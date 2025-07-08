@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Settings2, LayoutDashboard, type LucideIcon, Webhook, Newspaper, House, Users } from "lucide-react";
+import { type LucideIcon, Newspaper, House, Users, Plus } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -14,7 +14,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/api/useAuth";
-import { cn } from "@/lib/utils";
+
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LogoFull, LogoIcon } from "./logo";
@@ -42,12 +42,22 @@ interface MenuGroup {
 // Admin için kullanılacak menüler
 const adminMenus: MenuGroup[] = [
     {
-        group: "Panel",
+        group: "Menü",
         items: [
             {
                 title: "Anasayfa",
                 url: "/dashboard",
                 icon: House,
+            },
+            {
+                title: "Ürün Ekle",
+                url: "/product/add",
+                icon: Plus,
+            },
+            {
+                title: "Ürün Listesi",
+                url: "/product",
+                icon: Newspaper,
             },
             {
                 title: "Teklif Oluştur",
@@ -66,12 +76,22 @@ const adminMenus: MenuGroup[] = [
 // Normal kullanıcılar için kullanılacak menüler
 const userMenus: MenuGroup[] = [
     {
-        group: "Panel",
+        group: "Menü",
         items: [
             {
                 title: "Anasayfa",
                 url: "/dashboard",
                 icon: House,
+            },
+            {
+                title: "Ürün Ekle",
+                url: "/product/add",
+                icon: Plus,
+            },
+            {
+                title: "Ürün Listesi",
+                url: "/product",
+                icon: Newspaper,
             },
             {
                 title: "Teklif Oluştur",
