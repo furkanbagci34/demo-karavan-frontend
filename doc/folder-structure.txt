@@ -1,0 +1,62 @@
+src/
+├── app/
+│   ├── (auth)/                   # (Auth Grubu) URL'de görünmez, sadece organizasyon için
+│   │   ├── login/
+│   │   │   └── page.tsx          # /login sayfası
+│   │   ├── register/
+│   │   │   └── page.tsx          # /register sayfası
+│   │   └── layout.tsx            # (Opsiyonel) Login ve Register için ortak layout
+│   │
+│   ├── (dashboard)/              # (Dashboard Grubu) Korunan alan, URL'de görünmez
+│   │   ├── dashboard/
+│   │   │   ├── page.tsx          # /dashboard ana sayfası
+│   │   │   ├── settings/
+│   │   │   │   └── page.tsx      # /dashboard/settings sayfası
+│   │   │   ├── users/            # Örnek: Sadece adminlerin görebileceği sayfa
+│   │   │   │   └── page.tsx      # /dashboard/users sayfası
+│   │   │   └── ... (diğer dashboard sayfaları)
+│   │   │
+│   │   └── layout.tsx            # Dashboard ve alt sayfaları için ana layout (Sidebar, Header vb. içerir)
+│   │
+│   ├── layout.tsx                # Kök layout (Tüm sayfalar için geçerli, en dış katman)
+│   ├── page.tsx                  # Kök sayfa (/) - Genellikle giriş yapılmadıysa /login'e, yapıldıysa /dashboard'a yönlendirir (middleware ile yönetilebilir)
+│   ├── global.css                # Global stiller
+│   └── ... (varsa diğer dosyalar: error.tsx, loading.tsx, template.tsx)
+│
+├── components/
+│   ├── ui/                       # Tekrar kullanılabilir temel UI bileşenleri (Button, Input, Card vb.)
+│   │   ├── button.tsx
+│   │   ├── input.tsx
+│   │   └── ...
+│   ├── auth/                     # Kimlik doğrulama ile ilgili bileşenler
+│   │   ├── LoginForm.tsx
+│   │   └── RegisterForm.tsx
+│   ├── dashboard/                # Dashboard'a özel bileşenler
+│   │   ├── Sidebar.tsx
+│   │   ├── Header.tsx
+│   │   ├── RoleBasedMenu.tsx     # Rol bazlı menü bileşeni
+│   │   └── ...
+│   └── common/                   # Farklı bölümlerde kullanılan ortak bileşenler
+│       ├── LoadingSpinner.tsx
+│       └── ErrorMessage.tsx
+├── hooks/                        # Özel React hook'ları
+│   ├── useAuth.ts                # Client bileşenlerinde auth durumunu kontrol etmek için
+│   └── useRoleCheck.ts           # Rol kontrolü için (useAuth içinde de olabilir)
+│
+├── lib/                          # Yardımcı fonksiyonlar, API istemcileri, sabitler vb.
+│   ├── auth.ts                   # Kimlik doğrulama işlemleri (login, logout, session alma vb. - NextAuth.js veya benzeri bir kütüphane kullanıyorsanız burada konfigürasyon olabilir)
+│   ├── api.ts                    # Backend API çağrıları için fonksiyonlar
+│   ├── utils.ts                  # Genel yardımcı fonksiyonlar
+│   └── constants.ts              # Sabitler (Rol isimleri, API endpointleri vb.)
+│
+├── services/                     # Özel React hook'ları
+│   └── auth.service.ts          
+│
+├── contexts/                     # (Opsiyonel) Global state yönetimi için Context API
+│   └── AuthContext.tsx           # Kimlik doğrulama state'ini yönetmek için
+│
+├── styles/                       # (Opsiyonel) Daha organize stil dosyaları için
+│   ├── theme.ts                  # Tema ayarları
+│   └── global.css                # Global stiller
+│
+└── middleware.ts                 # Rotaları korumak ve yönlendirmeleri yönetmek için (src klasörünün kökünde)
