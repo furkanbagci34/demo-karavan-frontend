@@ -39,7 +39,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     return (
         <div className={cn("flex flex-col", className)} {...props}>
             <div className="flex flex-col items-center space-y-6 pb-16 pt-10">
-                <LogoFull className="h-12 w-auto" />
+                <LogoFull className="h-20 w-auto" />
                 <div className="space-y-2 text-center">
                     <h1 className="text-2xl font-semibold tracking-tight">Tekrar Hoşgeldiniz</h1>
                     <p className="text-balance text-sm text-muted-foreground">

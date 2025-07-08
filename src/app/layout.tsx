@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "FumaGPT Panel",
-    description: "FumaGPT Yönetim Paneli",
+    title: "Demonte Panel",
+    description: "Demonte Yönetim Paneli",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

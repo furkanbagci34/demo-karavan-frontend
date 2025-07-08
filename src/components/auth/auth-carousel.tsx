@@ -2,27 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Bot, Lightbulb, Globe2 } from "lucide-react";
+import { Caravan, Trees, House } from "lucide-react";
 
 const CAROUSEL_ITEMS = [
     {
-        icon: Bot,
-        title: "Yapay Zeka ile İçerik Üretimi",
-        description: "FumaGPT ile saniyeler içinde özgün ve kaliteli içerikler oluşturun.",
+        icon: Caravan,
+        title: "Doğa sizi çağırıyor",
+        description: "Geçmişten gelen en iyi kamp aracı ile özgürlüğünüze bir adım daha yakınsınız.",
         gradient: "from-[#FF5F1F] to-[#FF3131]",
         iconColor: "text-white",
     },
     {
-        icon: Lightbulb,
-        title: "SEO Dostu İçerikler",
-        description: "Arama motorları için optimize edilmiş içerikler üretin.",
+        icon: Trees,
+        title: "Sınırları kaldıran rahatlık",
+        description:
+            "Maceraya doğru attığınız her bir adımda evinizden uzak, eviniz hep yanınızda. Keşfedilmemiş koylara, el değmemiş denizlere ve yabancı ülkelere evinizin rahatlığını taşıyın.",
         gradient: "from-[#FF5F1F] to-[#FF3131]",
         iconColor: "text-white",
     },
     {
-        icon: Globe2,
-        title: "Çoklu Dil Desteği",
-        description: "İstediğiniz dilde içerik oluşturun ve düzenleyin.",
+        icon: House,
+        title: "Maceranın yeni ve modern yüzü",
+        description:
+            "Ferah ve aydınlık iç tasarımı, kullanışlı ve esnek detayları ile Demonte karavanlar en zorlu yolculukları bile unutulmaz bir serüvene dönüştürmek için hazır.",
         gradient: "from-[#FF5F1F] to-[#FF3131]",
         iconColor: "text-white",
     },

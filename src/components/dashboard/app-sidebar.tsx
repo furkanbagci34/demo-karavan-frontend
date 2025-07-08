@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Settings2, LayoutDashboard, type LucideIcon, Webhook } from "lucide-react";
+import { Settings2, LayoutDashboard, type LucideIcon, Webhook, Newspaper, House, Users } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -45,34 +45,19 @@ const adminMenus: MenuGroup[] = [
         group: "Panel",
         items: [
             {
-                title: "Dashboard",
+                title: "Anasayfa",
                 url: "/dashboard",
-                icon: LayoutDashboard,
-                items: [
-                    {
-                        title: "Genel Bakış",
-                        url: "/dashboard",
-                    },
-                    {
-                        title: "Kullanıcılar",
-                        url: "/users",
-                    },
-                ],
+                icon: House,
             },
             {
-                title: "Sistem",
-                url: "#",
-                icon: Settings2,
-                items: [
-                    {
-                        title: "Genel Ayarlar",
-                        url: "/dashboard/settings",
-                    },
-                    {
-                        title: "Ödeme Geçmişi",
-                        url: "/dashboard/payment-history",
-                    },
-                ],
+                title: "Teklif Oluştur",
+                url: "/create-offer",
+                icon: Newspaper,
+            },
+            {
+                title: "Kullanıcılar",
+                url: "/users",
+                icon: Users,
             },
         ],
     },
@@ -84,14 +69,14 @@ const userMenus: MenuGroup[] = [
         group: "Panel",
         items: [
             {
-                title: "Genel Bakış",
+                title: "Anasayfa",
                 url: "/dashboard",
-                icon: LayoutDashboard,
+                icon: House,
             },
             {
-                title: "Test Sayfası",
-                url: "/my-apis",
-                icon: Webhook,
+                title: "Teklif Oluştur",
+                url: "/create-offer",
+                icon: Newspaper,
             },
         ],
     },
