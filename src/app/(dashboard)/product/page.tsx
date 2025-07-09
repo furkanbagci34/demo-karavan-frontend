@@ -30,6 +30,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const PAGE_SIZE = 10;
 
@@ -37,6 +38,8 @@ export default function ProductListPage() {
     const [currentPage, setCurrentPage] = React.useState(1);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedProductImage, setSelectedProductImage] = useState<{ src: string; alt: string } | null>(null);
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const { products, deleteProduct, isLoading } = useProducts();
 
     // Ürün pasif hale getirme dialog'unu aç
@@ -64,6 +67,17 @@ export default function ProductListPage() {
             toast.error("Ürün pasif hale getirilemedi", {
                 description: errorMessage,
             });
+        }
+    };
+
+    // Resim tıklama fonksiyonu
+    const handleImageClick = (product: Product) => {
+        if (product.image) {
+            setSelectedProductImage({
+                src: product.image,
+                alt: product.name,
+            });
+            setIsImageModalOpen(true);
         }
     };
 
@@ -147,7 +161,12 @@ export default function ProductListPage() {
                                                     <img
                                                         src={product.image || "/images/no-image-placeholder.svg"}
                                                         alt={product.name}
-                                                        className="w-12 h-12 aspect-square object-cover rounded border"
+                                                        className={`w-12 h-12 aspect-square object-cover rounded border ${
+                                                            product.image
+                                                                ? "cursor-pointer hover:opacity-80 transition-opacity"
+                                                                : ""
+                                                        }`}
+                                                        onClick={() => product.image && handleImageClick(product)}
                                                         onError={(e) => {
                                                             const target = e.target as HTMLImageElement;
                                                             target.src = "/images/no-image-placeholder.svg";
@@ -220,7 +239,12 @@ export default function ProductListPage() {
                                                 <img
                                                     src={product.image || "/images/no-image-placeholder.svg"}
                                                     alt={product.name}
-                                                    className="w-16 h-16 aspect-square object-cover rounded border flex-shrink-0"
+                                                    className={`w-16 h-16 aspect-square object-cover rounded border flex-shrink-0 ${
+                                                        product.image
+                                                            ? "cursor-pointer hover:opacity-80 transition-opacity"
+                                                            : ""
+                                                    }`}
+                                                    onClick={() => product.image && handleImageClick(product)}
                                                     onError={(e) => {
                                                         const target = e.target as HTMLImageElement;
                                                         target.src = "/images/no-image-placeholder.svg";
@@ -320,6 +344,26 @@ export default function ProductListPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Resim Büyütme Modal'ı */}
+            <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+                    <DialogHeader className="p-6 pb-0">
+                        <DialogTitle>{selectedProductImage?.alt}</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-6 pt-0">
+                        {selectedProductImage && (
+                            <div className="flex justify-center">
+                                <img
+                                    src={selectedProductImage.src}
+                                    alt={selectedProductImage.alt}
+                                    className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
