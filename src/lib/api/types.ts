@@ -95,3 +95,40 @@ export interface WordpressTag {
     name: string;
     slug: string;
 }
+
+// Product tipleri
+export interface Product {
+    id: number;
+    name: string;
+    code?: string;
+    purchase_price?: number;
+    sale_price?: number;
+    stock_quantity?: number;
+    description?: string;
+    image?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateProductData {
+    name: string;
+    code?: string;
+    purchasePrice?: number;
+    salePrice?: number;
+    stockQuantity?: number;
+    description?: string;
+    image?: string;
+    isActive?: boolean;
+}
+
+export interface UpdateProductData {
+    name?: string;
+    code?: string;
+    purchasePrice?: number;
+    salePrice?: number;
+    stockQuantity?: number;
+    description?: string;
+    image?: string;
+    isActive?: boolean;
+}

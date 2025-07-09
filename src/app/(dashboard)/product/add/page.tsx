@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useProducts } from "@/hooks/api/useProducts";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -25,11 +27,11 @@ import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
 
 // Form doğrulama şeması
 const productSchema = z.object({
-    name: z.string().min(1, "Ürün adı gereklidir").max(100, "Ürün adı çok uzun"),
-    stockCode: z.string().min(1, "Stok kodu gereklidir").max(50, "Stok kodu çok uzun"),
-    purchasePrice: z.coerce.number().min(0, "Alış fiyatı 0'dan küçük olamaz").max(999999, "Alış fiyatı çok yüksek"),
-    salePrice: z.coerce.number().min(0, "Satış fiyatı 0'dan küçük olamaz").max(999999, "Satış fiyatı çok yüksek"),
-    stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek"),
+    name: z.string().min(1, "Ürün adı gereklidir").max(500, "Ürün adı çok uzun"),
+    code: z.string().optional(),
+    purchasePrice: z.coerce.number().min(0, "Alış fiyatı 0'dan küçük olamaz").max(999999, "Alış fiyatı çok yüksek").optional(),
+    salePrice: z.coerce.number().min(0, "Satış fiyatı 0'dan küçük olamaz").max(999999, "Satış fiyatı çok yüksek").optional(),
+    stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek").optional(),
     description: z.string().optional(),
 });
 
@@ -38,15 +40,17 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function AddProductPage() {
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const router = useRouter();
+    const { createProduct, isLoading } = useProducts();
 
     const form = useForm<ProductFormData>({
         resolver: zodResolver(productSchema),
         defaultValues: {
             name: "",
-            stockCode: "",
-            purchasePrice: 0,
-            salePrice: 0,
-            stockQuantity: 0,
+            code: "",
+            purchasePrice: undefined,
+            salePrice: undefined,
+            stockQuantity: undefined,
             description: "",
         },
     });
@@ -54,9 +58,9 @@ export default function AddProductPage() {
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // Dosya boyutu kontrolü (max 5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                toast.error("Dosya boyutu 5MB'dan büyük olamaz");
+            // Dosya boyutu kontrolü (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                toast.error("Dosya boyutu 2MB'dan büyük olamaz");
                 return;
             }
 
@@ -66,13 +70,67 @@ export default function AddProductPage() {
                 return;
             }
 
-            setSelectedImage(file);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setImagePreview(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
+            // Resmi sıkıştır
+            compressImage(file, (compressedFile) => {
+                setSelectedImage(compressedFile);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setImagePreview(e.target?.result as string);
+                };
+                reader.readAsDataURL(compressedFile);
+            });
         }
+    };
+
+    // Resim sıkıştırma fonksiyonu
+    const compressImage = (file: File, callback: (compressedFile: File) => void) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        img.onload = () => {
+            // Maksimum boyutlar
+            const maxWidth = 800;
+            const maxHeight = 800;
+
+            // Yeni boyutları hesapla
+            let { width, height } = img;
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+            }
+
+            // Canvas boyutunu ayarla
+            canvas.width = width;
+            canvas.height = height;
+
+            // Resmi çiz
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            // Sıkıştırılmış dosyayı oluştur
+            canvas.toBlob(
+                (blob) => {
+                    if (blob) {
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now(),
+                        });
+                        callback(compressedFile);
+                    }
+                },
+                'image/jpeg',
+                0.7 // Kalite (0.7 = %70 kalite)
+            );
+        };
+
+        img.src = URL.createObjectURL(file);
     };
 
     const removeImage = () => {
@@ -82,22 +140,61 @@ export default function AddProductPage() {
 
     const onSubmit = async (data: ProductFormData) => {
         try {
-            // Form verilerini konsola yazdır (backend bağlantısı olmadığı için)
-            console.log("Ürün Bilgileri:", data);
-            console.log("Seçilen Resim:", selectedImage);
+            // Resim dosyasını base64'e çevir
+            let imageBase64 = undefined;
+            if (selectedImage) {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    imageBase64 = reader.result as string;
 
-            // Başarı mesajı
-            toast.success("Ürün başarıyla eklendi!", {
-                description: `${data.name} ürünü sisteme kaydedildi.`,
-            });
+                    // API çağrısı
+                    const productData = {
+                        name: data.name,
+                        code: data.code || undefined,
+                        purchasePrice: data.purchasePrice,
+                        salePrice: data.salePrice,
+                        stockQuantity: data.stockQuantity,
+                        description: data.description || undefined,
+                        image: imageBase64,
+                        isActive: true,
+                    };
 
-            // Formu temizle
-            form.reset();
-            removeImage();
-        } catch (error) {
+                    await createProduct(productData);
+
+                    toast.success("Ürün başarıyla eklendi!", {
+                        description: `${data.name} ürünü sisteme kaydedildi.`,
+                    });
+
+                    // Ürünler sayfasına yönlendir
+                    router.push("/product");
+                };
+                reader.readAsDataURL(selectedImage);
+            } else {
+                // Resim yoksa direkt API çağrısı
+                const productData = {
+                    name: data.name,
+                    code: data.code || undefined,
+                    purchasePrice: data.purchasePrice,
+                    salePrice: data.salePrice,
+                    stockQuantity: data.stockQuantity,
+                    description: data.description || undefined,
+                    image: undefined,
+                    isActive: true,
+                };
+
+                await createProduct(productData);
+
+                toast.success("Ürün başarıyla eklendi!", {
+                    description: `${data.name} ürünü sisteme kaydedildi.`,
+                });
+
+                // Ürünler sayfasına yönlendir
+                router.push("/product");
+            }
+        } catch (error: any) {
             console.error("Ürün ekleme hatası:", error);
             toast.error("Ürün eklenemedi", {
-                description: "Bir hata oluştu, lütfen tekrar deneyin.",
+                description: error.message || "Bir hata oluştu, lütfen tekrar deneyin.",
             });
         }
     };
@@ -161,7 +258,7 @@ export default function AddProductPage() {
 
                                     <FormField
                                         control={form.control}
-                                        name="stockCode"
+                                        name="code"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Stok Kodu</FormLabel>
@@ -285,7 +382,7 @@ export default function AddProductPage() {
                                                             Fotoğraf yüklemek için tıklayın
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">
-                                                            PNG, JPG, JPEG dosyaları kabul edilir (Max 5MB)
+                                                            PNG, JPG, JPEG dosyaları kabul edilir (Max 2MB)
                                                         </p>
                                                     </div>
                                                 </div>
@@ -330,10 +427,10 @@ export default function AddProductPage() {
                             <Button
                                 type="submit"
                                 className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                                disabled={form.formState.isSubmitting}
+                                disabled={isLoading || form.formState.isSubmitting}
                             >
                                 <Save className="h-4 w-4 mr-2" />
-                                {form.formState.isSubmitting ? "Kaydediliyor..." : "Ürünü Kaydet"}
+                                {isLoading || form.formState.isSubmitting ? "Kaydediliyor..." : "Ürünü Kaydet"}
                             </Button>
                         </div>
                     </form>
