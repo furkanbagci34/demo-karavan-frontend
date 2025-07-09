@@ -22,55 +22,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
-import React from "react";
-
-// Dumi ürün verisi (gerçek DB yerine)
-const mockProducts = [
-    {
-        id: 1,
-        name: "12V LED Şerit",
-        stockCode: "LED-001",
-        stockQuantity: 120,
-        purchasePrice: 2.5,
-        salePrice: 4.2,
-        description: "Su geçirmez, 5 metre.",
-        image: "/images/product-placeholder.jpg",
-    },
-    {
-        id: 2,
-        name: "Akü 100Ah",
-        stockCode: "AKU-100",
-        stockQuantity: 15,
-        purchasePrice: 80,
-        salePrice: 120,
-        description: "Derin döngü, bakım gerektirmez.",
-        image: "/images/product-placeholder.jpg",
-    },
-    {
-        id: 3,
-        name: "Güneş Paneli 150W",
-        stockCode: "GUN-150",
-        stockQuantity: 8,
-        purchasePrice: 60,
-        salePrice: 95,
-        description: "Monokristal, yüksek verim.",
-        image: "/images/product-placeholder.jpg",
-    },
-    {
-        id: 4,
-        name: "Sigorta Kutusu",
-        stockCode: "SIG-BOX",
-        stockQuantity: 40,
-        purchasePrice: 5,
-        salePrice: 9.5,
-        description: "6'lı modül, şeffaf kapak.",
-        image: "/images/product-placeholder.jpg",
-    },
-];
+import React, { useEffect, useState } from "react";
+import { useProducts } from "@/hooks/api/useProducts";
+import { Product } from "@/lib/api/types";
 
 const productSchema = z.object({
     name: z.string().min(1, "Ürün adı gereklidir").max(100, "Ürün adı çok uzun"),
-    stockCode: z.string().min(1, "Stok kodu gereklidir").max(50, "Stok kodu çok uzun"),
+    stockCode: z.string().max(50, "Stok kodu çok uzun").optional(),
     purchasePrice: z.coerce.number().min(0, "Alış fiyatı 0'dan küçük olamaz").max(999999, "Alış fiyatı çok yüksek"),
     salePrice: z.coerce.number().min(0, "Satış fiyatı 0'dan küçük olamaz").max(999999, "Satış fiyatı çok yüksek"),
     stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek"),
@@ -83,56 +41,131 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function EditProductPage() {
     const router = useRouter();
     const params = useParams();
-    const id = Number(params.id);
-    const product = mockProducts.find((p) => p.id === id);
-    const [imagePreview, setImagePreview] = React.useState<string | null>(product?.image || null);
+    const id = params.id as string;
+    const { getProductById, updateProduct, isLoadingUpdate } = useProducts();
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [isLoadingProduct, setIsLoadingProduct] = useState(true);
+    const [productData, setProductData] = useState<Product | null>(null);
+    const [isFormInitialized, setIsFormInitialized] = useState(false);
+    const [isImageInitialized, setIsImageInitialized] = useState(false);
 
     const form = useForm<ProductFormData>({
         resolver: zodResolver(productSchema),
-        defaultValues: product
-            ? {
-                  name: product.name,
-                  stockCode: product.stockCode,
-                  purchasePrice: product.purchasePrice,
-                  salePrice: product.salePrice,
-                  stockQuantity: product.stockQuantity,
-                  description: product.description,
-                  image: product.image,
-              }
-            : {
-                  name: "",
-                  stockCode: "",
-                  purchasePrice: 0,
-                  salePrice: 0,
-                  stockQuantity: 0,
-                  description: "",
-                  image: "",
-              },
+        defaultValues: {
+            name: "",
+            stockCode: "",
+            purchasePrice: 0,
+            salePrice: 0,
+            stockQuantity: 0,
+            description: "",
+            image: "",
+        },
     });
 
-    React.useEffect(() => {
-        if (!product) {
-            toast.error("Ürün bulunamadı");
-            router.replace("/product");
+    // Ürünü yükle
+    useEffect(() => {
+        const loadProduct = async () => {
+            try {
+                const data = await getProductById(id);
+                setProductData(data);
+                // imagePreview'i sadece ilk yüklemede set et
+                if (!isImageInitialized) {
+                    setImagePreview(data.image || null);
+                    setIsImageInitialized(true);
+                }
+            } catch (error: unknown) {
+                console.error("Ürün yüklenirken hata:", error);
+                const errorMessage = error instanceof Error ? error.message : "Ürün yüklenemedi";
+                toast.error("Ürün bulunamadı", {
+                    description: errorMessage,
+                });
+                router.replace("/product");
+            } finally {
+                setIsLoadingProduct(false);
+            }
+        };
+
+        if (id) {
+            loadProduct();
         }
-    }, [product, router]);
+    }, [id, getProductById, router, isImageInitialized]);
+
+    // Ürün yüklendiğinde form'u doldur (sadece bir kez)
+    useEffect(() => {
+        if (productData && !isFormInitialized) {
+            // Form'u tek seferde doldur (daha hızlı)
+            const formData = {
+                name: productData.name,
+                stockCode: productData.code || "",
+                purchasePrice: productData.purchase_price || 0,
+                salePrice: productData.sale_price || 0,
+                stockQuantity: productData.stock_quantity || 0,
+                description: productData.description || "",
+            };
+
+            form.reset(formData);
+            setIsFormInitialized(true);
+        }
+    }, [productData, isFormInitialized, form]);
+
+    const compressImage = (file: File, callback: (compressedImage: string) => void) => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
+        const img = new Image();
+
+        img.onload = () => {
+            // Maksimum boyutlar
+            const maxWidth = 800;
+            const maxHeight = 800;
+
+            let { width, height } = img;
+
+            // Boyutları orantılı olarak küçült
+            if (width > height) {
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+            } else {
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // Resmi çiz
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // JPEG formatında sıkıştır (0.7 kalite)
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+            callback(compressedDataUrl);
+        };
+
+        img.src = URL.createObjectURL(file);
+    };
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                toast.error("Dosya boyutu 5MB'dan büyük olamaz");
+            // Dosya boyutu kontrolü (max 2MB - add sayfasıyla aynı)
+            if (file.size > 2 * 1024 * 1024) {
+                toast.error("Dosya boyutu 2MB'dan büyük olamaz");
                 return;
             }
+
+            // Dosya türü kontrolü
             if (!file.type.startsWith("image/")) {
                 toast.error("Sadece resim dosyaları kabul edilir");
                 return;
             }
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setImagePreview(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
+
+            // Resmi sıkıştır (callback kullanarak daha hızlı)
+            compressImage(file, (compressedImage) => {
+                setImagePreview(compressedImage);
+            });
         }
     };
 
@@ -142,18 +175,70 @@ export default function EditProductPage() {
 
     const onSubmit = async (data: ProductFormData) => {
         try {
-            // Güncellenen verileri konsola yazdır
-            console.log("Güncellenen Ürün:", data);
+            // Tüm alanları gönder, backend sadece değişenleri güncelleyecek
+            const updateData: Record<string, unknown> = {
+                name: data.name,
+                code: data.stockCode || null,
+                purchasePrice: data.purchasePrice,
+                salePrice: data.salePrice,
+                stockQuantity: data.stockQuantity,
+                description: data.description || null,
+                image: imagePreview,
+            };
+
+            await updateProduct(id, updateData);
+
             toast.success("Ürün başarıyla güncellendi!", {
                 description: `${data.name} ürünü güncellendi.`,
             });
-            // router.push("/product"); // İstersen otomatik listeye dönebilir
-        } catch {
+
+            // Ürün listesine geri dön
+            router.push("/product");
+        } catch (error: unknown) {
+            console.error("Ürün güncelleme hatası:", error);
+            const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
             toast.error("Ürün güncellenemedi", {
-                description: "Bir hata oluştu, lütfen tekrar deneyin.",
+                description: errorMessage,
             });
         }
     };
+
+    // Loading durumunda loading göster
+    if (isLoadingProduct) {
+        return (
+            <>
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b">
+                    <div className="flex items-center gap-2 px-4">
+                        <SidebarTrigger className="-ml-1" />
+                        <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+                        <Breadcrumb>
+                            <BreadcrumbList>
+                                <BreadcrumbItem className="hidden sm:block">
+                                    <BreadcrumbLink href="/dashboard">Anasayfa</BreadcrumbLink>
+                                </BreadcrumbItem>
+                                <BreadcrumbSeparator className="hidden sm:block" />
+                                <BreadcrumbItem className="hidden sm:block">
+                                    <BreadcrumbLink href="/product">Ürünler</BreadcrumbLink>
+                                </BreadcrumbItem>
+                                <BreadcrumbSeparator className="hidden sm:block" />
+                                <BreadcrumbItem>
+                                    <BreadcrumbPage>Ürün Düzenle</BreadcrumbPage>
+                                </BreadcrumbItem>
+                            </BreadcrumbList>
+                        </Breadcrumb>
+                    </div>
+                </header>
+                <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-6">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                            <span>Ürün yükleniyor...</span>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
@@ -213,9 +298,9 @@ export default function EditProductPage() {
                                         name="stockCode"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Stok Kodu</FormLabel>
+                                                <FormLabel>Stok Kodu (İsteğe Bağlı)</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Stok kodunu giriniz" {...field} />
+                                                    <Input placeholder="Stok kodunu giriniz (opsiyonel)" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -368,10 +453,10 @@ export default function EditProductPage() {
                             <Button
                                 type="submit"
                                 className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                                disabled={form.formState.isSubmitting}
+                                disabled={form.formState.isSubmitting || isLoadingUpdate}
                             >
                                 <Save className="h-4 w-4 mr-2" />
-                                {form.formState.isSubmitting ? "Güncelleniyor..." : "Güncelle"}
+                                {form.formState.isSubmitting || isLoadingUpdate ? "Güncelleniyor..." : "Güncelle"}
                             </Button>
                         </div>
                     </form>

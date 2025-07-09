@@ -32,18 +32,18 @@ export default function DashboardPage() {
                     </Breadcrumb>
                 </div>
             </header>
-            <div className="flex flex-1 flex-col p-4">
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">Dashboard</h1>
+            <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-3 mb-6">
+                <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     <Card>
                         <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Toplam Makale</CardTitle>
+                            <CardTitle className="text-sm font-medium">Toplam Ürün</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-bold">0</div>
+                            <div className="text-2xl sm:text-3xl font-bold">0</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -51,7 +51,7 @@ export default function DashboardPage() {
                             <CardTitle className="text-sm font-medium">Toplam Kullanıcı</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-bold">0</div>
+                            <div className="text-2xl sm:text-3xl font-bold">0</div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
                             <CardTitle className="text-sm font-medium">Aktif Kullanıcı</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-bold">0</div>
+                            <div className="text-2xl sm:text-3xl font-bold">0</div>
                         </CardContent>
                     </Card>
                 </div>

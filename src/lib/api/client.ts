@@ -17,6 +17,7 @@ class ApiClient {
             headers: {
                 "Content-Type": "application/json",
             },
+            timeout: 10000, // 10 saniye timeout
         });
 
         this.setupInterceptors();

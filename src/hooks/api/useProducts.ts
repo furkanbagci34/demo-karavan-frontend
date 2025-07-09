@@ -1,18 +1,29 @@
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Product, CreateProductData, UpdateProductData, ApiResponse } from "@/lib/api/types";
 
 export const useProducts = () => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
 
-    const createProduct = async (data: CreateProductData): Promise<ApiResponse<{ productId: number }>> => {
-        setIsLoading(true);
-        setError(null);
+    // Ürünleri getir (React Query ile cache'le)
+    const {
+        data: products = [],
+        isLoading,
+        error,
+    } = useQuery({
+        queryKey: ["products"],
+        queryFn: async (): Promise<Product[]> => {
+            const response = await apiClient.get<Product[]>(API_ENDPOINTS.products.getAll);
+            return response;
+        },
+        staleTime: 30 * 1000, // 30 saniye cache
+        refetchOnWindowFocus: false,
+    });
 
-        try {
-            // Backend'e gönderilecek veriyi dönüştür
+    // Ürün oluştur
+    const createProductMutation = useMutation({
+        mutationFn: async (data: CreateProductData): Promise<ApiResponse<{ productId: number }>> => {
             const backendData = {
                 name: data.name,
                 code: data.code,
@@ -30,105 +41,66 @@ export const useProducts = () => {
             );
 
             return response;
-        } catch (err: any) {
-            const errorMessage = err.message || "Ürün oluşturulurken bir hata oluştu";
-            setError(errorMessage);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        },
+        onSuccess: () => {
+            // Ürün listesini yenile
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+        },
+    });
 
-    const getAllProducts = async (): Promise<Product[]> => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const response = await apiClient.get<Product[]>(API_ENDPOINTS.products.getAll);
-            return response;
-        } catch (err: any) {
-            const errorMessage = err.message || "Ürünler yüklenirken bir hata oluştu";
-            setError(errorMessage);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const getProductById = async (id: string): Promise<Product> => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const response = await apiClient.get<Product>(API_ENDPOINTS.products.getById(id));
-            return response;
-        } catch (err: any) {
-            const errorMessage = err.message || "Ürün yüklenirken bir hata oluştu";
-            setError(errorMessage);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const updateProduct = async (id: string, data: UpdateProductData): Promise<ApiResponse<{ product: Product }>> => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            // Backend'e gönderilecek veriyi dönüştür
-            const backendData = {
-                name: data.name,
-                code: data.code,
-                purchasePrice: data.purchasePrice,
-                salePrice: data.salePrice,
-                stockQuantity: data.stockQuantity,
-                description: data.description,
-                image: data.image,
-                isActive: data.isActive,
-            };
-
+    // Ürün güncelle
+    const updateProductMutation = useMutation({
+        mutationFn: async ({
+            id,
+            data,
+        }: {
+            id: string;
+            data: UpdateProductData;
+        }): Promise<ApiResponse<{ product: Product }>> => {
             const response = await apiClient.put<ApiResponse<{ product: Product }>>(
                 API_ENDPOINTS.products.update(id),
-                backendData
+                data as Record<string, unknown>
             );
 
             return response;
-        } catch (err: any) {
-            const errorMessage = err.message || "Ürün güncellenirken bir hata oluştu";
-            setError(errorMessage);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        },
+        onSuccess: () => {
+            // Ürün listesini yenile
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+        },
+    });
 
-    const deleteProduct = async (id: string): Promise<ApiResponse<{ message: string }>> => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
+    // Ürün sil
+    const deleteProductMutation = useMutation({
+        mutationFn: async (id: string): Promise<ApiResponse<{ message: string }>> => {
             const response = await apiClient.delete<ApiResponse<{ message: string }>>(
                 API_ENDPOINTS.products.delete(id)
             );
 
             return response;
-        } catch (err: any) {
-            const errorMessage = err.message || "Ürün silinirken bir hata oluştu";
-            setError(errorMessage);
-            throw err;
-        } finally {
-            setIsLoading(false);
-        }
+        },
+        onSuccess: () => {
+            // Ürün listesini yenile
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+        },
+    });
+
+    // Tekil ürün getir
+    const getProductById = async (id: string): Promise<Product> => {
+        const response = await apiClient.get<Product>(API_ENDPOINTS.products.getById(id));
+        return response;
     };
 
     return {
-        createProduct,
-        getAllProducts,
+        products,
+        createProduct: createProductMutation.mutateAsync,
+        updateProduct: (id: string, data: UpdateProductData) => updateProductMutation.mutateAsync({ id, data }),
+        deleteProduct: deleteProductMutation.mutateAsync,
         getProductById,
-        updateProduct,
-        deleteProduct,
         isLoading,
-        error,
+        isLoadingCreate: createProductMutation.isPending,
+        isLoadingUpdate: updateProductMutation.isPending,
+        isLoadingDelete: deleteProductMutation.isPending,
+        error: error?.message || null,
     };
 };
