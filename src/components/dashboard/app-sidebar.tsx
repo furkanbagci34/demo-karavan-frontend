@@ -50,14 +50,34 @@ const adminMenus: MenuGroup[] = [
                 icon: House,
             },
             {
-                title: "Ürün Ekle",
-                url: "/product/add",
-                icon: Plus,
+                title: "Müşteriler",
+                url: "/customer",
+                icon: Users,
+                items: [
+                    {
+                        title: "Müşteri Listesi",
+                        url: "/customer",
+                    },
+                    {
+                        title: "Yeni Müşteri Ekle",
+                        url: "/customer/add",
+                    },
+                ],
             },
             {
-                title: "Ürün Listesi",
+                title: "Ürünler",
                 url: "/product",
                 icon: Newspaper,
+                items: [
+                    {
+                        title: "Ürün Listesi",
+                        url: "/product",
+                    },
+                    {
+                        title: "Yeni Ürün Ekle",
+                        url: "/product/add",
+                    },
+                ],
             },
             {
                 title: "Teklif Oluştur",
@@ -84,14 +104,34 @@ const userMenus: MenuGroup[] = [
                 icon: House,
             },
             {
-                title: "Ürün Ekle",
-                url: "/product/add",
-                icon: Plus,
+                title: "Müşteriler",
+                url: "/customer",
+                icon: Users,
+                items: [
+                    {
+                        title: "Müşteri Listesi",
+                        url: "/customer",
+                    },
+                    {
+                        title: "Yeni Müşteri Ekle",
+                        url: "/customer/add",
+                    },
+                ],
             },
             {
-                title: "Ürün Listesi",
+                title: "Ürünler",
                 url: "/product",
                 icon: Newspaper,
+                items: [
+                    {
+                        title: "Ürün Listesi",
+                        url: "/product",
+                    },
+                    {
+                        title: "Yeni Ürün Ekle",
+                        url: "/product/add",
+                    },
+                ],
             },
             {
                 title: "Teklif Oluştur",

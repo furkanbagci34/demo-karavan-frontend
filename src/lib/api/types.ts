@@ -132,3 +132,31 @@ export interface UpdateProductData {
     image?: string;
     isActive?: boolean;
 }
+
+// Customer tipleri
+export interface Customer {
+    id: number;
+    user_id: number;
+    name: string;
+    email: string;
+    phone_number?: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateCustomerData {
+    name: string;
+    email?: string;
+    phoneNumber?: string;
+    description?: string;
+}
+
+export interface UpdateCustomerData {
+    name?: string;
+    email?: string;
+    phoneNumber?: string;
+    description?: string;
+    isActive?: boolean;
+}

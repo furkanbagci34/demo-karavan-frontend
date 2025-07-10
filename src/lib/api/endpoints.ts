@@ -13,4 +13,11 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/products/${id}`,
         delete: (id: string) => `/api/products/${id}`,
     },
+    customers: {
+        create: "/api/customers",
+        getAll: "/api/customers",
+        getById: (id: string) => `/api/customers/${id}`,
+        update: (id: string) => `/api/customers/${id}`,
+        delete: (id: string) => `/api/customers/${id}`,
+    },
 } as const;
