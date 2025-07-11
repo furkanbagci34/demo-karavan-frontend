@@ -425,7 +425,7 @@ export default function AddProductPage() {
                         </div>
 
                         {/* Alt Butonlar */}
-                        <div className="flex flex-col sm:flex-row justify-end gap-4 sm:space-x-4 sm:space-y-0">
+                        <div className="flex flex-col sm:flex-row justify-end gap-4 sm:space-x-4 sm:space-y-0 pb-10">
                             <Button
                                 type="button"
                                 variant="outline"

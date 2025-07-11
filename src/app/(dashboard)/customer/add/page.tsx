@@ -220,7 +220,7 @@ export default function AddCustomerPage() {
                         </div>
 
                         {/* Alt Butonlar */}
-                        <div className="flex flex-col sm:flex-row justify-end gap-4 sm:space-x-4 sm:space-y-0">
+                        <div className="flex flex-col sm:flex-row justify-end gap-4 sm:space-x-4 sm:space-y-0 pb-10">
                             <Button
                                 type="button"
                                 variant="outline"
@@ -233,7 +233,7 @@ export default function AddCustomerPage() {
                             </Button>
                             <Button
                                 type="submit"
-                                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto "
                                 disabled={isLoading || form.formState.isSubmitting}
                             >
                                 <Save className="h-4 w-4 mr-2" />
