@@ -14,6 +14,7 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from "@/components/ui/sidebar";
 
 interface MenuItem {
@@ -34,6 +35,15 @@ interface MenuGroup {
 }
 
 export function NavMain({ menuGroups }: { menuGroups: MenuGroup[] }) {
+    const { isMobile, setOpenMobile } = useSidebar();
+
+    // Mobil görünümde menü sekmelerine tıklandığında menüyü kapat
+    const handleMobileNavigation = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
+
     return (
         <>
             {menuGroups.map((menuGroup) => (
@@ -64,7 +74,11 @@ export function NavMain({ menuGroups }: { menuGroups: MenuGroup[] }) {
                                                                 subItem.isActive && "bg-muted text-primary font-medium"
                                                             )}
                                                         >
-                                                            <Link href={subItem.url} className="w-full">
+                                                            <Link
+                                                                href={subItem.url}
+                                                                className="w-full"
+                                                                onClick={handleMobileNavigation}
+                                                            >
                                                                 <span>{subItem.title}</span>
                                                             </Link>
                                                         </SidebarMenuSubButton>
@@ -81,7 +95,11 @@ export function NavMain({ menuGroups }: { menuGroups: MenuGroup[] }) {
                                         tooltip={item.title}
                                         className={cn(item.isActive && "text-primary font-medium")}
                                     >
-                                        <Link href={item.url} className="w-full flex items-center">
+                                        <Link
+                                            href={item.url}
+                                            className="w-full flex items-center"
+                                            onClick={handleMobileNavigation}
+                                        >
                                             {item.icon && <item.icon className="h-4 w-4" />}
                                             <span>{item.title}</span>
                                         </Link>

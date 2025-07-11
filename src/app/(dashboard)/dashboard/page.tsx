@@ -15,21 +15,14 @@ export default function DashboardPage() {
     const { recentOffers, isLoading: offersLoading } = useRecentOffers();
 
     return (
-        <div style={{ padding: 32 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32, color: "#1e293b" }}>Hoşgeldiniz 👋</h1>
+        <div className="p-4 md:p-8">
+            <h1 className="text-2xl md:text-4xl font-bold mb-4 md:mb-8 text-slate-800">Hoşgeldiniz 👋</h1>
 
             {/* Summary Cards */}
-            {summaryLoading && <div>Yükleniyor...</div>}
-            {summaryError && <div style={{ color: "red", marginBottom: 16 }}>{summaryError}</div>}
+            {summaryLoading && <div className="text-center py-8">Yükleniyor...</div>}
+            {summaryError && <div className="text-red-500 mb-4">{summaryError}</div>}
             {summary && (
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                        gap: 32,
-                        marginBottom: 32,
-                    }}
-                >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 mb-4 md:mb-8">
                     <DashboardStatCard
                         title="Toplam Müşteri"
                         value={summary.totalCustomers}
@@ -62,13 +55,7 @@ export default function DashboardPage() {
             )}
 
             {/* Charts and Lists */}
-            <div
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-                    gap: 32,
-                }}
-            >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
                 {/* Revenue Chart */}
                 <RevenueChart data={monthlyRevenue} isLoading={revenueLoading} />
 

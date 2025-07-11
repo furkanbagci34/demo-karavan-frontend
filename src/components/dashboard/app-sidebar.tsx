@@ -18,6 +18,8 @@ import { useAuth } from "@/hooks/api/useAuth";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LogoFull, LogoIcon } from "./logo";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Menü öğelerinin tiplerini tanımlayalım
 interface SubMenuItem {
@@ -165,7 +167,7 @@ const userMenus: MenuGroup[] = [
 export function AppSidebar() {
     const { user } = useAuth();
     const pathname = usePathname();
-    const { state } = useSidebar();
+    const { state, isMobile, setOpenMobile } = useSidebar();
 
     // Yol adına göre aktif durumları güncelle
     const menuWithActiveState = React.useMemo(() => {
@@ -197,10 +199,16 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon">
             <SidebarHeader>
-                <div className="px-4 py-2">
+                <div className="px-4 py-2 flex items-center justify-between">
                     <Link href="/dashboard" className="flex items-center justify-center">
                         {state === "expanded" ? <LogoFull /> : <LogoIcon />}
                     </Link>
+                    {/* Mobil görünümde kapatma butonu */}
+                    {isMobile && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpenMobile(false)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
             </SidebarHeader>
             <SidebarContent>
