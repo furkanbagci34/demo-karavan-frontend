@@ -20,4 +20,13 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/customers/${id}`,
         delete: (id: string) => `/api/customers/${id}`,
     },
+    offers: {
+        getProducts: (search?: string) =>
+            `/api/offers/products${search ? `?search=${encodeURIComponent(search)}` : ""}`,
+        create: "/api/offers",
+        getAll: "/api/offers",
+        getById: (id: string) => `/api/offers/${id}`,
+        update: (id: string) => `/api/offers/${id}`,
+        delete: (id: string) => `/api/offers/${id}`,
+    },
 } as const;

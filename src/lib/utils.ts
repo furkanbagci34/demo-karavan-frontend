@@ -44,5 +44,9 @@ export function formatNumber(value: number): string {
     if (value === null || value === undefined) return "-";
 
     // Türkçe formatında binlik ayracı nokta (.) ve ondalık ayracı virgül (,) olarak kullan
-    return value.toLocaleString("tr-TR");
+    // Minimum 2 ondalık basamak göster
+    return value.toLocaleString("tr-TR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 }
