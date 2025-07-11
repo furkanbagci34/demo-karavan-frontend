@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -61,10 +62,10 @@ export default function CreateOfferPage() {
     const [discountType, setDiscountType] = useState<"percentage" | "amount" | null>(null);
     const [discountValue, setDiscountValue] = useState<number>(0);
     const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>(null);
-    const [currentOfferId, setCurrentOfferId] = useState<number | null>(null);
+
     const [saving, setSaving] = useState(false);
 
-    const { products, loading, error, getProductsForOffer, createOffer, updateOffer } = useOffers();
+    const { products, loading, error, getProductsForOffer, createOffer } = useOffers();
     const { customers, isLoading: customersLoading } = useCustomers();
     const isMobile = useIsMobile();
 
@@ -255,7 +256,9 @@ export default function CreateOfferPage() {
 
     const handleSaveOffer = async () => {
         if (offerItems.length === 0) {
-            alert("Lütfen en az bir ürün ekleyin");
+            toast.error("Ürün eklenmedi", {
+                description: "Lütfen en az bir ürün ekleyin",
+            });
             return;
         }
 
@@ -265,7 +268,7 @@ export default function CreateOfferPage() {
             offerNumber: offerNumber || undefined,
             customerId: selectedCustomerId || undefined,
             subtotal: calculateGrossTotal(),
-            discountType: discountType,
+            discountType: discountType || undefined,
             discountValue: discountValue,
             discountAmount: calculateDiscount(),
             netTotal: calculateNetTotal(),
@@ -280,21 +283,30 @@ export default function CreateOfferPage() {
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 totalPrice: item.totalPrice,
+                discountAmount: discountMethod === "distribute" ? calculateItemDiscount(item.totalPrice) : 0,
+                discountType: discountMethod === "distribute" ? discountType || undefined : undefined,
+                discountValue: discountMethod === "distribute" ? discountValue : 0,
             })),
         };
 
         try {
-            if (currentOfferId) {
-                await updateOffer(currentOfferId, offerData);
-                alert("Teklif başarıyla güncellendi!");
+            const result = await createOffer(offerData);
+
+            if (result && result.offerId) {
+                toast.success("Teklif başarıyla oluşturuldu!", {
+                    description: "Yeni teklif sisteme kaydedildi.",
+                });
             } else {
-                const result = await createOffer(offerData);
-                setCurrentOfferId(result.offerId);
-                alert("Teklif başarıyla oluşturuldu!");
+                toast.error("Teklif kaydedilemedi", {
+                    description: "Beklenmeyen bir hata oluştu",
+                });
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Teklif kaydedilirken hata:", error);
-            alert("Teklif kaydedilirken bir hata oluştu");
+            const errorMessage = error instanceof Error ? error.message : "Teklif kaydedilirken bir hata oluştu";
+            toast.error("Teklif kaydedilemedi", {
+                description: errorMessage,
+            });
         } finally {
             setSaving(false);
         }
@@ -375,8 +387,8 @@ export default function CreateOfferPage() {
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
-                                                                  (customer) => customer.id === selectedCustomerId
-                                                              )?.name
+                                                                (customer) => customer.id === selectedCustomerId
+                                                            )?.name
                                                             : "Müşteri seçin (opsiyonel)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -488,7 +500,7 @@ export default function CreateOfferPage() {
                                                 >
                                                     {selectedProductId
                                                         ? products.find((product) => product.id === selectedProductId)
-                                                              ?.name
+                                                            ?.name
                                                         : "Ürün ara veya seç..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
@@ -575,11 +587,11 @@ export default function CreateOfferPage() {
                                                                                             "number"
                                                                                             ? product.price
                                                                                             : typeof product.price ===
-                                                                                              "string"
-                                                                                            ? parseFloat(
-                                                                                                  product.price
-                                                                                              ) || 0
-                                                                                            : 0
+                                                                                                "string"
+                                                                                                ? parseFloat(
+                                                                                                    product.price
+                                                                                                ) || 0
+                                                                                                : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
@@ -980,7 +992,7 @@ export default function CreateOfferPage() {
                                                             />
                                                         </svg>
                                                     </div>
-                                                    {currentOfferId ? "Güncelle" : "Kaydet"}
+                                                    Kaydet
                                                 </>
                                             )}
                                         </Button>
@@ -1170,8 +1182,8 @@ export default function CreateOfferPage() {
                                                             {discountMethod === "total"
                                                                 ? `-€${formatNumber(calculateDiscount())}`
                                                                 : `Satırlara dağıtılacak: €${formatNumber(
-                                                                      calculateDiscount()
-                                                                  )}`}
+                                                                    calculateDiscount()
+                                                                )}`}
                                                         </span>
                                                     </div>
                                                 </div>

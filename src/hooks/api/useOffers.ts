@@ -17,31 +17,39 @@ interface OfferItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    discountAmount?: number;
+    discountType?: string;
+    discountValue?: number;
     sortOrder?: number;
 }
 
 interface Offer {
     id: number;
-    offerNumber: string;
-    customerId?: number;
+    offer_number: string;
+    customer_id?: number;
+    customer_name?: string;
     subtotal: number;
-    discountAmount: number;
-    netTotal: number;
-    vatRate: number;
-    vatAmount: number;
-    totalAmount: number;
+    discount_amount: number;
+    net_total: number;
+    vat_rate: number;
+    vat_amount: number;
+    total_amount: number;
     status: string;
-    validUntil?: string;
+    valid_until?: string;
     notes?: string;
-    items: OfferItem[];
-    createdAt: string;
-    updatedAt: string;
+    item_count: number;
+    total_items_price: number;
+    created_at: string;
+    updated_at: string;
 }
 
 interface CreateOfferData {
     offerNumber?: string;
     customerId?: number;
     subtotal: number;
+    discountType?: string;
+    discountValue?: number;
+    discountMethod?: string;
     discountAmount: number;
     netTotal: number;
     vatRate: number;
@@ -111,12 +119,12 @@ export const useOffers = () => {
         }
     }, []);
 
-    const getOfferById = useCallback(async (offerId: number) => {
+    const getOfferById = useCallback(async (offerId: number): Promise<any> => {
         try {
             setLoading(true);
             setError(null);
 
-            const response = await apiClient.get<Offer>(API_ENDPOINTS.offers.getById(offerId.toString()));
+            const response = await apiClient.get<any>(API_ENDPOINTS.offers.getById(offerId.toString()));
             return response;
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Teklif yüklenirken bir hata oluştu";

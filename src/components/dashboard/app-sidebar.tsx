@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type LucideIcon, Newspaper, House, Users, Plus } from "lucide-react";
+import { type LucideIcon, Newspaper, House, Users, Plus, FileText } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -80,9 +80,19 @@ const adminMenus: MenuGroup[] = [
                 ],
             },
             {
-                title: "Teklif Oluştur",
-                url: "/create-offer",
-                icon: Newspaper,
+                title: "Teklifler",
+                url: "/offer",
+                icon: FileText,
+                items: [
+                    {
+                        title: "Teklif Listesi",
+                        url: "/offer",
+                    },
+                    {
+                        title: "Yeni Teklif Oluştur",
+                        url: "/offer/add",
+                    },
+                ],
             },
             {
                 title: "Kullanıcılar",
@@ -134,9 +144,19 @@ const userMenus: MenuGroup[] = [
                 ],
             },
             {
-                title: "Teklif Oluştur",
-                url: "/create-offer",
-                icon: Newspaper,
+                title: "Teklifler",
+                url: "/offer",
+                icon: FileText,
+                items: [
+                    {
+                        title: "Teklif Listesi",
+                        url: "/offer",
+                    },
+                    {
+                        title: "Yeni Teklif Oluştur",
+                        url: "/offer/add",
+                    },
+                ],
             },
         ],
     },
