@@ -23,6 +23,7 @@ import { formatNumber } from "@/lib/utils";
 import { useOffers } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { generateOfferPdf } from "@/components/OfferPdfPreview";
 
 interface OfferItem {
     id: number;
@@ -990,6 +991,46 @@ export default function CreateOfferPage() {
                                                 variant="outline"
                                                 size="sm"
                                                 className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 h-10 font-medium relative z-10"
+                                                onClick={() =>
+                                                    generateOfferPdf({
+                                                        offerNo: offerNumber,
+                                                        offerDate: new Date().toLocaleDateString("tr-TR"),
+                                                        offerValidUntil: validUntil,
+                                                        customerName:
+                                                            customers.find((c) => c.id === selectedCustomerId)?.name ||
+                                                            "Müşteri Adı",
+                                                        products: offerItems.map((item) => {
+                                                            let oldPrice = undefined;
+                                                            let price = item.unitPrice;
+                                                            if (
+                                                                discountType &&
+                                                                discountValue > 0 &&
+                                                                discountMethod === "distribute"
+                                                            ) {
+                                                                const itemDiscount = calculateItemDiscount(
+                                                                    item.totalPrice
+                                                                );
+                                                                oldPrice = item.unitPrice;
+                                                                price = item.unitPrice - itemDiscount / item.quantity;
+                                                            }
+                                                            return {
+                                                                id: item.id,
+                                                                name: item.name,
+                                                                quantity: item.quantity,
+                                                                price,
+                                                                oldPrice,
+                                                                total: price * item.quantity,
+                                                                imageUrl: item.image,
+                                                            };
+                                                        }),
+                                                        notes: notes,
+                                                        gross: calculateGrossTotal(),
+                                                        discount: calculateDiscount(),
+                                                        net: calculateNetTotal(),
+                                                        vat: calculateVAT(),
+                                                        total: calculateFinalTotal(),
+                                                    })
+                                                }
                                             >
                                                 <div className="w-4 h-4 mr-2">
                                                     <svg
