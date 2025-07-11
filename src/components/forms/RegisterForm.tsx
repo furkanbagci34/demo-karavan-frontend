@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import Link from "next/link";
 import { LogoFull } from "../dashboard/logo";
+import { Users, Shield, UserPlus, Building } from "lucide-react";
 
 export function RegisterForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
     const { mutate: register, isPending } = useRegister({
@@ -44,9 +45,11 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
             <div className="flex flex-col items-center space-y-6 pb-16 pt-10">
                 <LogoFull className="h-12 w-auto" />
                 <div className="space-y-2 text-center">
-                    <h1 className="text-2xl font-semibold tracking-tight">Hesap Oluşturun</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight text-orange-600">
+                        Demonte Karavan - Yeni Hesap
+                    </h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        Yeni bir hesap oluşturarak yapay zeka destekli içerik üretmeye başlayın
+                        Karavan yönetim sistemine katılmak için hesap oluşturun
                     </p>
                 </div>
             </div>
@@ -57,7 +60,11 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                             <div className="grid gap-5">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="firstName" className="text-sm font-medium">
+                                        <Label
+                                            htmlFor="firstName"
+                                            className="text-sm font-medium flex items-center gap-2"
+                                        >
+                                            <Users className="h-4 w-4 text-orange-500" />
                                             Ad
                                         </Label>
                                         <Input
@@ -69,11 +76,16 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                             required
                                             autoComplete="given-name"
                                             name="firstName"
-                                            className="border-muted-foreground/20"
+                                            className="border-muted-foreground/20 focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Adınız"
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="lastName" className="text-sm font-medium">
+                                        <Label
+                                            htmlFor="lastName"
+                                            className="text-sm font-medium flex items-center gap-2"
+                                        >
+                                            <Building className="h-4 w-4 text-orange-500" />
                                             Soyad
                                         </Label>
                                         <Input
@@ -85,13 +97,15 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                             required
                                             autoComplete="family-name"
                                             name="lastName"
-                                            className="border-muted-foreground/20"
+                                            className="border-muted-foreground/20 focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Soyadınız"
                                         />
                                     </div>
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email" className="text-sm font-medium">
-                                        Email
+                                    <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                                        <Users className="h-4 w-4 text-orange-500" />
+                                        E-posta Adresi
                                     </Label>
                                     <Input
                                         id="email"
@@ -102,11 +116,13 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                         required
                                         autoComplete="email"
                                         name="email"
-                                        className="border-muted-foreground/20"
+                                        className="border-muted-foreground/20 focus:border-orange-500 focus:ring-orange-500"
+                                        placeholder="ornek@demontekaravan.com"
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="password" className="text-sm font-medium">
+                                    <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-orange-500" />
                                         Şifre
                                     </Label>
                                     <Input
@@ -118,19 +134,28 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                         required
                                         autoComplete="new-password"
                                         name="password"
-                                        className="border-muted-foreground/20"
+                                        className="border-muted-foreground/20 focus:border-orange-500 focus:ring-orange-500"
+                                        placeholder="••••••••"
                                     />
                                 </div>
                             </div>
                             <div className="grid gap-4">
-                                <Button type="submit" disabled={isPending} size="lg">
+                                <Button
+                                    type="submit"
+                                    disabled={isPending}
+                                    size="lg"
+                                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                                >
                                     {isPending ? (
                                         <>
                                             <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                                             Kayıt yapılıyor...
                                         </>
                                     ) : (
-                                        "Kayıt Ol"
+                                        <>
+                                            <UserPlus className="mr-2 h-4 w-4" />
+                                            Hesap Oluştur
+                                        </>
                                     )}
                                 </Button>
                                 <div className="relative">
@@ -146,10 +171,10 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                     type="button"
                                     disabled={isPending}
                                     size="lg"
-                                    className="border-muted-foreground/20"
+                                    className="border-muted-foreground/20 hover:border-orange-300 hover:bg-orange-50"
                                 >
                                     <Icons.google className="mr-2 h-4 w-4" />
-                                    Google ile devam et
+                                    Google ile Kayıt Ol
                                 </Button>
                             </div>
                         </form>
@@ -158,17 +183,21 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                 <div className="mt-6 grid gap-6">
                     <div className="text-center text-sm">
                         Zaten hesabınız var mı?{" "}
-                        <Button variant="link" className="h-auto p-0 text-primary font-normal" asChild>
+                        <Button
+                            variant="link"
+                            className="h-auto p-0 text-orange-600 hover:text-orange-700 font-normal"
+                            asChild
+                        >
                             <Link href="/login">Giriş Yap</Link>
                         </Button>
                     </div>
                     <div className="text-balance text-center text-xs text-muted-foreground">
                         <span className="space-x-1">
-                            <Link href="/terms" className="underline-offset-4 hover:underline">
+                            <Link href="/terms" className="underline-offset-4 hover:underline text-orange-600">
                                 Hizmet Şartları
                             </Link>
                             <span>-</span>
-                            <Link href="/privacy" className="underline-offset-4 hover:underline">
+                            <Link href="/privacy" className="underline-offset-4 hover:underline text-orange-600">
                                 Gizlilik Politikası
                             </Link>
                         </span>
