@@ -20,9 +20,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText, Eye, Save, Loader2 } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText, Loader2 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { useOffers } from "@/hooks/api/useOffers";
+import { useOffers, type Offer } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
@@ -41,23 +41,6 @@ interface OfferItem {
     itemDiscountAmount?: number;
     itemDiscountType?: string;
     itemDiscountValue?: number;
-}
-
-interface Offer {
-    id: number;
-    offer_number: string;
-    customer_id?: number;
-    customer_name?: string;
-    subtotal: number;
-    discount_amount: number;
-    net_total: number;
-    vat_rate: number;
-    vat_amount: number;
-    total_amount: number;
-    status: string;
-    valid_until?: string;
-    notes?: string;
-    items: OfferItem[];
 }
 
 export default function EditOfferPage() {
@@ -81,7 +64,14 @@ export default function EditOfferPage() {
     const [saving, setSaving] = useState(false);
     const [originalOffer, setOriginalOffer] = useState<Offer | null>(null);
 
-    const { products, loading: productsLoading, error: productsError, getProductsForOffer, getOfferById, updateOffer } = useOffers();
+    const {
+        products,
+        loading: productsLoading,
+        error: productsError,
+        getProductsForOffer,
+        getOfferById,
+        updateOffer,
+    } = useOffers();
     const { customers, isLoading: customersLoading } = useCustomers();
     const isMobile = useIsMobile();
 
@@ -97,7 +87,7 @@ export default function EditOfferPage() {
                 if (offerData) {
                     setOriginalOffer(offerData);
                     setOfferNumber(offerData.offer_number || "");
-                    setValidUntil(offerData.valid_until ? offerData.valid_until.split('T')[0] : "");
+                    setValidUntil(offerData.valid_until ? offerData.valid_until.split("T")[0] : "");
                     setNotes(offerData.notes || "");
                     setSelectedCustomerId(offerData.customer_id || null);
 
@@ -123,30 +113,41 @@ export default function EditOfferPage() {
                         }
 
                         // İndirim yöntemini belirle - eğer herhangi bir item'da indirim varsa "distribute", yoksa "total"
-                        const hasItemDiscounts = offerData.items && offerData.items.some((item: any) =>
-                            item.discountAmount && item.discountAmount > 0
-                        );
+                        const hasItemDiscounts =
+                            offerData.items &&
+                            offerData.items.some(
+                                (item: unknown) =>
+                                    typeof item === "object" &&
+                                    item !== null &&
+                                    "discountAmount" in item &&
+                                    typeof (item as { discountAmount?: number }).discountAmount === "number" &&
+                                    (item as { discountAmount: number }).discountAmount > 0
+                            );
                         setDiscountMethod(hasItemDiscounts ? "distribute" : "total");
                     }
 
                     // Ürünleri yükle
                     if (offerData.items && offerData.items.length > 0) {
-                        const items: OfferItem[] = offerData.items.map((item: any) => ({
-                            id: item.id || Date.now(),
-                            productId: item.productId,
-                            name: item.productName || "",
-                            description: item.productDescription || "",
-                            quantity: item.quantity,
-                            unitPrice: item.unitPrice,
-                            totalPrice: item.totalPrice,
-                            purchasePrice: item.purchasePrice || 0,
-                            totalPurchasePrice: (item.purchasePrice || 0) * item.quantity,
-                            image: item.productImage || "/images/no-image-placeholder.svg",
-                            // İndirim bilgilerini de ekle
-                            itemDiscountAmount: item.discountAmount || 0,
-                            itemDiscountType: item.discountType,
-                            itemDiscountValue: item.discountValue || 0,
-                        }));
+                        const items: OfferItem[] = offerData.items.map((item: unknown) => {
+                            const typedItem = item as Record<string, unknown>;
+                            return {
+                                id: (typedItem.id as number) || Date.now(),
+                                productId: typedItem.productId as number,
+                                name: (typedItem.productName as string) || "",
+                                description: (typedItem.productDescription as string) || "",
+                                quantity: typedItem.quantity as number,
+                                unitPrice: typedItem.unitPrice as number,
+                                totalPrice: typedItem.totalPrice as number,
+                                purchasePrice: (typedItem.purchasePrice as number) || 0,
+                                totalPurchasePrice:
+                                    ((typedItem.purchasePrice as number) || 0) * (typedItem.quantity as number),
+                                image: (typedItem.productImage as string) || "/images/no-image-placeholder.svg",
+                                // İndirim bilgilerini de ekle
+                                itemDiscountAmount: (typedItem.discountAmount as number) || 0,
+                                itemDiscountType: typedItem.discountType as string,
+                                itemDiscountValue: (typedItem.discountValue as number) || 0,
+                            };
+                        });
                         setOfferItems(items);
                     }
                 }
@@ -308,7 +309,11 @@ export default function EditOfferPage() {
 
     const calculateItemDiscount = (itemTotal: number, itemIndex?: number) => {
         // Eğer mevcut item'da indirim varsa onu kullan
-        if (itemIndex !== undefined && offerItems[itemIndex]?.itemDiscountAmount && offerItems[itemIndex].itemDiscountAmount > 0) {
+        if (
+            itemIndex !== undefined &&
+            offerItems[itemIndex]?.itemDiscountAmount &&
+            offerItems[itemIndex].itemDiscountAmount > 0
+        ) {
             return offerItems[itemIndex].itemDiscountAmount;
         }
 
@@ -407,7 +412,10 @@ export default function EditOfferPage() {
             offerNo: offerNumber,
             offerDate: offerDate,
             offerValidUntil: validUntil ? new Date(validUntil).toLocaleDateString("tr-TR") : "Belirtilmemiş",
-            customerName: customers.find(c => c.id === selectedCustomerId)?.name || originalOffer.customer_name || "Müşteri belirtilmemiş",
+            customerName:
+                customers.find((c) => c.id === selectedCustomerId)?.name ||
+                originalOffer.customer_name ||
+                "Müşteri belirtilmemiş",
             products: offerItems.map((item, index) => {
                 let oldPrice = undefined;
                 let price = item.unitPrice;
@@ -418,14 +426,14 @@ export default function EditOfferPage() {
                     const itemDiscount = calculateItemDiscount(item.totalPrice, index);
                     if (itemDiscount > 0) {
                         oldPrice = item.unitPrice;
-                        price = item.unitPrice - (itemDiscount / item.quantity);
+                        price = item.unitPrice - itemDiscount / item.quantity;
                         total = price * item.quantity;
                     }
                 }
                 // Eğer item'da mevcut indirim varsa
                 else if (item.itemDiscountAmount && item.itemDiscountAmount > 0) {
                     oldPrice = item.unitPrice;
-                    price = item.unitPrice - (item.itemDiscountAmount / item.quantity);
+                    price = item.unitPrice - item.itemDiscountAmount / item.quantity;
                     total = price * item.quantity;
                 }
 
@@ -542,8 +550,8 @@ export default function EditOfferPage() {
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
-                                                                (customer) => customer.id === selectedCustomerId
-                                                            )?.name
+                                                                  (customer) => customer.id === selectedCustomerId
+                                                              )?.name
                                                             : "Müşteri seçin (opsiyonel)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -655,7 +663,7 @@ export default function EditOfferPage() {
                                                 >
                                                     {selectedProductId
                                                         ? products.find((product) => product.id === selectedProductId)
-                                                            ?.name
+                                                              ?.name
                                                         : "Ürün ara veya seç..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
@@ -742,11 +750,11 @@ export default function EditOfferPage() {
                                                                                             "number"
                                                                                             ? product.price
                                                                                             : typeof product.price ===
-                                                                                                "string"
-                                                                                                ? parseFloat(
-                                                                                                    product.price
-                                                                                                ) || 0
-                                                                                                : 0
+                                                                                              "string"
+                                                                                            ? parseFloat(
+                                                                                                  product.price
+                                                                                              ) || 0
+                                                                                            : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
@@ -797,7 +805,8 @@ export default function EditOfferPage() {
                                     </div>
                                     {offerItems.length === 0 && (
                                         <p className="text-sm text-slate-600">
-                                            Ürün ekledikten sonra &quot;Güncelle&quot; butonuna basarak teklifi güncelleyin.
+                                            Ürün ekledikten sonra &quot;Güncelle&quot; butonuna basarak teklifi
+                                            güncelleyin.
                                         </p>
                                     )}
                                 </CardHeader>
@@ -925,7 +934,8 @@ export default function EditOfferPage() {
                                                                     </span>
                                                                 </div>
                                                                 {discountMethod === "distribute" &&
-                                                                    calculateItemDiscount(item.totalPrice, index) > 0 && (
+                                                                    calculateItemDiscount(item.totalPrice, index) >
+                                                                        0 && (
                                                                         <div className="flex items-center justify-between pt-1">
                                                                             <span className="text-xs text-red-600">
                                                                                 İndirim:
@@ -1069,11 +1079,15 @@ export default function EditOfferPage() {
                                                             </TableCell>
                                                             {discountMethod === "distribute" && (
                                                                 <TableCell className="text-red-600 font-medium">
-                                                                    {calculateItemDiscount(item.totalPrice, index) > 0 ? (
+                                                                    {calculateItemDiscount(item.totalPrice, index) >
+                                                                    0 ? (
                                                                         <>
                                                                             -€
                                                                             {formatNumber(
-                                                                                calculateItemDiscount(item.totalPrice, index)
+                                                                                calculateItemDiscount(
+                                                                                    item.totalPrice,
+                                                                                    index
+                                                                                )
                                                                             )}
                                                                         </>
                                                                     ) : (
@@ -1296,8 +1310,8 @@ export default function EditOfferPage() {
                                                             {discountMethod === "total"
                                                                 ? `-€${formatNumber(calculateDiscount())}`
                                                                 : `Satırlara dağıtılacak: €${formatNumber(
-                                                                    calculateDiscount()
-                                                                )}`}
+                                                                      calculateDiscount()
+                                                                  )}`}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1328,7 +1342,9 @@ export default function EditOfferPage() {
                                             <span className="text-slate-600">Durum:</span>
                                             <div className="flex items-center gap-1">
                                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                                <span className="text-green-700 font-medium">{originalOffer?.status || "Draft"}</span>
+                                                <span className="text-green-700 font-medium">
+                                                    {originalOffer?.status || "Draft"}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1395,4 +1411,4 @@ export default function EditOfferPage() {
             </div>
         </div>
     );
-} 
+}

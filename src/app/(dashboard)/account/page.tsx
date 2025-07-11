@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/api/useAuth";
 import { useState, useEffect } from "react";
 import { User } from "@/types/user";
-import { formatDate } from "@/lib/utils";
 
 export default function AccountPage() {
     const { user } = useAuth();

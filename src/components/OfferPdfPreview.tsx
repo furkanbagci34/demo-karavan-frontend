@@ -8,6 +8,7 @@ export interface OfferProduct {
     price: number;
     total: number;
     imageUrl?: string;
+    oldPrice?: number;
 }
 
 export interface OfferPdfPreviewProps {
@@ -42,7 +43,6 @@ export async function generateOfferPdf({
     offerNo,
     offerDate,
     offerValidUntil,
-    customerName,
     products,
     gross,
     discount,
@@ -155,9 +155,9 @@ export async function generateOfferPdf({
                             { text: `${p.quantity} adet`, alignment: "center", fontSize: 10 },
                             {
                                 stack: [
-                                    (p as any).oldPrice
+                                    p.oldPrice
                                         ? {
-                                              text: `€ ${(p as any).oldPrice.toFixed(2)}`,
+                                              text: `€ ${p.oldPrice.toFixed(2)}`,
                                               decoration: "lineThrough",
                                               fontSize: 9,
                                               color: "#444",
@@ -168,7 +168,7 @@ export async function generateOfferPdf({
                                         text: `€ ${p.price.toFixed(2)}`,
                                         fontSize: 10,
                                         alignment: "center",
-                                        bold: !!(p as any).oldPrice,
+                                        bold: !!p.oldPrice,
                                     },
                                 ].filter(Boolean),
                                 alignment: "center",
@@ -179,25 +179,25 @@ export async function generateOfferPdf({
                 },
                 layout: {
                     defaultBorder: true,
-                    paddingTop: function (_i: any, _node: any) {
+                    paddingTop: function () {
                         return 8;
                     },
-                    paddingBottom: function (_i: any, _node: any) {
+                    paddingBottom: function () {
                         return 8;
                     },
-                    paddingLeft: function (_i: any, _node: any) {
+                    paddingLeft: function () {
                         return 4;
                     },
-                    paddingRight: function (_i: any, _node: any) {
+                    paddingRight: function () {
                         return 4;
                     },
-                    hLineWidth: function (_i: any, _node: any) {
+                    hLineWidth: function () {
                         return 1;
                     },
-                    vLineWidth: function (_i: any, _node: any) {
+                    vLineWidth: function () {
                         return 0;
                     },
-                    hLineColor: function (_i: any) {
+                    hLineColor: function () {
                         return "#bbb";
                     },
                 },

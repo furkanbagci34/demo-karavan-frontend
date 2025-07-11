@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
-interface Product {
+export interface Product {
     id: number;
     name: string;
     description: string;
@@ -11,7 +11,7 @@ interface Product {
     image: string;
 }
 
-interface OfferItem {
+export interface OfferItem {
     id?: number;
     productId: number;
     quantity: number;
@@ -23,13 +23,15 @@ interface OfferItem {
     sortOrder?: number;
 }
 
-interface Offer {
+export interface Offer {
     id: number;
     offer_number: string;
     customer_id?: number;
     customer_name?: string;
     subtotal: number;
     discount_amount: number;
+    discount_type?: string;
+    discount_value?: number;
     net_total: number;
     vat_rate: number;
     vat_amount: number;
@@ -41,6 +43,7 @@ interface Offer {
     total_items_price: number;
     created_at: string;
     updated_at: string;
+    items?: OfferItem[] | unknown[]; // Backend'den gelen items array
 }
 
 interface CreateOfferData {
@@ -119,12 +122,12 @@ export const useOffers = () => {
         }
     }, []);
 
-    const getOfferById = useCallback(async (offerId: number): Promise<any> => {
+    const getOfferById = useCallback(async (offerId: number): Promise<Offer | null> => {
         try {
             setLoading(true);
             setError(null);
 
-            const response = await apiClient.get<any>(API_ENDPOINTS.offers.getById(offerId.toString()));
+            const response = await apiClient.get<Offer>(API_ENDPOINTS.offers.getById(offerId.toString()));
             return response;
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Teklif yüklenirken bir hata oluştu";

@@ -29,9 +29,21 @@ import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
 const productSchema = z.object({
     name: z.string().min(1, "Ürün adı gereklidir").max(500, "Ürün adı çok uzun"),
     code: z.string().optional(),
-    purchasePrice: z.coerce.number().min(0, "Alış fiyatı 0'dan küçük olamaz").max(999999, "Alış fiyatı çok yüksek").optional(),
-    salePrice: z.coerce.number().min(0, "Satış fiyatı 0'dan küçük olamaz").max(999999, "Satış fiyatı çok yüksek").optional(),
-    stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek").optional(),
+    purchasePrice: z.coerce
+        .number()
+        .min(0, "Alış fiyatı 0'dan küçük olamaz")
+        .max(999999, "Alış fiyatı çok yüksek")
+        .optional(),
+    salePrice: z.coerce
+        .number()
+        .min(0, "Satış fiyatı 0'dan küçük olamaz")
+        .max(999999, "Satış fiyatı çok yüksek")
+        .optional(),
+    stockQuantity: z.coerce
+        .number()
+        .min(0, "Stok miktarı 0'dan küçük olamaz")
+        .max(999999, "Stok miktarı çok yüksek")
+        .optional(),
     description: z.string().optional(),
 });
 
@@ -84,8 +96,8 @@ export default function AddProductPage() {
 
     // Resim sıkıştırma fonksiyonu
     const compressImage = (file: File, callback: (compressedFile: File) => void) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
         const img = new Image();
 
         img.onload = () => {
@@ -119,13 +131,13 @@ export default function AddProductPage() {
                 (blob) => {
                     if (blob) {
                         const compressedFile = new File([blob], file.name, {
-                            type: 'image/jpeg',
+                            type: "image/jpeg",
                             lastModified: Date.now(),
                         });
                         callback(compressedFile);
                     }
                 },
-                'image/jpeg',
+                "image/jpeg",
                 0.7 // Kalite (0.7 = %70 kalite)
             );
         };
@@ -191,10 +203,11 @@ export default function AddProductPage() {
                 // Ürünler sayfasına yönlendir
                 router.push("/product");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Ürün ekleme hatası:", error);
+            const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
             toast.error("Ürün eklenemedi", {
-                description: error.message || "Bir hata oluştu, lütfen tekrar deneyin.",
+                description: errorMessage,
             });
         }
     };

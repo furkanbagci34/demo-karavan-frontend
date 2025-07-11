@@ -13,8 +13,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Pencil, Trash2, Loader2, AlertTriangle, Eye } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
@@ -110,8 +109,6 @@ export default function OfferListPage() {
         }
     };
 
-
-
     // Pagination hesaplamaları
     const totalPages = Math.max(1, Math.ceil(offers.length / PAGE_SIZE));
     const paginatedOffers = offers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -147,7 +144,10 @@ export default function OfferListPage() {
                         <FileText className="h-6 w-6" />
                         Teklifler
                     </h1>
-                    <Button asChild className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md border-0">
+                    <Button
+                        asChild
+                        className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md border-0"
+                    >
                         <Link href="/offer/add">
                             <Plus className="h-4 w-4 mr-2" />
                             Yeni Teklif Oluştur
@@ -218,8 +218,7 @@ export default function OfferListPage() {
                                                 <TableCell>
                                                     {offer.valid_until
                                                         ? new Date(offer.valid_until).toLocaleDateString("tr-TR")
-                                                        : "-"
-                                                    }
+                                                        : "-"}
                                                 </TableCell>
                                                 <TableCell className="flex items-center justify-center gap-2">
                                                     <Link
@@ -269,39 +268,53 @@ export default function OfferListPage() {
                                                 <div className="flex items-start justify-between">
                                                     <div>
                                                         <h3 className="font-medium text-lg">{offer.offer_number}</h3>
-                                                        <p className="text-sm text-slate-600">{offer.customer_name || "Müşteri belirtilmemiş"}</p>
+                                                        <p className="text-sm text-slate-600">
+                                                            {offer.customer_name || "Müşteri belirtilmemiş"}
+                                                        </p>
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-2 text-sm">
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-600">Brüt Toplam:</span>
-                                                        <span className="font-medium">€{formatNumber(offer.subtotal)}</span>
+                                                        <span className="font-medium">
+                                                            €{formatNumber(offer.subtotal)}
+                                                        </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-600">İndirim:</span>
-                                                        <span className="font-medium text-red-600">-€{formatNumber(offer.discount_amount)}</span>
+                                                        <span className="font-medium text-red-600">
+                                                            -€{formatNumber(offer.discount_amount)}
+                                                        </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-600">Net Toplam:</span>
-                                                        <span className="font-medium">€{formatNumber(offer.net_total)}</span>
+                                                        <span className="font-medium">
+                                                            €{formatNumber(offer.net_total)}
+                                                        </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-600">KDV:</span>
-                                                        <span className="font-medium">€{formatNumber(offer.vat_amount)}</span>
+                                                        <span className="font-medium">
+                                                            €{formatNumber(offer.vat_amount)}
+                                                        </span>
                                                     </div>
                                                     <div className="flex justify-between col-span-2">
-                                                        <span className="text-slate-600 font-medium">Genel Toplam:</span>
-                                                        <span className="font-bold">€{formatNumber(offer.total_amount)}</span>
+                                                        <span className="text-slate-600 font-medium">
+                                                            Genel Toplam:
+                                                        </span>
+                                                        <span className="font-bold">
+                                                            €{formatNumber(offer.total_amount)}
+                                                        </span>
                                                     </div>
                                                 </div>
 
                                                 <div className="flex items-center justify-between pt-2 border-t">
                                                     <div className="text-xs text-slate-500">
-                                                        Geçerlilik: {offer.valid_until
+                                                        Geçerlilik:{" "}
+                                                        {offer.valid_until
                                                             ? new Date(offer.valid_until).toLocaleDateString("tr-TR")
-                                                            : "Belirtilmemiş"
-                                                        }
+                                                            : "Belirtilmemiş"}
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <Link
@@ -362,4 +375,4 @@ export default function OfferListPage() {
             </AlertDialog>
         </>
     );
-} 
+}
