@@ -16,7 +16,7 @@ type RegisterData = {
     email: string;
     password: string;
     name: string;
-    surname?: string;
+    surname: string;
 };
 
 export const useAuth = () => {
@@ -86,7 +86,10 @@ export const useRegister = (options?: { onError?: (error: unknown) => void }) =>
 
     return useMutation({
         mutationFn: async (data: RegisterData) => {
-            const response = await apiClient.post<{ token: string }>(API_ENDPOINTS.users.register, data);
+            const response = await apiClient.post<{ token: string; message: string; userId: number }>(
+                API_ENDPOINTS.users.register,
+                data
+            );
             return response;
         },
         onSuccess: async (data) => {

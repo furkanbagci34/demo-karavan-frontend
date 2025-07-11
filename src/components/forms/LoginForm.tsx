@@ -42,21 +42,20 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             <div className="flex flex-col items-center space-y-6 pb-16 pt-10">
                 <LogoFull className="h-20 w-auto" />
                 <div className="space-y-2 text-center">
-                    <h1 className="text-2xl font-semibold tracking-tight text-orange-600">
-                        Demonte Karavan Yönetim Paneli
-                    </h1>
-                    <p className="text-balance text-sm text-muted-foreground">
-                        Karavan satış ve yönetim sistemine hoş geldiniz
-                    </p>
+                    <h1 className="text-2xl font-semibold tracking-tight text-gray-800">Demonte Karavan</h1>
+                    <p className="text-balance text-sm text-gray-600">Yönetim Paneli</p>
                 </div>
             </div>
             <div className="mx-auto w-full max-w-[400px]">
-                <Card className="border-none bg-card/50 shadow-none">
-                    <CardContent className="p-0">
+                <Card className="border border-gray-200 bg-white/80 backdrop-blur-sm shadow-lg">
+                    <CardContent className="p-6">
                         <form onSubmit={handleSubmit} className="grid gap-6">
                             <div className="grid gap-5">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                                    <Label
+                                        htmlFor="email"
+                                        className="text-sm font-medium flex items-center gap-2 text-gray-700"
+                                    >
                                         <Users className="h-4 w-4 text-orange-500" />
                                         E-posta Adresi
                                     </Label>
@@ -69,7 +68,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         required
                                         autoComplete="username"
                                         name="email"
-                                        className="border-muted-foreground/20 focus:border-orange-500 focus:ring-orange-500"
+                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
                                         placeholder="ornek@demontekaravan.com"
                                     />
                                 </div>
@@ -77,7 +76,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                     <div className="flex items-center justify-between">
                                         <Label
                                             htmlFor="password"
-                                            className="text-sm font-medium flex items-center gap-2"
+                                            className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                         >
                                             <Shield className="h-4 w-4 text-orange-500" />
                                             Şifre
@@ -99,7 +98,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         required
                                         autoComplete="current-password"
                                         name="password"
-                                        className="border-muted-foreground/20 focus:border-orange-500 focus:ring-orange-500"
+                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
                                         placeholder="••••••••"
                                     />
                                 </div>
@@ -109,7 +108,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                     type="submit"
                                     disabled={isPending}
                                     size="lg"
-                                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
                                 >
                                     {isPending ? (
                                         <>
@@ -123,12 +122,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         </>
                                     )}
                                 </Button>
-                                <div className="relative">
+                                {/* <div className="relative">
                                     <div className="absolute inset-0 flex items-center">
-                                        <div className="w-full border-t border-muted-foreground/20" />
+                                        <div className="w-full border-t border-gray-300" />
                                     </div>
                                     <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-background px-2 text-muted-foreground">veya</span>
+                                        <span className="bg-white px-2 text-gray-500">veya</span>
                                     </div>
                                 </div>
                                 <Button
@@ -136,17 +135,17 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                     type="button"
                                     disabled={isPending}
                                     size="lg"
-                                    className="border-muted-foreground/20 hover:border-orange-300 hover:bg-orange-50"
+                                    className="border-gray-300 text-gray-700 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700 transition-all duration-200"
                                 >
                                     <Icons.google className="mr-2 h-4 w-4" />
                                     Google ile Giriş Yap
-                                </Button>
+                                </Button> */}
                             </div>
                         </form>
                     </CardContent>
                 </Card>
                 <div className="mt-6 grid gap-6">
-                    <div className="text-center text-sm">
+                    <div className="text-center text-sm text-gray-600">
                         Yeni kullanıcı mısınız?{" "}
                         <Button
                             variant="link"
@@ -156,7 +155,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                             <Link href="/register">Hesap Oluştur</Link>
                         </Button>
                     </div>
-                    <div className="text-balance text-center text-xs text-muted-foreground">
+                    <div className="text-balance text-center text-xs text-gray-500">
                         <span className="space-x-1">
                             <Link href="/terms" className="underline-offset-4 hover:underline text-orange-600">
                                 Hizmet Şartları
