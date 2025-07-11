@@ -1,78 +1,83 @@
 "use client";
 
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from "react";
+import { useDashboardSummary, useMonthlyRevenue, useTopProducts, useRecentOffers } from "@/hooks/api/useDashboard";
+import DashboardStatCard from "@/components/dashboard/DashboardStatCard";
+import RevenueChart from "@/components/dashboard/RevenueChart";
+import TopProductsList from "@/components/dashboard/TopProductsList";
+import RecentOffersList from "@/components/dashboard/RecentOffersList";
+import { Users, FileText, Package, Euro } from "lucide-react";
 
 export default function DashboardPage() {
+    const { summary, isLoading: summaryLoading, error: summaryError } = useDashboardSummary();
+    const { monthlyRevenue, isLoading: revenueLoading } = useMonthlyRevenue();
+    const { topProducts, isLoading: productsLoading } = useTopProducts();
+    const { recentOffers, isLoading: offersLoading } = useRecentOffers();
+
     return (
-        <>
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-                <div className="flex items-center gap-2 px-4">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            <BreadcrumbItem className="hidden md:block">
-                                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                            </BreadcrumbItem>
-                            <BreadcrumbSeparator className="hidden md:block" />
-                            <BreadcrumbItem>
-                                <BreadcrumbPage>Genel Bakış</BreadcrumbPage>
-                            </BreadcrumbItem>
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </div>
-            </header>
-            <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-                </div>
+        <div style={{ padding: 32 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 32, color: "#1e293b" }}>Hoşgeldiniz 👋</h1>
 
-                <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Toplam Ürün</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl sm:text-3xl font-bold">0</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Toplam Kullanıcı</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl sm:text-3xl font-bold">0</div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Aktif Kullanıcı</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl sm:text-3xl font-bold">0</div>
-                        </CardContent>
-                    </Card>
+            {/* Summary Cards */}
+            {summaryLoading && <div>Yükleniyor...</div>}
+            {summaryError && <div style={{ color: "red", marginBottom: 16 }}>{summaryError}</div>}
+            {summary && (
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                        gap: 32,
+                        marginBottom: 32,
+                    }}
+                >
+                    <DashboardStatCard
+                        title="Toplam Müşteri"
+                        value={summary.totalCustomers}
+                        icon={<Users />}
+                        color="#2563eb"
+                        description="Kayıtlı müşteri sayısı"
+                    />
+                    <DashboardStatCard
+                        title="Toplam Teklif"
+                        value={summary.totalOffers}
+                        icon={<FileText />}
+                        color="#f59e42"
+                        description="Oluşturulan teklif sayısı"
+                    />
+                    <DashboardStatCard
+                        title="Toplam Ürün"
+                        value={summary.totalProducts}
+                        icon={<Package />}
+                        color="#10b981"
+                        description="Katalogdaki ürün sayısı"
+                    />
+                    <DashboardStatCard
+                        title="Toplam Ciro"
+                        value={summary.totalRevenue.toLocaleString("tr-TR", { style: "currency", currency: "EUR" })}
+                        icon={<Euro />}
+                        color="#e11d48"
+                        description="Tüm tekliflerin toplam tutarı"
+                    />
                 </div>
+            )}
 
-                <Card className="flex-1">
-                    <CardHeader>
-                        <CardTitle>Son İşlemler</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">Henüz işlem bulunmuyor.</p>
-                    </CardContent>
-                </Card>
+            {/* Charts and Lists */}
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+                    gap: 32,
+                }}
+            >
+                {/* Revenue Chart */}
+                <RevenueChart data={monthlyRevenue} isLoading={revenueLoading} />
+
+                {/* Top Products */}
+                <TopProductsList data={topProducts} isLoading={productsLoading} />
+
+                {/* Recent Offers */}
+                <RecentOffersList data={recentOffers} isLoading={offersLoading} />
             </div>
-        </>
+        </div>
     );
 }

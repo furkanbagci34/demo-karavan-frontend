@@ -29,4 +29,12 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/offers/${id}`,
         delete: (id: string) => `/api/offers/${id}`,
     },
+    dashboard: {
+        summary: "/api/dashboard/summary",
+        monthlyRevenue: "/api/dashboard/monthly-revenue",
+        topProducts: "/api/dashboard/top-products",
+        recentOffers: "/api/dashboard/recent-offers",
+        customerActivity: "/api/dashboard/customer-activity",
+        offerStatusDistribution: "/api/dashboard/offer-status-distribution",
+    },
 } as const;

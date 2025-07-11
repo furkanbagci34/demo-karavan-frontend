@@ -254,6 +254,18 @@ export default function CreateOfferPage() {
         return netTotal + vat;
     };
 
+    const handleClearAll = () => {
+        setOfferItems([]);
+        setSelectedCustomerId(null);
+        setDiscountType(null);
+        setDiscountValue(0);
+        setDiscountMethod(null);
+        setNotes("");
+        toast.success("Tüm liste temizlendi", {
+            description: "Teklif listesi başarıyla sıfırlandı.",
+        });
+    };
+
     const handleSaveOffer = async () => {
         if (offerItems.length === 0) {
             toast.error("Ürün eklenmedi", {
@@ -387,8 +399,8 @@ export default function CreateOfferPage() {
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
-                                                                (customer) => customer.id === selectedCustomerId
-                                                            )?.name
+                                                                  (customer) => customer.id === selectedCustomerId
+                                                              )?.name
                                                             : "Müşteri seçin (opsiyonel)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -500,7 +512,7 @@ export default function CreateOfferPage() {
                                                 >
                                                     {selectedProductId
                                                         ? products.find((product) => product.id === selectedProductId)
-                                                            ?.name
+                                                              ?.name
                                                         : "Ürün ara veya seç..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
@@ -587,11 +599,11 @@ export default function CreateOfferPage() {
                                                                                             "number"
                                                                                             ? product.price
                                                                                             : typeof product.price ===
-                                                                                                "string"
-                                                                                                ? parseFloat(
-                                                                                                    product.price
-                                                                                                ) || 0
-                                                                                                : 0
+                                                                                              "string"
+                                                                                            ? parseFloat(
+                                                                                                  product.price
+                                                                                              ) || 0
+                                                                                            : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
@@ -1061,6 +1073,29 @@ export default function CreateOfferPage() {
                                                 </div>
                                                 PDF Görüntüle
                                             </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 h-10 font-medium mt-2 relative z-10"
+                                                onClick={handleClearAll}
+                                            >
+                                                <div className="w-4 h-4 mr-2">
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                Temizle
+                                            </Button>
                                         </div>
                                     </div>
 
@@ -1182,8 +1217,8 @@ export default function CreateOfferPage() {
                                                             {discountMethod === "total"
                                                                 ? `-€${formatNumber(calculateDiscount())}`
                                                                 : `Satırlara dağıtılacak: €${formatNumber(
-                                                                    calculateDiscount()
-                                                                )}`}
+                                                                      calculateDiscount()
+                                                                  )}`}
                                                         </span>
                                                     </div>
                                                 </div>
