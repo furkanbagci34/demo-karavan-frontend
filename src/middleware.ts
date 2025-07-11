@@ -28,6 +28,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
     matcher: [
         // Public dosyalar ve API rotaları için middleware çalışmaz
-        "/((?!api|_next/static|_next/image|favicon.ico).*)",
+        "/((?!api|_next/static|_next/image|fumagpt.ico|images).*)",
     ],
 };
