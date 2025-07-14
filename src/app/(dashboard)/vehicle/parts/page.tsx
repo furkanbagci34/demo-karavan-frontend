@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
     Breadcrumb,
@@ -16,7 +15,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -26,15 +24,12 @@ import { Car, Package, Plus, Trash2, Loader2, Search } from "lucide-react";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { useProducts } from "@/hooks/api/useProducts";
-import { Vehicle, Product } from "@/lib/api/types";
 
 export default function VehiclePartsPage() {
-    const router = useRouter();
     const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
-    const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
 
     const { vehicles, isLoading: isLoadingVehicles } = useVehicles();
     const { products, isLoading: isLoadingProducts } = useProducts();
@@ -42,7 +37,6 @@ export default function VehiclePartsPage() {
         vehicleParts,
         createVehiclePart,
         updateVehiclePart,
-        deleteVehiclePart,
         isLoading: isLoadingParts,
         isLoadingCreate,
     } = useVehicleParts(selectedVehicleId);
@@ -62,15 +56,6 @@ export default function VehiclePartsPage() {
         setSelectedProductIds((prev) =>
             prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
         );
-    };
-
-    // Miktar değiştirme
-    const updateProductQuantity = (productId: number, quantity: number) => {
-        if (quantity < 1) return;
-        setProductQuantities((prev) => ({
-            ...prev,
-            [productId.toString()]: quantity,
-        }));
     };
 
     // Tüm ürünleri seç/kaldır
@@ -113,20 +98,6 @@ export default function VehiclePartsPage() {
             console.error("Ürün ekleme hatası:", error);
             const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
             toast.error("Ürünler eklenemedi", {
-                description: errorMessage,
-            });
-        }
-    };
-
-    // Parça silme
-    const handleDeletePart = async (partId: string) => {
-        try {
-            await deleteVehiclePart(partId);
-            toast.success("Parça başarıyla silindi");
-        } catch (error: unknown) {
-            console.error("Parça silme hatası:", error);
-            const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
-            toast.error("Parça silinemedi", {
                 description: errorMessage,
             });
         }
@@ -529,23 +500,10 @@ export default function VehiclePartsPage() {
                                     <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                                     <p className="text-muted-foreground">Henüz parça eklenmemiş</p>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        "Parça Ekle" butonuna tıklayarak ürün ekleyebilirsiniz
+                                        &quot;Parça Ekle&quot; butonuna tıklayarak ürün ekleyebilirsiniz.
                                     </p>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Araç seçilmemişse bilgi mesajı */}
-                {!selectedVehicleId && (
-                    <Card>
-                        <CardContent className="p-8 text-center">
-                            <Car className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                            <p className="text-muted-foreground">Lütfen bir araç seçin</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Yukarıdaki araç seçimi dropdown'ından bir araç seçerek parça ekleyebilirsiniz
-                            </p>
                         </CardContent>
                     </Card>
                 )}

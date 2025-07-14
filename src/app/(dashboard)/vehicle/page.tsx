@@ -13,7 +13,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Car, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, Car, Pencil, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
