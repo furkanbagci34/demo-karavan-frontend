@@ -126,6 +126,7 @@ export async function generateOfferPdf({
                             },
                         ].filter(Boolean),
                         alignment: "center",
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     } as any,
                     {
                         text: `€ ${p.total.toFixed(2)}`,
