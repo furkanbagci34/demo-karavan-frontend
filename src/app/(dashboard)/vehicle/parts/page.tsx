@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Package, Plus, Trash2, Loader2, Search } from "lucide-react";
+import { Car, Package, Plus, Trash2, Loader2, Search, Settings } from "lucide-react";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { useProducts } from "@/hooks/api/useProducts";
@@ -185,59 +185,115 @@ export default function VehiclePartsPage() {
                     </h1>
                 </div>
 
-                {/* Araç Seçimi */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Araç Seçimi</CardTitle>
+                {/* Araç Seçimi - İyileştirilmiş Tasarım */}
+                <Card className="border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 transition-colors duration-300">
+                    <CardHeader className="pb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                                <Car className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">Araç Seçimi</CardTitle>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Parçalarını yönetmek istediğiniz aracı seçin
+                                </p>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1">
-                                <Label htmlFor="vehicle-select">Araç Seçin</Label>
-                                <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Araç seçin" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {isLoadingVehicles ? (
-                                            <SelectItem value="loading" disabled>
-                                                <div className="flex items-center gap-2">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Araçlar yükleniyor...
-                                                </div>
-                                            </SelectItem>
-                                        ) : vehicles.length > 0 ? (
-                                            vehicles.map((vehicle) => (
-                                                <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                                                    {vehicle.name}
+                        <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1">
+                                    <Label htmlFor="vehicle-select" className="text-sm font-medium mb-2 block">
+                                        Araç Seçin
+                                    </Label>
+                                    <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
+                                        <SelectTrigger className="w-full h-12 text-base">
+                                            <SelectValue placeholder="Araç seçin" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {isLoadingVehicles ? (
+                                                <SelectItem value="loading" disabled>
+                                                    <div className="flex items-center gap-2">
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                        Araçlar yükleniyor...
+                                                    </div>
                                                 </SelectItem>
-                                            ))
-                                        ) : (
-                                            <SelectItem value="no-vehicles" disabled>
-                                                Araç bulunamadı
-                                            </SelectItem>
-                                        )}
-                                    </SelectContent>
-                                </Select>
+                                            ) : vehicles.length > 0 ? (
+                                                vehicles.map((vehicle) => (
+                                                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                                                        <div className="flex items-center gap-3">
+                                                            <img
+                                                                src={
+                                                                    vehicle.image || "/images/no-image-placeholder.svg"
+                                                                }
+                                                                alt={vehicle.name}
+                                                                className="w-8 h-8 rounded object-cover"
+                                                                onError={(e) => {
+                                                                    const target = e.target as HTMLImageElement;
+                                                                    target.src = "/images/no-image-placeholder.svg";
+                                                                }}
+                                                            />
+                                                            <span className="font-medium">{vehicle.name}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value="no-vehicles" disabled>
+                                                    Araç bulunamadı
+                                                </SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
+
+                            {/* Seçili Araç Bilgileri */}
                             {selectedVehicle && (
-                                <div className="flex items-center gap-2">
-                                    <img
-                                        src={selectedVehicle.image || "/images/no-image-placeholder.svg"}
-                                        alt={selectedVehicle.name}
-                                        className="w-12 h-12 aspect-square object-cover rounded border"
-                                        onError={(e) => {
-                                            const target = e.target as HTMLImageElement;
-                                            target.src = "/images/no-image-placeholder.svg";
-                                        }}
-                                    />
-                                    <div>
-                                        <p className="font-medium">{selectedVehicle.name}</p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {vehicleParts.length > 0
-                                                ? `${vehicleParts[0]?.products?.length || 0} parça`
-                                                : "Henüz parça eklenmemiş"}
-                                        </p>
+                                <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative">
+                                            <img
+                                                src={selectedVehicle.image || "/images/no-image-placeholder.svg"}
+                                                alt={selectedVehicle.name}
+                                                className="w-16 h-16 aspect-square object-cover rounded-lg border-2 border-primary/20 shadow-sm"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.src = "/images/no-image-placeholder.svg";
+                                                }}
+                                            />
+                                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                                                <span className="text-xs font-bold text-primary-foreground">
+                                                    {vehicleParts.length > 0
+                                                        ? vehicleParts[0]?.products?.length || 0
+                                                        : 0}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-lg text-primary">
+                                                {selectedVehicle.name}
+                                            </h3>
+                                            <div className="flex items-center gap-4 mt-1">
+                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                    <Package className="h-4 w-4" />
+                                                    <span>
+                                                        {vehicleParts.length > 0
+                                                            ? `${vehicleParts[0]?.products?.length || 0} parça`
+                                                            : "Henüz parça eklenmemiş"}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                    <Settings className="h-4 w-4" />
+                                                    <span>Parça Yönetimi</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="secondary" className="text-xs">
+                                                Aktif
+                                            </Badge>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -245,15 +301,25 @@ export default function VehiclePartsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Parça Listesi */}
+                {/* Parça Listesi - İyileştirilmiş Tasarım */}
                 {selectedVehicleId && (
-                    <Card>
-                        <CardHeader>
+                    <Card className="shadow-sm border-0 bg-gradient-to-br from-background to-muted/20">
+                        <CardHeader className="pb-4">
                             <div className="flex items-center justify-between">
-                                <CardTitle>Parça Listesi</CardTitle>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-secondary">
+                                        <Package className="h-5 w-5 text-secondary-foreground" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg">Parça Listesi</CardTitle>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Araca eklenen parçaları yönetin
+                                        </p>
+                                    </div>
+                                </div>
                                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                                     <DialogTrigger asChild>
-                                        <Button>
+                                        <Button className="shadow-sm">
                                             <Plus className="h-4 w-4 mr-2" />
                                             Parça Ekle
                                         </Button>
@@ -314,7 +380,7 @@ export default function VehiclePartsPage() {
                                                                 }`}
                                                                 onClick={() => toggleProductSelection(product.id)}
                                                             >
-                                                                {/* Ürün Resmi */}
+                                                                {/* Ürün Resmi - Daha küçük */}
                                                                 <div className="aspect-square mb-3 rounded-md overflow-hidden bg-muted">
                                                                     <img
                                                                         src={
@@ -421,40 +487,53 @@ export default function VehiclePartsPage() {
                                     </div>
                                 </div>
                             ) : vehicleParts.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-4">
                                     {vehicleParts[0]?.products?.map((product) => (
-                                        <Card key={product.id} className="overflow-hidden">
-                                            <div className="aspect-square relative">
-                                                <img
-                                                    src={product.image || "/images/no-image-placeholder.svg"}
-                                                    alt={product.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        const target = e.target as HTMLImageElement;
-                                                        target.src = "/images/no-image-placeholder.svg";
-                                                    }}
-                                                />
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="absolute top-2 right-2"
-                                                    onClick={() => handleRemoveProductFromVehicle(product.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                        <Card
+                                            key={product.id}
+                                            className="overflow-hidden hover:shadow-md transition-shadow duration-200 group"
+                                        >
+                                            <div className="relative">
+                                                {/* Ürün Resmi - Daha küçük ve düzenli */}
+                                                <div className="aspect-[4/3] relative overflow-hidden bg-muted">
+                                                    <img
+                                                        src={product.image || "/images/no-image-placeholder.svg"}
+                                                        alt={product.name}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = "/images/no-image-placeholder.svg";
+                                                        }}
+                                                    />
+                                                    {/* Miktar Badge'i */}
+                                                    <div className="absolute top-2 left-2">
+                                                        <Badge variant="secondary" className="text-xs font-medium">
+                                                            {vehicleParts[0]?.quantities?.[product.id.toString()] || 1}
+                                                        </Badge>
+                                                    </div>
+                                                    {/* Silme Butonu */}
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 w-7 p-0"
+                                                        onClick={() => handleRemoveProductFromVehicle(product.id)}
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="p-3">
-                                                <h3 className="font-medium text-sm truncate">{product.name}</h3>
-                                                {product.code && (
-                                                    <p className="text-xs text-muted-foreground truncate">
-                                                        {product.code}
-                                                    </p>
-                                                )}
-                                                <div className="flex items-center justify-between mt-2">
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Miktar:{" "}
-                                                        {vehicleParts[0]?.quantities?.[product.id.toString()] || 1}
-                                                    </p>
+                                            <div className="p-3 space-y-2">
+                                                <div>
+                                                    <h3 className="font-medium text-sm line-clamp-2 leading-tight">
+                                                        {product.name}
+                                                    </h3>
+                                                    {product.code && (
+                                                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                                                            {product.code}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-1">
                                                         <Button
                                                             variant="outline"
@@ -470,6 +549,9 @@ export default function VehiclePartsPage() {
                                                         >
                                                             +
                                                         </Button>
+                                                        <span className="text-xs font-medium px-2">
+                                                            {vehicleParts[0]?.quantities?.[product.id.toString()] || 1}
+                                                        </span>
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -497,11 +579,20 @@ export default function VehiclePartsPage() {
                                 </div>
                             ) : (
                                 <div className="p-8 text-center">
-                                    <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                                    <p className="text-muted-foreground">Henüz parça eklenmemiş</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        &quot;Parça Ekle&quot; butonuna tıklayarak ürün ekleyebilirsiniz.
-                                    </p>
+                                    <div className="max-w-sm mx-auto">
+                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <Package className="h-8 w-8 text-muted-foreground" />
+                                        </div>
+                                        <h3 className="font-medium text-lg mb-2">Henüz parça eklenmemiş</h3>
+                                        <p className="text-sm text-muted-foreground mb-4">
+                                            Bu araca henüz parça eklenmemiş. Parça Ekle butonuna tıklayarak ürün
+                                            ekleyebilirsiniz.
+                                        </p>
+                                        <Button onClick={() => setIsAddDialogOpen(true)} className="shadow-sm">
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            İlk Parçayı Ekle
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </CardContent>
