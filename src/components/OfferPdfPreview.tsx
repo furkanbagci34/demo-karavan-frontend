@@ -23,6 +23,7 @@ export interface OfferPdfPreviewProps {
     vat: number;
     total: number;
     notes?: string;
+    hidePricing?: boolean; // Yeni parametre: fiyat bilgilerini gizle
 }
 
 function getBase64FromUrl(url: string): Promise<string> {
@@ -50,6 +51,7 @@ export async function generateOfferPdf({
     vat,
     total,
     notes,
+    hidePricing = false, // Varsayılan olarak false
 }: OfferPdfPreviewProps): Promise<void> {
     const pdfMake = (await import("pdfmake/build/pdfmake")).default;
     const pdfFonts = await import("pdfmake/build/vfs_fonts");
@@ -71,6 +73,76 @@ export async function generateOfferPdf({
 
     // PNG logo için base64
     const logoBase64 = await getBase64FromUrl("/images/demonte-icon.png");
+
+    // Tablo başlıklarını ve içeriğini hidePricing parametresine göre ayarla
+    const tableWidths = hidePricing ? [20, 60, "*", 50] : [20, 60, "*", 50, 70, 80];
+
+    const tableBody = [
+        // Header row
+        hidePricing
+            ? [
+                  { text: "", alignment: "center" },
+                  { text: "", alignment: "center" },
+                  { text: "Ürün İsmi", alignment: "center" },
+                  { text: "Miktar", alignment: "center" },
+              ]
+            : [
+                  { text: "", alignment: "center" },
+                  { text: "", alignment: "center" },
+                  { text: "Ürün İsmi", alignment: "center" },
+                  { text: "Miktar", alignment: "center" },
+                  { text: "Fiyat", alignment: "center" },
+                  { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
+              ],
+        // Data rows
+        ...products.map((p, i) => {
+            const baseRow = [
+                { text: (i + 1).toString(), fontSize: 9, alignment: "center", margin: [0, 12, 0, 0] },
+                productImages[i] ? { image: productImages[i], width: 50, height: 50, alignment: "center" } : "",
+                { text: p.name, fontSize: 12, bold: true, alignment: "center", margin: [0, 8, 0, 0] },
+                { text: `${p.quantity} adet`, alignment: "center", fontSize: 10 },
+            ];
+
+            if (!hidePricing) {
+                baseRow.push(
+                    {
+                        stack: [
+                            p.oldPrice
+                                ? {
+                                      text: `€ ${p.oldPrice.toFixed(2)}`,
+                                      decoration: "lineThrough",
+                                      fontSize: 9,
+                                      color: "#444",
+                                      alignment: "center",
+                                  }
+                                : "",
+                            {
+                                text: `€ ${p.price.toFixed(2)}`,
+                                fontSize: 10,
+                                alignment: "center",
+                                bold: !!p.oldPrice,
+                            },
+                        ].filter(Boolean),
+                        alignment: "center",
+                    },
+                    { text: `€ ${p.total.toFixed(2)}`, alignment: "center", fontSize: 10, bold: true }
+                );
+            }
+
+            return baseRow;
+        }),
+    ];
+
+    // Özet tablosunu hidePricing parametresine göre ayarla
+    const summaryTable = {
+        body: [
+            ["Brüt", `€ ${gross.toFixed(2)}`],
+            ["İndirim", `€ ${discount.toFixed(2)}`],
+            ["Net", `€ ${net.toFixed(2)}`],
+            ["KDV (%20)", `€ ${vat.toFixed(2)}`],
+            ["Toplam", { text: `€ ${total.toFixed(2)}`, bold: true }],
+        ],
+    };
 
     const docDefinition = {
         content: [
@@ -136,46 +208,8 @@ export async function generateOfferPdf({
             {
                 table: {
                     headerRows: 1,
-                    widths: [20, 60, "*", 50, 70, 80],
-                    body: [
-                        [
-                            { text: "", alignment: "center" },
-                            { text: "", alignment: "center" },
-                            { text: "Ürün İsmi", alignment: "center" },
-                            { text: "Miktar", alignment: "center" },
-                            { text: "Fiyat", alignment: "center" },
-                            { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
-                        ],
-                        ...products.map((p, i) => [
-                            { text: (i + 1).toString(), fontSize: 9, alignment: "center", margin: [0, 12, 0, 0] },
-                            productImages[i]
-                                ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
-                                : "",
-                            { text: p.name, fontSize: 12, bold: true, alignment: "center", margin: [0, 8, 0, 0] },
-                            { text: `${p.quantity} adet`, alignment: "center", fontSize: 10 },
-                            {
-                                stack: [
-                                    p.oldPrice
-                                        ? {
-                                              text: `€ ${p.oldPrice.toFixed(2)}`,
-                                              decoration: "lineThrough",
-                                              fontSize: 9,
-                                              color: "#444",
-                                              alignment: "center",
-                                          }
-                                        : "",
-                                    {
-                                        text: `€ ${p.price.toFixed(2)}`,
-                                        fontSize: 10,
-                                        alignment: "center",
-                                        bold: !!p.oldPrice,
-                                    },
-                                ].filter(Boolean),
-                                alignment: "center",
-                            },
-                            { text: `€ ${p.total.toFixed(2)}`, alignment: "center", fontSize: 10, bold: true },
-                        ]),
-                    ],
+                    widths: tableWidths,
+                    body: tableBody,
                 },
                 layout: {
                     defaultBorder: true,
@@ -208,15 +242,7 @@ export async function generateOfferPdf({
                     {},
                     {
                         width: "auto",
-                        table: {
-                            body: [
-                                ["Brüt", `€ ${gross.toFixed(2)}`],
-                                ["İndirim", `€ ${discount.toFixed(2)}`],
-                                ["Net", `€ ${net.toFixed(2)}`],
-                                ["KDV (%20)", `€ ${vat.toFixed(2)}`],
-                                ["Toplam", { text: `€ ${total.toFixed(2)}`, bold: true }],
-                            ],
-                        },
+                        table: summaryTable,
                         layout: "noBorders",
                     },
                 ],
@@ -234,7 +260,7 @@ export async function generateOfferPdf({
                         bold: true,
                     },
                     {
-                        text: "Proje Başlangıcı: Teklifimiz, toplam bedelin %50’sinin banka hesabımıza peşinat olarak yatırılması ile başlar. Teklifin kabul edilmesini takiben satış sözleşmesi hazırlanır ve imzalanmasıyla birlikte üretim süreci başlar. Ürününüz, sözleşmede belirtilen tarihte teslim edilir.",
+                        text: "Proje Başlangıcı: Teklifimiz, toplam bedelin %50'sinin banka hesabımıza peşinat olarak yatırılması ile başlar. Teklifin kabul edilmesini takiben satış sözleşmesi hazırlanır ve imzalanmasıyla birlikte üretim süreci başlar. Ürününüz, sözleşmede belirtilen tarihte teslim edilir.",
                         bold: true,
                     },
                     {
