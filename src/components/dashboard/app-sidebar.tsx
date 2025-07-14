@@ -109,6 +109,10 @@ const adminMenus: MenuGroup[] = [
                         title: "Yeni Araç Ekle",
                         url: "/vehicle/add",
                     },
+                    {
+                        title: "Araç Parçaları",
+                        url: "/vehicle/parts",
+                    },
                 ],
             },
             {
@@ -177,6 +181,10 @@ const userMenus: MenuGroup[] = [
                     {
                         title: "Yeni Araç Ekle",
                         url: "/vehicle/add",
+                    },
+                    {
+                        title: "Araç Parçaları",
+                        url: "/vehicle/parts",
                     },
                 ],
             },

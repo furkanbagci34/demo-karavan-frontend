@@ -182,3 +182,27 @@ export interface UpdateVehicleData {
     image?: string;
     isActive?: boolean;
 }
+
+// Vehicle Parts tipleri
+export interface VehiclePart {
+    id: number;
+    vehicle_id: number;
+    product_ids: number[];
+    quantities: Record<string, number>; // Her product ID için miktar bilgisi
+    vehicle_name: string;
+    products: Product[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateVehiclePartData {
+    vehicleId: number;
+    productIds: number[];
+    quantities?: Record<string, number>; // Her product ID için miktar bilgisi
+}
+
+export interface UpdateVehiclePartData {
+    vehicleId?: number;
+    productIds?: number[];
+    quantities?: Record<string, number>; // Her product ID için miktar bilgisi
+}

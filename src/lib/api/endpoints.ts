@@ -35,6 +35,12 @@ export const API_ENDPOINTS = {
         getById: (id: string) => `/api/vehicles/${id}`,
         update: (id: string) => `/api/vehicles/${id}`,
         delete: (id: string) => `/api/vehicles/${id}`,
+        // Vehicle Parts endpoints
+        getParts: (vehicleId: string) => `/api/vehicles/${vehicleId}/parts`,
+        addPart: (vehicleId: string) => `/api/vehicles/${vehicleId}/parts`,
+        updatePart: (vehicleId: string, partId: string) => `/api/vehicles/${vehicleId}/parts/${partId}`,
+        deletePart: (vehicleId: string, partId: string) => `/api/vehicles/${vehicleId}/parts/${partId}`,
+        getPartById: (vehicleId: string, partId: string) => `/api/vehicles/${vehicleId}/parts/${partId}`,
     },
     dashboard: {
         summary: "/api/dashboard/summary",
