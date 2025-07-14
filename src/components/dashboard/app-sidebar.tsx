@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type LucideIcon, Newspaper, House, Users, FileText, Factory } from "lucide-react";
+import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -97,6 +97,21 @@ const adminMenus: MenuGroup[] = [
                 ],
             },
             {
+                title: "Araçlar",
+                url: "/vehicle",
+                icon: Car,
+                items: [
+                    {
+                        title: "Araç Listesi",
+                        url: "/vehicle",
+                    },
+                    {
+                        title: "Yeni Araç Ekle",
+                        url: "/vehicle/add",
+                    },
+                ],
+            },
+            {
                 title: "Üretim",
                 url: "/manufacture",
                 icon: Factory,
@@ -147,6 +162,21 @@ const userMenus: MenuGroup[] = [
                     {
                         title: "Yeni Ürün Ekle",
                         url: "/product/add",
+                    },
+                ],
+            },
+            {
+                title: "Araçlar",
+                url: "/vehicle",
+                icon: Car,
+                items: [
+                    {
+                        title: "Araç Listesi",
+                        url: "/vehicle",
+                    },
+                    {
+                        title: "Yeni Araç Ekle",
+                        url: "/vehicle/add",
                     },
                 ],
             },

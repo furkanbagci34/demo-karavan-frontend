@@ -160,3 +160,25 @@ export interface UpdateCustomerData {
     description?: string;
     isActive?: boolean;
 }
+
+// Vehicle tipleri
+export interface Vehicle {
+    id: number;
+    name: string;
+    image?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateVehicleData {
+    name: string;
+    image?: string;
+    isActive?: boolean;
+}
+
+export interface UpdateVehicleData {
+    name?: string;
+    image?: string;
+    isActive?: boolean;
+}
