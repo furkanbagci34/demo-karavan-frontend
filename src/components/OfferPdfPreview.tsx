@@ -114,6 +114,7 @@ export async function generateOfferPdf({
                                       fontSize: 9,
                                       color: "#444",
                                       alignment: "center",
+                                      margin: [0, 0, 0, 0],
                                   }
                                 : "",
                             {
@@ -121,11 +122,18 @@ export async function generateOfferPdf({
                                 fontSize: 10,
                                 alignment: "center",
                                 bold: !!p.oldPrice,
+                                margin: [0, 0, 0, 0],
                             },
                         ].filter(Boolean),
                         alignment: "center",
-                    },
-                    { text: `€ ${p.total.toFixed(2)}`, alignment: "center", fontSize: 10, bold: true }
+                    } as any,
+                    {
+                        text: `€ ${p.total.toFixed(2)}`,
+                        alignment: "center",
+                        fontSize: 10,
+                        bold: true,
+                        margin: [0, 0, 0, 0],
+                    }
                 );
             }
 
