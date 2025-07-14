@@ -153,12 +153,16 @@ export default function EditProductPage() {
             // Dosya boyutu kontrolü (max 2MB - add sayfasıyla aynı)
             if (file.size > 2 * 1024 * 1024) {
                 toast.error("Dosya boyutu 2MB'dan büyük olamaz");
+                // Input'u temizle
+                event.target.value = "";
                 return;
             }
 
             // Dosya türü kontrolü
             if (!file.type.startsWith("image/")) {
                 toast.error("Sadece resim dosyaları kabul edilir");
+                // Input'u temizle
+                event.target.value = "";
                 return;
             }
 
@@ -167,6 +171,8 @@ export default function EditProductPage() {
                 setImagePreview(compressedImage);
             });
         }
+        // Input'u temizle ki aynı dosya tekrar seçilebilsin
+        event.target.value = "";
     };
 
     const removeImage = () => {
