@@ -85,9 +85,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                             variant="link"
                                             className="h-auto p-0 text-xs font-normal text-orange-600 hover:text-orange-700"
                                             asChild
-                                        >
-                                            <Link href="/forgot-password">Şifremi Unuttum</Link>
-                                        </Button>
+                                        ></Button>
                                     </div>
                                     <Input
                                         id="password"
