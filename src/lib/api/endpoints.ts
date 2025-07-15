@@ -5,6 +5,9 @@ export const API_ENDPOINTS = {
         logout: "/api/users/logout",
         profile: "/api/users/profile",
         update: (userId: string) => `/api/users/${userId}`,
+        getAll: "/api/users",
+        getById: (id: string) => `/api/users/${id}`,
+        delete: (id: string) => `/api/users/${id}`,
     },
     products: {
         create: "/api/products",

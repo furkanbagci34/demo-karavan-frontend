@@ -70,6 +70,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         name="email"
                                         className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
                                         placeholder="ornek@demontekaravan.com"
+                                        tabIndex={1}
                                     />
                                 </div>
                                 <div className="grid gap-2">
@@ -98,6 +99,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         name="password"
                                         className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
                                         placeholder="••••••••"
+                                        tabIndex={2}
                                     />
                                 </div>
                             </div>
@@ -107,6 +109,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                     disabled={isPending}
                                     size="lg"
                                     className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                    tabIndex={3}
                                 >
                                     {isPending ? (
                                         <>
@@ -149,17 +152,26 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                             variant="link"
                             className="h-auto p-0 text-orange-600 hover:text-orange-700 font-normal"
                             asChild
+                            tabIndex={4}
                         >
                             <Link href="/register">Hesap Oluştur</Link>
                         </Button>
                     </div>
                     <div className="text-balance text-center text-xs text-gray-500">
                         <span className="space-x-1">
-                            <Link href="/terms" className="underline-offset-4 hover:underline text-orange-600">
+                            <Link
+                                href="/terms"
+                                className="underline-offset-4 hover:underline text-orange-600"
+                                tabIndex={5}
+                            >
                                 Hizmet Şartları
                             </Link>
                             <span>-</span>
-                            <Link href="/privacy" className="underline-offset-4 hover:underline text-orange-600">
+                            <Link
+                                href="/privacy"
+                                className="underline-offset-4 hover:underline text-orange-600"
+                                tabIndex={6}
+                            >
                                 Gizlilik Politikası
                             </Link>
                         </span>

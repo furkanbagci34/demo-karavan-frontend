@@ -10,19 +10,20 @@ export interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInpu
 }
 
 const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
-    ({ className, onChange, value = "", placeholder = "+90 542 294 0610", ...props }, ref) => {
+    ({ className, onChange, value = "", placeholder = "+90 555 555 55 55", ...props }, ref) => {
         const [displayValue, setDisplayValue] = React.useState("+90 ");
 
         // Telefon numarasını formatla
         const formatPhoneNumber = (numbers: string): string => {
-            // Türkiye telefon numarası formatı (+90 542 294 0610)
+            // Türkiye telefon numarası formatı (+90 5XX XXX XX XX)
             if (numbers.length === 0) return "+90 ";
             if (numbers.length <= 3) return `+90 ${numbers}`;
             if (numbers.length <= 6) return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3)}`;
-            if (numbers.length <= 9) return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6)}`;
-            if (numbers.length <= 10)
-                return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 9)} ${numbers.slice(9)}`;
-            return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 9)} ${numbers.slice(9, 10)}`;
+            if (numbers.length <= 8) return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6)}`;
+            if (numbers.length === 9)
+                return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 8)} ${numbers.slice(8)}`;
+            // 10 ve üzeri rakam için tam format
+            return `+90 ${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 8)} ${numbers.slice(8, 10)}`;
         };
 
         // Input değiştiğinde
@@ -44,6 +45,11 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
             } else {
                 // Sadece rakamları al
                 numbers = input.replace(/\D/g, "");
+            }
+
+            // Maksimum 10 rakam kabul et
+            if (numbers.length > 10) {
+                numbers = numbers.slice(0, 10);
             }
 
             // Formatlanmış değeri göster
@@ -70,6 +76,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                 <input
                     type="tel"
                     data-slot="input"
+                    autoComplete="new-password"
                     className={cn(
                         "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
                         "focus:border-ring",
@@ -82,7 +89,7 @@ const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
                     value={displayValue}
                     onChange={handleChange}
                     placeholder={placeholder}
-                    maxLength={16} // Formatlanmış maksimum uzunluk (+90 542 294 0610)
+                    maxLength={17} // Formatlanmış maksimum uzunluk (+90 555 555 55 55)
                     {...props}
                 />
             </div>

@@ -17,13 +17,26 @@ export interface PaginatedResponse<T> {
     total: number;
 }
 
+export interface UsersResponse {
+    data: User[];
+    totalCount: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
+
 // User tipleri
 export interface User {
-    id: string;
-    email: string;
+    id: number;
     name: string;
+    surname: string;
+    email: string;
+    phone_number: string;
+    is_active: boolean;
     created_at: string;
-    updated_at: string;
+    last_signin_at?: string;
+    role: string;
 }
 
 export type LoginData = {
