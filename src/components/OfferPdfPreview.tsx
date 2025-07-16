@@ -49,16 +49,16 @@ async function getBase64FromUrl(url: string): Promise<string | null> {
         const blob = await response.blob();
 
         // Blob tipini kontrol et
-        if (!blob.type.startsWith('image/')) {
+        if (!blob.type.startsWith("image/")) {
             console.warn(`Invalid image type for ${url}: ${blob.type}`);
             return null;
         }
 
-        return new Promise<string | null>((resolve, reject) => {
+        return new Promise<string | null>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const result = reader.result as string;
-                if (result && result.startsWith('data:image/')) {
+                if (result && result.startsWith("data:image/")) {
                     resolve(result);
                 } else {
                     console.warn(`Invalid base64 result for ${url}`);
@@ -124,24 +124,26 @@ export async function generateOfferPdf({
         // Header row
         hidePricing
             ? [
-                { text: "", alignment: "center" },
-                { text: "", alignment: "center" },
-                { text: "Ürün İsmi", alignment: "center" },
-                { text: "Miktar", alignment: "center" },
-            ]
+                  { text: "", alignment: "center" },
+                  { text: "", alignment: "center" },
+                  { text: "Ürün İsmi", alignment: "center" },
+                  { text: "Miktar", alignment: "center" },
+              ]
             : [
-                { text: "", alignment: "center" },
-                { text: "", alignment: "center" },
-                { text: "Ürün İsmi", alignment: "center" },
-                { text: "Miktar", alignment: "center" },
-                { text: "Fiyat", alignment: "center" },
-                { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
-            ],
+                  { text: "", alignment: "center" },
+                  { text: "", alignment: "center" },
+                  { text: "Ürün İsmi", alignment: "center" },
+                  { text: "Miktar", alignment: "center" },
+                  { text: "Fiyat", alignment: "center" },
+                  { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
+              ],
         // Data rows
         ...products.map((p, i) => {
             const baseRow = [
                 { text: (i + 1).toString(), fontSize: 9, alignment: "center", margin: [0, 12, 0, 0] },
-                productImages[i] ? { image: productImages[i], width: 50, height: 50, alignment: "center" } : { text: "", width: 50, height: 50 },
+                productImages[i]
+                    ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
+                    : { text: "", width: 50, height: 50 },
                 { text: p.name, fontSize: 12, bold: true, alignment: "center", margin: [0, 8, 0, 0] },
                 { text: `${p.quantity} adet`, alignment: "center", fontSize: 10 },
             ];
@@ -152,13 +154,13 @@ export async function generateOfferPdf({
                         stack: [
                             p.oldPrice
                                 ? {
-                                    text: `€ ${p.oldPrice.toFixed(2)}`,
-                                    decoration: "lineThrough",
-                                    fontSize: 9,
-                                    color: "#444",
-                                    alignment: "center",
-                                    margin: [0, 0, 0, 0],
-                                }
+                                      text: `€ ${p.oldPrice.toFixed(2)}`,
+                                      decoration: "lineThrough",
+                                      fontSize: 9,
+                                      color: "#444",
+                                      alignment: "center",
+                                      margin: [0, 0, 0, 0],
+                                  }
                                 : "",
                             {
                                 text: `€ ${p.price.toFixed(2)}`,
@@ -206,13 +208,15 @@ export async function generateOfferPdf({
                         { text: "Prestij İş Merkezi No:41/2", fontSize: 9, margin: [0, 0, 0, 0] },
                         { text: "Başakşehir/İstanbul", fontSize: 9, margin: [0, 0, 0, 0] },
                     ],
-                    logoBase64 ? {
-                        width: 60,
-                        image: logoBase64,
-                        fit: [60, 60],
-                        alignment: "right",
-                        margin: [0, 0, 0, 0],
-                    } : { width: 60, text: "" },
+                    logoBase64
+                        ? {
+                              width: 60,
+                              image: logoBase64,
+                              fit: [60, 60],
+                              alignment: "right",
+                              margin: [0, 0, 0, 0],
+                          }
+                        : { width: 60, text: "" },
                 ],
                 margin: [0, 0, 0, 10],
             },

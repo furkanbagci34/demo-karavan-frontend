@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText, Car } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { useOffers } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
@@ -73,7 +73,7 @@ export default function CreateOfferPage() {
     const { products, loading, error, getProductsForOffer, createOffer } = useOffers();
     const { customers, isLoading: customersLoading } = useCustomers();
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
-    const { vehicleParts, isLoading: vehiclePartsLoading } = useVehicleParts(selectedVehicleId?.toString());
+    const { vehicleParts } = useVehicleParts(selectedVehicleId?.toString());
     const isMobile = useIsMobile();
 
     // Sayfa yüklendiğinde ürünleri getir
@@ -95,14 +95,14 @@ export default function CreateOfferPage() {
         if (selectedVehicleId && vehicleParts.length > 0) {
             console.log("🚗 Seçili araç parçaları:", {
                 vehicleId: selectedVehicleId,
-                vehicleName: vehicles.find(v => v.id === selectedVehicleId)?.name,
-                parts: vehicleParts
+                vehicleName: vehicles.find((v) => v.id === selectedVehicleId)?.name,
+                parts: vehicleParts,
             });
 
             // Araç parçalarını teklife ekle (handleAddProduct mantığıyla)
-            vehicleParts.forEach(vehiclePart => {
+            vehicleParts.forEach((vehiclePart) => {
                 if (vehiclePart.products && vehiclePart.products.length > 0) {
-                    vehiclePart.products.forEach(product => {
+                    vehiclePart.products.forEach((product) => {
                         // handleAddProduct mantığını kullan
                         // Fiyatı number'a çevir ve güvenlik kontrolü yap
                         let unitPrice: number;
@@ -148,18 +148,21 @@ export default function CreateOfferPage() {
                                 unitPrice: unitPrice,
                                 totalPrice: unitPrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
                                 purchasePrice: purchasePrice,
-                                totalPurchasePrice: purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
+                                totalPurchasePrice:
+                                    purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
                                 image: product.image || "/images/no-image-placeholder.svg",
                             };
 
-                            setOfferItems(prev => [...prev, newItem]);
+                            setOfferItems((prev) => [...prev, newItem]);
                         }
                     });
                 }
             });
 
             toast.success("Araç parçaları teklife eklendi", {
-                description: `${vehicles.find(v => v.id === selectedVehicleId)?.name} aracının parçaları teklif listesine eklendi.`,
+                description: `${
+                    vehicles.find((v) => v.id === selectedVehicleId)?.name
+                } aracının parçaları teklif listesine eklendi.`,
             });
         }
     }, [selectedVehicleId, vehicleParts, vehicles]);
@@ -482,8 +485,8 @@ export default function CreateOfferPage() {
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
-                                                                (customer) => customer.id === selectedCustomerId
-                                                            )?.name
+                                                                  (customer) => customer.id === selectedCustomerId
+                                                              )?.name
                                                             : "Müşteri seçin (opsiyonel)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -558,8 +561,8 @@ export default function CreateOfferPage() {
                                                     >
                                                         {selectedVehicleId
                                                             ? vehicles.find(
-                                                                (vehicle) => vehicle.id === selectedVehicleId
-                                                            )?.name
+                                                                  (vehicle) => vehicle.id === selectedVehicleId
+                                                              )?.name
                                                             : "Araç seçin (opsiyonel)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -622,8 +625,10 @@ export default function CreateOfferPage() {
                                                                                     alt={vehicle.name}
                                                                                     className="w-full h-full object-cover"
                                                                                     onError={(e) => {
-                                                                                        const target = e.target as HTMLImageElement;
-                                                                                        target.src = "/images/no-image-placeholder.svg";
+                                                                                        const target =
+                                                                                            e.target as HTMLImageElement;
+                                                                                        target.src =
+                                                                                            "/images/no-image-placeholder.svg";
                                                                                     }}
                                                                                 />
                                                                             </div>
@@ -684,7 +689,7 @@ export default function CreateOfferPage() {
                                                 >
                                                     {selectedProductId
                                                         ? products.find((product) => product.id === selectedProductId)
-                                                            ?.name
+                                                              ?.name
                                                         : "Ürün ara veya seç..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
@@ -771,11 +776,11 @@ export default function CreateOfferPage() {
                                                                                             "number"
                                                                                             ? product.price
                                                                                             : typeof product.price ===
-                                                                                                "string"
-                                                                                                ? parseFloat(
-                                                                                                    product.price
-                                                                                                ) || 0
-                                                                                                : 0
+                                                                                              "string"
+                                                                                            ? parseFloat(
+                                                                                                  product.price
+                                                                                              ) || 0
+                                                                                            : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
@@ -1433,8 +1438,8 @@ export default function CreateOfferPage() {
                                                             {discountMethod === "total"
                                                                 ? `-€${formatNumber(calculateDiscount())}`
                                                                 : `Satırlara dağıtılacak: €${formatNumber(
-                                                                    calculateDiscount()
-                                                                )}`}
+                                                                      calculateDiscount()
+                                                                  )}`}
                                                         </span>
                                                     </div>
                                                 </div>
