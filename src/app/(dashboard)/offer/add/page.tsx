@@ -20,10 +20,12 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText, Car } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { useOffers } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
+import { useVehicles } from "@/hooks/api/useVehicles";
+import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
 
@@ -60,6 +62,7 @@ export default function CreateOfferPage() {
     });
     const [notes, setNotes] = useState("");
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+    const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
     const [discountType, setDiscountType] = useState<"percentage" | "amount" | null>(null);
     const [discountValue, setDiscountValue] = useState<number>(0);
     const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>(null);
@@ -69,6 +72,8 @@ export default function CreateOfferPage() {
 
     const { products, loading, error, getProductsForOffer, createOffer } = useOffers();
     const { customers, isLoading: customersLoading } = useCustomers();
+    const { vehicles, isLoading: vehiclesLoading } = useVehicles();
+    const { vehicleParts, isLoading: vehiclePartsLoading } = useVehicleParts(selectedVehicleId?.toString());
     const isMobile = useIsMobile();
 
     // Sayfa yüklendiğinde ürünleri getir
@@ -84,6 +89,17 @@ export default function CreateOfferPage() {
             getProductsForOffer();
         }
     }, [searchTerm, getProductsForOffer]);
+
+    // Araç seçildiğinde parçalarını logla
+    useEffect(() => {
+        if (selectedVehicleId && vehicleParts.length > 0) {
+            console.log("🚗 Seçili araç parçaları:", {
+                vehicleId: selectedVehicleId,
+                vehicleName: vehicles.find(v => v.id === selectedVehicleId)?.name,
+                parts: vehicleParts
+            });
+        }
+    }, [selectedVehicleId, vehicleParts, vehicles]);
 
     const handleAddProduct = (productId: number) => {
         const product = products.find((p) => p.id === productId);
@@ -259,6 +275,7 @@ export default function CreateOfferPage() {
     const handleClearAll = () => {
         setOfferItems([]);
         setSelectedCustomerId(null);
+        setSelectedVehicleId(null);
         setDiscountType(null);
         setDiscountValue(0);
         setDiscountMethod(null);
@@ -281,6 +298,7 @@ export default function CreateOfferPage() {
         const offerData = {
             offerNumber: offerNumber || undefined,
             customerId: selectedCustomerId || undefined,
+            vehicleId: selectedVehicleId || undefined,
             subtotal: calculateGrossTotal(),
             discountType: discountType || undefined,
             discountValue: discountValue,
@@ -378,7 +396,7 @@ export default function CreateOfferPage() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-1">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">
                                                 Teklif Numarası
@@ -401,8 +419,8 @@ export default function CreateOfferPage() {
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
-                                                                  (customer) => customer.id === selectedCustomerId
-                                                              )?.name
+                                                                (customer) => customer.id === selectedCustomerId
+                                                            )?.name
                                                             : "Müşteri seçin (opsiyonel)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
@@ -467,6 +485,95 @@ export default function CreateOfferPage() {
                                             </Popover>
                                         </div>
                                         <div className="space-y-1">
+                                            <label className="text-sm font-medium text-slate-700">Araç Seçimi</label>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className="w-full justify-between h-9 text-left font-normal border-slate-300 hover:bg-slate-50"
+                                                    >
+                                                        {selectedVehicleId
+                                                            ? vehicles.find(
+                                                                (vehicle) => vehicle.id === selectedVehicleId
+                                                            )?.name
+                                                            : "Araç seçin (opsiyonel)..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-full p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Araç ara..." className="h-9" />
+                                                        <CommandEmpty>
+                                                            {vehiclesLoading ? (
+                                                                <div className="flex items-center justify-center py-4">
+                                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                                                    <span className="ml-2 text-sm">Yükleniyor...</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                                                    Araç bulunamadı
+                                                                </div>
+                                                            )}
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            <CommandList className="max-h-[200px]">
+                                                                <CommandItem
+                                                                    onSelect={() => setSelectedVehicleId(null)}
+                                                                    className="flex items-center gap-2"
+                                                                >
+                                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
+                                                                        {!selectedVehicleId && (
+                                                                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-sm text-slate-500">
+                                                                        Araç seçme
+                                                                    </span>
+                                                                </CommandItem>
+                                                                {vehicles.map((vehicle) => (
+                                                                    <CommandItem
+                                                                        key={vehicle.id}
+                                                                        onSelect={() =>
+                                                                            setSelectedVehicleId(vehicle.id)
+                                                                        }
+                                                                        className="flex items-center gap-2"
+                                                                    >
+                                                                        <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
+                                                                            {selectedVehicleId === vehicle.id && (
+                                                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <div className="font-medium text-sm">
+                                                                                {vehicle.name}
+                                                                            </div>
+                                                                            <div className="text-xs text-slate-500">
+                                                                                {vehicle.is_active ? "Aktif" : "Pasif"}
+                                                                            </div>
+                                                                        </div>
+                                                                        {vehicle.image && (
+                                                                            <div className="w-6 h-6 rounded border overflow-hidden flex-shrink-0">
+                                                                                <img
+                                                                                    src={vehicle.image}
+                                                                                    alt={vehicle.name}
+                                                                                    className="w-full h-full object-cover"
+                                                                                    onError={(e) => {
+                                                                                        const target = e.target as HTMLImageElement;
+                                                                                        target.src = "/images/no-image-placeholder.svg";
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandList>
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">
                                                 Geçerlilik Tarihi
                                             </label>
@@ -514,7 +621,7 @@ export default function CreateOfferPage() {
                                                 >
                                                     {selectedProductId
                                                         ? products.find((product) => product.id === selectedProductId)
-                                                              ?.name
+                                                            ?.name
                                                         : "Ürün ara veya seç..."}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
@@ -601,11 +708,11 @@ export default function CreateOfferPage() {
                                                                                             "number"
                                                                                             ? product.price
                                                                                             : typeof product.price ===
-                                                                                              "string"
-                                                                                            ? parseFloat(
-                                                                                                  product.price
-                                                                                              ) || 0
-                                                                                            : 0
+                                                                                                "string"
+                                                                                                ? parseFloat(
+                                                                                                    product.price
+                                                                                                ) || 0
+                                                                                                : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
@@ -1067,6 +1174,7 @@ export default function CreateOfferPage() {
                                                         customerName:
                                                             customers.find((c) => c.id === selectedCustomerId)?.name ||
                                                             "Müşteri Adı",
+
                                                         products: offerItems.map((item) => {
                                                             let oldPrice = undefined;
                                                             let price = item.unitPrice;
@@ -1262,8 +1370,8 @@ export default function CreateOfferPage() {
                                                             {discountMethod === "total"
                                                                 ? `-€${formatNumber(calculateDiscount())}`
                                                                 : `Satırlara dağıtılacak: €${formatNumber(
-                                                                      calculateDiscount()
-                                                                  )}`}
+                                                                    calculateDiscount()
+                                                                )}`}
                                                         </span>
                                                     </div>
                                                 </div>
