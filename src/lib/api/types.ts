@@ -178,6 +178,7 @@ export interface UpdateCustomerData {
 export interface Vehicle {
     id: number;
     name: string;
+    brand_model?: string;
     image?: string;
     is_active: boolean;
     created_at: string;
@@ -186,12 +187,14 @@ export interface Vehicle {
 
 export interface CreateVehicleData {
     name: string;
+    brandModel?: string;
     image?: string;
     isActive?: boolean;
 }
 
 export interface UpdateVehicleData {
     name?: string;
+    brandModel?: string;
     image?: string;
     isActive?: boolean;
 }

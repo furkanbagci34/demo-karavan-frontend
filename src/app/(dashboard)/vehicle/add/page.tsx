@@ -27,6 +27,7 @@ import { Car, Upload, ImageIcon, Save, X } from "lucide-react";
 // Form doğrulama şeması
 const vehicleSchema = z.object({
     name: z.string().min(1, "Araç adı gereklidir").max(500, "Araç adı çok uzun"),
+    brandModel: z.string().optional(),
 });
 
 type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -41,6 +42,7 @@ export default function AddVehiclePage() {
         resolver: zodResolver(vehicleSchema),
         defaultValues: {
             name: "",
+            brandModel: "",
         },
     });
 
@@ -145,6 +147,7 @@ export default function AddVehiclePage() {
                     // API çağrısı
                     const vehicleData = {
                         name: data.name,
+                        brandModel: data.brandModel || undefined,
                         image: imageBase64,
                         isActive: true,
                     };
@@ -163,6 +166,7 @@ export default function AddVehiclePage() {
                 // Resim yoksa direkt API çağrısı
                 const vehicleData = {
                     name: data.name,
+                    brandModel: data.brandModel || undefined,
                     image: undefined,
                     isActive: true,
                 };
@@ -236,6 +240,19 @@ export default function AddVehiclePage() {
                                                 <FormLabel>Araç Adı</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Araç adını giriniz" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="brandModel"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Marka Model</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Örn: Volkswagen Transporter, Mercedes Sprinter" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

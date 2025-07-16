@@ -90,13 +90,76 @@ export default function CreateOfferPage() {
         }
     }, [searchTerm, getProductsForOffer]);
 
-    // Araç seçildiğinde parçalarını logla
+    // Araç seçildiğinde parçalarını logla ve teklife ekle
     useEffect(() => {
         if (selectedVehicleId && vehicleParts.length > 0) {
             console.log("🚗 Seçili araç parçaları:", {
                 vehicleId: selectedVehicleId,
                 vehicleName: vehicles.find(v => v.id === selectedVehicleId)?.name,
                 parts: vehicleParts
+            });
+
+            // Araç parçalarını teklife ekle (handleAddProduct mantığıyla)
+            vehicleParts.forEach(vehiclePart => {
+                if (vehiclePart.products && vehiclePart.products.length > 0) {
+                    vehiclePart.products.forEach(product => {
+                        // handleAddProduct mantığını kullan
+                        // Fiyatı number'a çevir ve güvenlik kontrolü yap
+                        let unitPrice: number;
+                        if (typeof product.sale_price === "string") {
+                            unitPrice = parseFloat(product.sale_price);
+                        } else if (typeof product.sale_price === "number") {
+                            unitPrice = product.sale_price;
+                        } else {
+                            unitPrice = 0;
+                        }
+
+                        if (isNaN(unitPrice) || unitPrice < 0) {
+                            console.error("Geçersiz fiyat:", product.sale_price);
+                            return;
+                        }
+
+                        // Alış fiyatını al
+                        let purchasePrice: number;
+                        if (typeof product.purchase_price === "string") {
+                            purchasePrice = parseFloat(product.purchase_price);
+                        } else if (typeof product.purchase_price === "number") {
+                            purchasePrice = product.purchase_price;
+                        } else {
+                            purchasePrice = 0;
+                        }
+
+                        if (isNaN(purchasePrice) || purchasePrice < 0) {
+                            purchasePrice = 0;
+                        }
+
+                        // Aynı ürün zaten eklenmişse miktarını artır
+                        const existingItemIndex = offerItems.findIndex((item) => item.productId === product.id);
+
+                        if (existingItemIndex >= 0) {
+                            handleQuantityChange(existingItemIndex, offerItems[existingItemIndex].quantity + 1);
+                        } else {
+                            const newItem: OfferItem = {
+                                id: Date.now() + Math.random(),
+                                productId: product.id,
+                                name: product.name || "Ürün",
+                                description: product.description || product.code || product.name || "Ürün açıklaması",
+                                quantity: vehiclePart.quantities?.[product.id.toString()] || 1,
+                                unitPrice: unitPrice,
+                                totalPrice: unitPrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
+                                purchasePrice: purchasePrice,
+                                totalPurchasePrice: purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
+                                image: product.image || "/images/no-image-placeholder.svg",
+                            };
+
+                            setOfferItems(prev => [...prev, newItem]);
+                        }
+                    });
+                }
+            });
+
+            toast.success("Araç parçaları teklife eklendi", {
+                description: `${vehicles.find(v => v.id === selectedVehicleId)?.name} aracının parçaları teklif listesine eklendi.`,
             });
         }
     }, [selectedVehicleId, vehicleParts, vehicles]);
@@ -141,7 +204,7 @@ export default function CreateOfferPage() {
             handleQuantityChange(existingItemIndex, offerItems[existingItemIndex].quantity + 1);
         } else {
             const newItem: OfferItem = {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 productId: product.id,
                 name: product.name,
                 description: product.description,

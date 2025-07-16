@@ -136,6 +136,7 @@ export default function VehicleListPage() {
                                     <TableRow>
                                         <TableHead className="w-16">Fotoğraf</TableHead>
                                         <TableHead>Araç Adı</TableHead>
+                                        <TableHead>Marka Model</TableHead>
                                         <TableHead>Durum</TableHead>
                                         <TableHead>Oluşturulma Tarihi</TableHead>
                                         <TableHead className="text-center w-20">İşlemler</TableHead>
@@ -158,11 +159,10 @@ export default function VehicleListPage() {
                                                     <img
                                                         src={vehicle.image || "/images/no-image-placeholder.svg"}
                                                         alt={vehicle.name}
-                                                        className={`w-12 h-12 aspect-square object-cover rounded border ${
-                                                            vehicle.image
-                                                                ? "cursor-pointer hover:opacity-80 transition-opacity"
-                                                                : ""
-                                                        }`}
+                                                        className={`w-12 h-12 aspect-square object-cover rounded border ${vehicle.image
+                                                            ? "cursor-pointer hover:opacity-80 transition-opacity"
+                                                            : ""
+                                                            }`}
                                                         onClick={() => vehicle.image && handleImageClick(vehicle)}
                                                         onError={(e) => {
                                                             const target = e.target as HTMLImageElement;
@@ -171,13 +171,15 @@ export default function VehicleListPage() {
                                                     />
                                                 </TableCell>
                                                 <TableCell className="font-medium">{vehicle.name}</TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {vehicle.brand_model || "-"}
+                                                </TableCell>
                                                 <TableCell>
                                                     <span
-                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                            vehicle.is_active
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-red-100 text-red-800"
-                                                        }`}
+                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${vehicle.is_active
+                                                            ? "bg-green-100 text-green-800"
+                                                            : "bg-red-100 text-red-800"
+                                                            }`}
                                                     >
                                                         {vehicle.is_active ? "Aktif" : "Pasif"}
                                                     </span>
@@ -226,11 +228,10 @@ export default function VehicleListPage() {
                                                 <img
                                                     src={vehicle.image || "/images/no-image-placeholder.svg"}
                                                     alt={vehicle.name}
-                                                    className={`w-16 h-16 aspect-square object-cover rounded border flex-shrink-0 ${
-                                                        vehicle.image
-                                                            ? "cursor-pointer hover:opacity-80 transition-opacity"
-                                                            : ""
-                                                    }`}
+                                                    className={`w-16 h-16 aspect-square object-cover rounded border flex-shrink-0 ${vehicle.image
+                                                        ? "cursor-pointer hover:opacity-80 transition-opacity"
+                                                        : ""
+                                                        }`}
                                                     onClick={() => vehicle.image && handleImageClick(vehicle)}
                                                     onError={(e) => {
                                                         const target = e.target as HTMLImageElement;
@@ -239,13 +240,17 @@ export default function VehicleListPage() {
                                                 />
                                                 <div className="flex-1 min-w-0">
                                                     <h3 className="font-medium text-sm truncate">{vehicle.name}</h3>
+                                                    {vehicle.brand_model && (
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {vehicle.brand_model}
+                                                        </p>
+                                                    )}
                                                     <div className="flex items-center gap-2 mt-1">
                                                         <span
-                                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                                vehicle.is_active
-                                                                    ? "bg-green-100 text-green-800"
-                                                                    : "bg-red-100 text-red-800"
-                                                            }`}
+                                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${vehicle.is_active
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-red-100 text-red-800"
+                                                                }`}
                                                         >
                                                             {vehicle.is_active ? "Aktif" : "Pasif"}
                                                         </span>

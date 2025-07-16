@@ -27,6 +27,7 @@ import { Vehicle } from "@/lib/api/types";
 
 const vehicleSchema = z.object({
     name: z.string().min(1, "Araç adı gereklidir").max(500, "Araç adı çok uzun"),
+    brandModel: z.string().optional(),
 });
 
 type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -46,6 +47,7 @@ export default function EditVehiclePage() {
         resolver: zodResolver(vehicleSchema),
         defaultValues: {
             name: "",
+            brandModel: "",
         },
     });
 
@@ -83,6 +85,7 @@ export default function EditVehiclePage() {
             // Form'u tek seferde doldur (daha hızlı)
             const formData = {
                 name: vehicleData.name,
+                brandModel: vehicleData.brand_model || "",
             };
 
             form.reset(formData);
@@ -166,6 +169,7 @@ export default function EditVehiclePage() {
             // Tüm alanları gönder, backend sadece değişenleri güncelleyecek
             const updateData: Record<string, unknown> = {
                 name: data.name,
+                brandModel: data.brandModel || undefined,
                 image: imagePreview,
             };
 
@@ -271,6 +275,19 @@ export default function EditVehiclePage() {
                                                 <FormLabel>Araç Adı</FormLabel>
                                                 <FormControl>
                                                     <Input placeholder="Araç adını giriniz" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="brandModel"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Marka Model</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Örn: Volkswagen Transporter, Mercedes Sprinter" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
