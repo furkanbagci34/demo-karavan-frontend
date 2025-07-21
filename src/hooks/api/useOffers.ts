@@ -84,6 +84,22 @@ export const useOffers = () => {
         }
     }, []);
 
+    const getLastOfferId = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.get<{ lastId: number }>(API_ENDPOINTS.offers.getLastId);
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : "Son teklif ID'si alınırken bir hata oluştu";
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     const createOffer = useCallback(async (offerData: CreateOfferData) => {
         try {
             setLoading(true);
@@ -177,6 +193,7 @@ export const useOffers = () => {
         loading,
         error,
         getProductsForOffer,
+        getLastOfferId,
         createOffer,
         updateOffer,
         getOfferById,

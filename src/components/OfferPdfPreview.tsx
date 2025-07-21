@@ -188,14 +188,23 @@ export async function generateOfferPdf({
     ];
 
     // Özet tablosunu hidePricing parametresine göre ayarla
+    const summaryTableBody: (string | { text: string; bold: boolean })[][] = [
+        ["Brüt", `€ ${gross.toFixed(2)}`],
+    ];
+    
+    // İndirim varsa ekle
+    if (discount > 0) {
+        summaryTableBody.push(["İndirim", `€ ${discount.toFixed(2)}`]);
+    }
+    
+    summaryTableBody.push(
+        ["Net", `€ ${net.toFixed(2)}`],
+        ["KDV (%20)", `€ ${vat.toFixed(2)}`],
+        ["Toplam", { text: `€ ${total.toFixed(2)}`, bold: true }]
+    );
+    
     const summaryTable = {
-        body: [
-            ["Brüt", `€ ${gross.toFixed(2)}`],
-            ["İndirim", `€ ${discount.toFixed(2)}`],
-            ["Net", `€ ${net.toFixed(2)}`],
-            ["KDV (%20)", `€ ${vat.toFixed(2)}`],
-            ["Toplam", { text: `€ ${total.toFixed(2)}`, bold: true }],
-        ],
+        body: summaryTableBody,
     };
 
     const docDefinition = {

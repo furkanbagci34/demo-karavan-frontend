@@ -27,6 +27,16 @@ import { useOffers, type Offer } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface OfferItem {
     id: number;
@@ -59,12 +69,14 @@ export default function EditOfferPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
     const [discountType, setDiscountType] = useState<"percentage" | "amount" | null>(null);
     const [discountValue, setDiscountValue] = useState<number>(0);
-    const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>(null);
+    const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>("total");
     const [showPricingInPdf, setShowPricingInPdf] = useState(true); // PDF'de fiyat gösterimi için switch
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [originalOffer, setOriginalOffer] = useState<Offer | null>(null);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<{ index: number; name: string; image: string } | null>(null);
 
     const {
         products,
@@ -238,8 +250,21 @@ export default function EditOfferPage() {
     };
 
     const handleRemoveItem = (index: number) => {
-        const updatedItems = offerItems.filter((_, i) => i !== index);
-        setOfferItems(updatedItems);
+        const itemToRemove = offerItems[index];
+        setItemToDelete({ index, name: itemToRemove.name, image: itemToRemove.image });
+        setShowDeleteDialog(true);
+    };
+
+    const confirmDeleteItem = () => {
+        if (itemToDelete) {
+            const updatedItems = offerItems.filter((_, i) => i !== itemToDelete.index);
+            setOfferItems(updatedItems);
+            toast.success("Ürün kaldırıldı", {
+                description: `${itemToDelete.name} teklif listesinden kaldırıldı.`,
+            });
+        }
+        setShowDeleteDialog(false);
+        setItemToDelete(null);
     };
 
     const handleQuantityChange = (index: number, newQuantity: number) => {
@@ -300,12 +325,12 @@ export default function EditOfferPage() {
     const calculateDiscount = () => {
         if (!discountType || discountValue <= 0) return 0;
 
-        const grossTotal = calculateGrossTotal();
+        const finalTotal = calculateGrossTotal() + (calculateGrossTotal() * 0.2); // Brüt + KDV
 
         if (discountType === "percentage") {
-            return (grossTotal * discountValue) / 100;
+            return (finalTotal * discountValue) / 100;
         } else {
-            return Math.min(discountValue, grossTotal);
+            return Math.min(discountValue, finalTotal);
         }
     };
 
@@ -331,18 +356,19 @@ export default function EditOfferPage() {
 
     const calculateNetTotal = () => {
         const grossTotal = calculateGrossTotal();
+        const vat = grossTotal * 0.2; // %20 KDV
+        const finalTotal = grossTotal + vat;
         const discount = discountMethod === "total" ? calculateDiscount() : 0;
-        return grossTotal - discount;
+        return finalTotal - discount;
     };
 
     const calculateVAT = () => {
-        return calculateNetTotal() * 0.2; // %20 KDV
+        const grossTotal = calculateGrossTotal();
+        return grossTotal * 0.2; // %20 KDV
     };
 
     const calculateFinalTotal = () => {
-        const netTotal = calculateNetTotal();
-        const vat = calculateVAT();
-        return netTotal + vat;
+        return calculateNetTotal(); // Artık net total zaten KDV dahil toplam - indirim
     };
 
     const handleUpdateOffer = async () => {
@@ -1262,10 +1288,11 @@ export default function EditOfferPage() {
                                                         type="button"
                                                         variant={discountType === "percentage" ? "default" : "outline"}
                                                         size="sm"
+                                                        disabled={offerItems.length === 0}
                                                         onClick={() => {
                                                             setDiscountType("percentage");
                                                             setDiscountValue(0);
-                                                            setDiscountMethod(null);
+                                                            setDiscountMethod("total");
                                                         }}
                                                         className="flex-1 h-8 text-xs"
                                                     >
@@ -1275,10 +1302,11 @@ export default function EditOfferPage() {
                                                         type="button"
                                                         variant={discountType === "amount" ? "default" : "outline"}
                                                         size="sm"
+                                                        disabled={offerItems.length === 0}
                                                         onClick={() => {
                                                             setDiscountType("amount");
                                                             setDiscountValue(0);
-                                                            setDiscountMethod(null);
+                                                            setDiscountMethod("total");
                                                         }}
                                                         className="flex-1 h-8 text-xs"
                                                     >
@@ -1287,7 +1315,7 @@ export default function EditOfferPage() {
                                                 </div>
                                             </div>
 
-                                            {discountType && (
+                                            {/*{discountType && (
                                                 <div className="space-y-2">
                                                     <label className="text-xs font-medium text-slate-700">
                                                         İndirim Yöntemi
@@ -1315,7 +1343,7 @@ export default function EditOfferPage() {
                                                         </Button>
                                                     </div>
                                                 </div>
-                                            )}
+                                            )}*/}
 
                                             {discountType && discountMethod && (
                                                 <div className="space-y-2">
@@ -1448,6 +1476,42 @@ export default function EditOfferPage() {
                     </div>
                 </div>
             </div>
+
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-4 mb-4">
+                            {itemToDelete && (
+                                <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden relative">
+                                    <img
+                                        src={itemToDelete.image || "/images/no-image-placeholder.svg"}
+                                        alt={itemToDelete.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = "/images/no-image-placeholder.svg";
+                                        }}
+                                    />
+                                </div>
+                            )}
+                            <div className="flex-1">
+                                <AlertDialogTitle>
+                                    {itemToDelete ? `"${itemToDelete.name}" ürününü kaldırmak istediğinize emin misiniz?` : "Hata"}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Bu işlem geri alınamaz. Ürün teklif listesinden kaldırılacak.
+                                </AlertDialogDescription>
+                            </div>
+                        </div>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>İptal</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteItem}>
+                            Kaldır
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
