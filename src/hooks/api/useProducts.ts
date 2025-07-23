@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Product, CreateProductData, UpdateProductData, ApiResponse } from "@/lib/api/types";
@@ -87,10 +88,10 @@ export const useProducts = () => {
     });
 
     // Tekil ürün getir
-    const getProductById = async (id: string): Promise<Product> => {
+    const getProductById = useCallback(async (id: string): Promise<Product> => {
         const response = await apiClient.get<Product>(API_ENDPOINTS.products.getById(id));
         return response;
-    };
+    }, []);
 
     const updateProductStockQuantity = async (
         id: string,
