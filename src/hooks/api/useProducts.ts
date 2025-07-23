@@ -92,12 +92,24 @@ export const useProducts = () => {
         return response;
     };
 
+    const updateProductStockQuantity = async (
+        id: string,
+        quantity: number
+    ): Promise<ApiResponse<{ message: string }>> => {
+        const response = await apiClient.put<ApiResponse<{ message: string }>>(
+            API_ENDPOINTS.products.updateStockQuantity(id),
+            { quantity }
+        );
+        return response;
+    };
+
     return {
         products,
         createProduct: createProductMutation.mutateAsync,
         updateProduct: (id: string, data: UpdateProductData) => updateProductMutation.mutateAsync({ id, data }),
         deleteProduct: deleteProductMutation.mutateAsync,
         getProductById,
+        updateProductStockQuantity,
         isLoading,
         isLoadingCreate: createProductMutation.isPending,
         isLoadingUpdate: updateProductMutation.isPending,

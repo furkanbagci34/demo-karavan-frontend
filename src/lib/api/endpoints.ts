@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
         getById: (id: string) => `/api/products/${id}`,
         update: (id: string) => `/api/products/${id}`,
         delete: (id: string) => `/api/products/${id}`,
+        updateStockQuantity: (id: string) => `/api/products/${id}/stock-quantity`,
     },
     customers: {
         create: "/api/customers",
