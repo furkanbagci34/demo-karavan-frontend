@@ -1,5 +1,12 @@
 # Build stage
-FROM --platform=linux/arm64 node:22-alpine AS builder
+FROM --platform=linux/arm64 node:20-alpine AS builder
+
+# Install system dependencies for native modules
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    libc6-compat
 
 # Install dependencies only when needed
 WORKDIR /app
@@ -8,7 +15,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies for build (including devDependencies)
-RUN npm ci && npm cache clean --force
+# Use npm install instead of npm ci for better compatibility
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -18,7 +26,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Production stage - optimized with standalone output
-FROM --platform=linux/arm64 node:22-alpine AS runner
+FROM --platform=linux/arm64 node:20-alpine AS runner
 
 WORKDIR /app
 
