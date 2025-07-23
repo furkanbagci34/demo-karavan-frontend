@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -30,23 +30,11 @@ import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
 const productSchema = z.object({
     name: z.string().min(1, "Ürün adı gereklidir").max(500, "Ürün adı çok uzun"),
     code: z.string().optional(),
-    purchasePrice: z.coerce
-        .number()
-        .min(0, "Alış fiyatı 0'dan küçük olamaz")
-        .max(999999, "Alış fiyatı çok yüksek")
-        .optional(),
-    salePrice: z.coerce
-        .number()
-        .min(0, "Satış fiyatı 0'dan küçük olamaz")
-        .max(999999, "Satış fiyatı çok yüksek")
-        .optional(),
-    stockQuantity: z.coerce
-        .number()
-        .min(0, "Stok miktarı 0'dan küçük olamaz")
-        .max(999999, "Stok miktarı çok yüksek")
-        .optional(),
+    purchasePrice: z.string().optional(),
+    salePrice: z.string().optional(),
+    stockQuantity: z.string().optional(),
     description: z.string().optional(),
-    unit: z.enum(["Adet", "Saat"]).optional().default("Adet"),
+    unit: z.enum(["Adet", "Saat"]),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -68,6 +56,7 @@ export default function AddProductPage() {
             description: "",
             unit: "Adet",
         },
+        mode: "onChange",
     });
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +148,7 @@ export default function AddProductPage() {
         setImagePreview(null);
     };
 
-    const onSubmit = async (data: ProductFormData) => {
+    const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
         try {
             // Resim dosyasını base64'e çevir
             let imageBase64 = undefined;
@@ -172,9 +161,9 @@ export default function AddProductPage() {
                     const productData = {
                         name: data.name,
                         code: data.code || undefined,
-                        purchasePrice: data.purchasePrice,
-                        salePrice: data.salePrice,
-                        stockQuantity: data.stockQuantity,
+                        purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice) : undefined,
+                        salePrice: data.salePrice ? parseFloat(data.salePrice) : undefined,
+                        stockQuantity: data.stockQuantity ? parseInt(data.stockQuantity) : undefined,
                         description: data.description || undefined,
                         unit: data.unit,
                         image: imageBase64,
@@ -196,9 +185,9 @@ export default function AddProductPage() {
                 const productData = {
                     name: data.name,
                     code: data.code || undefined,
-                    purchasePrice: data.purchasePrice,
-                    salePrice: data.salePrice,
-                    stockQuantity: data.stockQuantity,
+                    purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice) : undefined,
+                    salePrice: data.salePrice ? parseFloat(data.salePrice) : undefined,
+                    stockQuantity: data.stockQuantity ? parseInt(data.stockQuantity) : undefined,
                     description: data.description || undefined,
                     unit: data.unit,
                     image: undefined,
@@ -308,6 +297,7 @@ export default function AddProductPage() {
                                                             min="0"
                                                             placeholder="0.00"
                                                             {...field}
+                                                            value={field.value ?? ""}
                                                         />
                                                     </FormControl>
                                                     <FormMessage />
@@ -328,6 +318,7 @@ export default function AddProductPage() {
                                                             min="0"
                                                             placeholder="0.00"
                                                             {...field}
+                                                            value={field.value ?? ""}
                                                         />
                                                     </FormControl>
                                                     <FormMessage />
@@ -343,7 +334,13 @@ export default function AddProductPage() {
                                                     <FormItem>
                                                         <FormLabel>Stok Miktarı</FormLabel>
                                                         <FormControl>
-                                                            <Input type="number" min="0" placeholder="0" {...field} />
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                placeholder="0"
+                                                                {...field}
+                                                                value={field.value ?? ""}
+                                                            />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
@@ -356,7 +353,7 @@ export default function AddProductPage() {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Birim</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
                                                             <FormControl>
                                                                 <SelectTrigger className="h-10 w-full">
                                                                     <SelectValue placeholder="Birim" />

@@ -87,7 +87,8 @@ export default function CreateOfferPage() {
     useEffect(() => {
         getProductsForOffer();
         generateOfferNumber();
-    }, [getProductsForOffer]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Arama yapıldığında ürünleri filtrele
     useEffect(() => {
@@ -101,7 +102,6 @@ export default function CreateOfferPage() {
     // Araç seçildiğinde parçalarını teklife ekle
     useEffect(() => {
         if (selectedVehicleId && vehicleParts.length > 0) {
-
             // Araç parçalarını teklife ekle (handleAddProduct mantığıyla)
             vehicleParts.forEach((vehiclePart) => {
                 if (vehiclePart.products && vehiclePart.products.length > 0) {
@@ -136,28 +136,35 @@ export default function CreateOfferPage() {
                             purchasePrice = 0;
                         }
 
-                        // Aynı ürün zaten eklenmişse miktarını artır
-                        const existingItemIndex = offerItems.findIndex((item) => item.productId === product.id);
+                        // Yeni ürün oluştur ve ekle
+                        const newItem: OfferItem = {
+                            id: Date.now() + Math.random(),
+                            productId: product.id,
+                            name: product.name || "Ürün",
+                            description: product.description || product.code || product.name || "Ürün açıklaması",
+                            quantity: vehiclePart.quantities?.[product.id.toString()] || 1,
+                            unitPrice: unitPrice,
+                            totalPrice: unitPrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
+                            purchasePrice: purchasePrice,
+                            totalPurchasePrice: purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
+                            image: product.image || "/images/no-image-placeholder.svg",
+                        };
 
-                        if (existingItemIndex >= 0) {
-                            handleQuantityChange(existingItemIndex, offerItems[existingItemIndex].quantity + 1);
-                        } else {
-                            const newItem: OfferItem = {
-                                id: Date.now() + Math.random(),
-                                productId: product.id,
-                                name: product.name || "Ürün",
-                                description: product.description || product.code || product.name || "Ürün açıklaması",
-                                quantity: vehiclePart.quantities?.[product.id.toString()] || 1,
-                                unitPrice: unitPrice,
-                                totalPrice: unitPrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
-                                purchasePrice: purchasePrice,
-                                totalPurchasePrice:
-                                    purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
-                                image: product.image || "/images/no-image-placeholder.svg",
-                            };
-
-                            setOfferItems((prev) => [...prev, newItem]);
-                        }
+                        setOfferItems((prev) => {
+                            // Aynı ürün zaten eklenmişse miktarını artır
+                            const existingItemIndex = prev.findIndex((item) => item.productId === product.id);
+                            if (existingItemIndex >= 0) {
+                                const updated = [...prev];
+                                updated[existingItemIndex].quantity += 1;
+                                updated[existingItemIndex].totalPrice =
+                                    updated[existingItemIndex].unitPrice * updated[existingItemIndex].quantity;
+                                updated[existingItemIndex].totalPurchasePrice =
+                                    updated[existingItemIndex].purchasePrice * updated[existingItemIndex].quantity;
+                                return updated;
+                            } else {
+                                return [...prev, newItem];
+                            }
+                        });
                     });
                 }
             });
@@ -307,7 +314,7 @@ export default function CreateOfferPage() {
     const calculateDiscount = () => {
         if (!discountType || discountValue === 0) return 0;
 
-        const finalTotal = calculateGrossTotal() + (calculateGrossTotal() * 0.2); // Brüt + KDV
+        const finalTotal = calculateGrossTotal() + calculateGrossTotal() * 0.2; // Brüt + KDV
 
         if (discountType === "amount") {
             // Tutarsal indirim - toplam tutarın (KDV dahil) yüzdesi
@@ -436,7 +443,7 @@ export default function CreateOfferPage() {
             const month = String(today.getMonth() + 1).padStart(2, "0");
             const day = String(today.getDate()).padStart(2, "0");
             const dateString = `${year}-${month}-${day}`;
-            
+
             const lastOfferResponse = await getLastOfferId();
             const nextId = lastOfferResponse.lastId || 1;
 
@@ -1271,13 +1278,15 @@ export default function CreateOfferPage() {
                                                 onClick={() => {
                                                     if (!isSaved) {
                                                         toast.error("İlk önce teklifi kaydetmelisiniz", {
-                                                            description: "PDF görüntülemeden önce lütfen teklifi kaydedin.",
+                                                            description:
+                                                                "PDF görüntülemeden önce lütfen teklifi kaydedin.",
                                                         });
                                                         return;
                                                     }
                                                     if (offerItems.length === 0) {
                                                         toast.error("Ürün eklenmedi", {
-                                                            description: "PDF görüntülemek için lütfen en az bir ürün ekleyin.",
+                                                            description:
+                                                                "PDF görüntülemek için lütfen en az bir ürün ekleyin.",
                                                         });
                                                         return;
                                                     }

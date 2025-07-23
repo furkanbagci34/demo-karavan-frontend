@@ -35,7 +35,7 @@ const productSchema = z.object({
     stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek"),
     description: z.string().optional(),
     image: z.string().optional(),
-    unit: z.enum(["Adet", "Saat"]).optional().default("Adet"),
+    unit: z.enum(["Adet", "Saat"]),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -103,7 +103,7 @@ export default function EditProductPage() {
                 salePrice: productData.sale_price || 0,
                 stockQuantity: productData.stock_quantity || 0,
                 description: productData.description || "",
-                unit: productData.unit || "Adet",
+                unit: (productData.unit as "Adet" | "Saat") || "Adet",
             };
 
             form.reset(formData);
@@ -376,8 +376,8 @@ export default function EditProductPage() {
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Birim</FormLabel>
-                                                        <Select 
-                                                            onValueChange={field.onChange} 
+                                                        <Select
+                                                            onValueChange={field.onChange}
                                                             value={field.value}
                                                             key={field.value}
                                                         >
