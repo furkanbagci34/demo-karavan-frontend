@@ -79,6 +79,10 @@ const adminMenus: MenuGroup[] = [
                         title: "Yeni Ürün Ekle",
                         url: "/product/add",
                     },
+                    {
+                        title: "Ürün Stok Durumu",
+                        url: "/product/stock",
+                    },
                 ],
             },
             {
@@ -166,6 +170,10 @@ const userMenus: MenuGroup[] = [
                     {
                         title: "Yeni Ürün Ekle",
                         url: "/product/add",
+                    },
+                    {
+                        title: "Ürün Stok Durumu",
+                        url: "/product/stock",
                     },
                 ],
             },
