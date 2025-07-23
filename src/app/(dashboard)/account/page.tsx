@@ -43,7 +43,6 @@ export default function AccountPage() {
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         // Burada profil güncellemesi yapılacak
-        console.log("Güncellenen profil:", formData);
         alert("Profil güncellendi!");
     };
 
