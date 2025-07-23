@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from "./endpoints";
 import { ApiError } from "./types";
 import Cookies from "js-cookie";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fumagpt.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.demontekaravan.com";
 
 type RequestData = Record<string, unknown>;
 
