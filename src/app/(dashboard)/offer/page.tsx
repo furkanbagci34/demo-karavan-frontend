@@ -13,6 +13,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -32,6 +33,71 @@ import {
 import { formatNumber } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
+
+// Status renklerini belirleyen fonksiyonlar
+const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+        case "beklemede":
+            return "bg-yellow-100 text-yellow-800";
+        case "tamamlandı":
+            return "bg-green-100 text-green-800";
+        case "üretimde":
+            return "bg-purple-100 text-purple-800";
+        case "iptal edildi":
+            return "bg-blue-100 text-blue-800";
+        case "gönderildi":
+            return "bg-blue-100 text-blue-800";
+        case "reddedildi":
+            return "bg-red-100 text-red-800";
+        case "onaylandı":
+            return "bg-green-100 text-green-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+};
+
+// Satır arka plan rengini belirleyen fonksiyon
+const getRowBackgroundColor = (status: string) => {
+    switch (status.toLowerCase()) {
+        case "beklemede":
+            return "bg-yellow-50 hover:bg-yellow-100";
+        case "tamamlandı":
+            return "bg-green-50 hover:bg-green-100";
+        case "üretimde":
+            return "bg-purple-50 hover:bg-purple-100";
+        case "iptal edildi":
+            return "bg-blue-50 hover:bg-blue-100";
+        case "gönderildi":
+            return "bg-blue-50 hover:bg-blue-100";
+        case "reddedildi":
+            return "bg-red-50 hover:bg-red-100";
+        case "onaylandı":
+            return "bg-green-50 hover:bg-green-100";
+        default:
+            return "bg-gray-50 hover:bg-gray-100";
+    }
+};
+
+const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+        case "beklemede":
+            return "Beklemede";
+        case "tamamlandı":
+            return "Tamamlandı";
+        case "üretimde":
+            return "Üretimde";
+        case "iptal edildi":
+            return "İptal Edildi";
+        case "gönderildi":
+            return "Gönderildi";
+        case "reddedildi":
+            return "Reddedildi";
+        case "onaylandı":
+            return "Onaylandı";
+        default:
+            return status;
+    }
+};
 
 interface Offer {
     id: number;
@@ -167,6 +233,7 @@ export default function OfferListPage() {
                                     <TableRow>
                                         <TableHead>Teklif No</TableHead>
                                         <TableHead>Müşteri</TableHead>
+                                        <TableHead>Durum</TableHead>
                                         <TableHead className="text-right">Brüt Toplam (€)</TableHead>
                                         <TableHead className="text-right">İndirim (€)</TableHead>
                                         <TableHead className="text-right">Net Toplam (€)</TableHead>
@@ -197,9 +264,14 @@ export default function OfferListPage() {
                                         </TableRow>
                                     ) : (
                                         paginatedOffers.map((offer) => (
-                                            <TableRow key={offer.id}>
+                                            <TableRow key={offer.id} className={getRowBackgroundColor(offer.status)}>
                                                 <TableCell className="font-medium">{offer.offer_number}</TableCell>
                                                 <TableCell>{offer.customer_name || "-"}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={getStatusColor(offer.status)}>
+                                                        {getStatusText(offer.status)}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     {formatNumber(offer.subtotal)}
                                                 </TableCell>
@@ -263,7 +335,10 @@ export default function OfferListPage() {
                             ) : (
                                 <div className="grid grid-cols-1 gap-4 p-4">
                                     {paginatedOffers.map((offer) => (
-                                        <Card key={offer.id} className="overflow-hidden">
+                                        <Card
+                                            key={offer.id}
+                                            className={`overflow-hidden ${getRowBackgroundColor(offer.status)}`}
+                                        >
                                             <div className="p-4 space-y-3">
                                                 <div className="flex items-start justify-between">
                                                     <div>
@@ -272,6 +347,9 @@ export default function OfferListPage() {
                                                             {offer.customer_name || "Müşteri belirtilmemiş"}
                                                         </p>
                                                     </div>
+                                                    <Badge className={getStatusColor(offer.status)}>
+                                                        {getStatusText(offer.status)}
+                                                    </Badge>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-2 text-sm">

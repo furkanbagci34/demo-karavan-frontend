@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import {
     Breadcrumb,
@@ -26,6 +26,7 @@ import { useOffers } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useVehicleParts } from "@/hooks/api/useVehicleParts";
+import { useProducts } from "@/hooks/api/useProducts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
 import {
@@ -39,6 +40,19 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Türkçe karakterleri normalize eden fonksiyon
+const normalizeTurkishText = (text: string): string => {
+    return text
+        .replace(/İ/g, "i")
+        .replace(/I/g, "ı")
+        .replace(/Ğ/g, "ğ")
+        .replace(/Ü/g, "ü")
+        .replace(/Ş/g, "ş")
+        .replace(/Ö/g, "ö")
+        .replace(/Ç/g, "ç")
+        .toLowerCase();
+};
+
 interface OfferItem {
     id: number;
     productId: number;
@@ -50,6 +64,7 @@ interface OfferItem {
     purchasePrice: number;
     totalPurchasePrice: number;
     image: string;
+    unit?: string; // Ürün birimi (Adet, Saat vb.)
 }
 
 export default function CreateOfferPage() {
@@ -77,27 +92,35 @@ export default function CreateOfferPage() {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{ index: number; name: string; image: string } | null>(null);
 
-    const { products, loading, error, getProductsForOffer, getLastOfferId, createOffer } = useOffers();
+    const { getLastOfferId, createOffer } = useOffers();
+    const { products, isLoading: productsLoading } = useProducts();
     const { customers, isLoading: customersLoading } = useCustomers();
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
     const { vehicleParts } = useVehicleParts(selectedVehicleId?.toString());
     const isMobile = useIsMobile();
 
-    // Sayfa yüklendiğinde ürünleri getir ve teklif numarasını oluştur
+    // Filtrelenmiş ürünler
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return products;
+        }
+
+        const searchNormalized = normalizeTurkishText(searchTerm.trim());
+        return products.filter((product) => {
+            const nameMatch = normalizeTurkishText(product.name).includes(searchNormalized);
+            const codeMatch = product.code ? normalizeTurkishText(product.code).includes(searchNormalized) : false;
+            const descriptionMatch = product.description
+                ? normalizeTurkishText(product.description).includes(searchNormalized)
+                : false;
+            return nameMatch || codeMatch || descriptionMatch;
+        });
+    }, [products, searchTerm]);
+
+    // Sayfa yüklendiğinde teklif numarasını oluştur
     useEffect(() => {
-        getProductsForOffer();
         generateOfferNumber();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    // Arama yapıldığında ürünleri filtrele
-    useEffect(() => {
-        if (searchTerm.trim()) {
-            getProductsForOffer(searchTerm);
-        } else {
-            getProductsForOffer();
-        }
-    }, [searchTerm, getProductsForOffer]);
 
     // Araç seçildiğinde parçalarını teklife ekle
     useEffect(() => {
@@ -148,6 +171,7 @@ export default function CreateOfferPage() {
                             purchasePrice: purchasePrice,
                             totalPurchasePrice: purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
                             image: product.image || "/images/no-image-placeholder.svg",
+                            unit: product.unit || "Adet", // Ürün birimini al
                         };
 
                         setOfferItems((prev) => {
@@ -178,21 +202,21 @@ export default function CreateOfferPage() {
     }, [selectedVehicleId, vehicleParts, vehicles]);
 
     const handleAddProduct = (productId: number) => {
-        const product = products.find((p) => p.id === productId);
+        const product = filteredProducts.find((p) => p.id === productId);
         if (!product) return;
 
         // Fiyatı number'a çevir ve güvenlik kontrolü yap
         let unitPrice: number;
-        if (typeof product.price === "string") {
-            unitPrice = parseFloat(product.price);
-        } else if (typeof product.price === "number") {
-            unitPrice = product.price;
+        if (typeof product.sale_price === "string") {
+            unitPrice = parseFloat(product.sale_price);
+        } else if (typeof product.sale_price === "number") {
+            unitPrice = product.sale_price;
         } else {
             unitPrice = 0;
         }
 
         if (isNaN(unitPrice) || unitPrice < 0) {
-            console.error("Geçersiz fiyat:", product.price);
+            console.error("Geçersiz fiyat:", product.sale_price);
             return;
         }
 
@@ -220,13 +244,14 @@ export default function CreateOfferPage() {
                 id: Date.now() + Math.random(),
                 productId: product.id,
                 name: product.name,
-                description: product.description,
+                description: product.description || "",
                 quantity: 1,
                 unitPrice: unitPrice,
                 totalPrice: unitPrice,
                 purchasePrice: purchasePrice,
                 totalPurchasePrice: purchasePrice,
-                image: product.image,
+                image: product.image || "/images/no-image-placeholder.svg",
+                unit: product.unit || "Adet", // Ürün birimini al
             };
 
             setOfferItems([...offerItems, newItem]);
@@ -377,6 +402,13 @@ export default function CreateOfferPage() {
     };
 
     const handleSaveOffer = async () => {
+        if (!selectedCustomerId) {
+            toast.error("Müşteri seçilmedi", {
+                description: "Lütfen bir müşteri seçin",
+            });
+            return;
+        }
+
         if (offerItems.length === 0) {
             toast.error("Ürün eklenmedi", {
                 description: "Lütfen en az bir ürün ekleyin",
@@ -398,7 +430,7 @@ export default function CreateOfferPage() {
             vatRate: 20.0,
             vatAmount: calculateVAT(),
             totalAmount: calculateFinalTotal(),
-            status: "draft",
+            status: "beklemede",
             validUntil: validUntil || undefined,
             notes: notes || undefined,
             items: offerItems.map((item) => ({
@@ -420,6 +452,9 @@ export default function CreateOfferPage() {
                 toast.success("Teklif başarıyla oluşturuldu!", {
                     description: "Yeni teklif sisteme kaydedildi.",
                 });
+
+                // Teklif kaydedildikten sonra yeni teklif numarası oluştur
+                await generateOfferNumber();
             } else {
                 toast.error("Teklif kaydedilemedi", {
                     description: "Beklenmeyen bir hata oluştu",
@@ -519,24 +554,31 @@ export default function CreateOfferPage() {
                                             <Input
                                                 placeholder="OFF-2024-001"
                                                 value={offerNumber}
+                                                disabled
                                                 onChange={(e) => setOfferNumber(e.target.value)}
                                                 className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-9"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-sm font-medium text-slate-700">Müşteri Seçimi</label>
+                                            <label className="text-sm font-medium text-slate-700">
+                                                Müşteri Seçimi <span className="text-red-500">*</span>
+                                            </label>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        className="w-full justify-between h-9 text-left font-normal border-slate-300 hover:bg-slate-50"
+                                                        className={`w-full justify-between h-9 text-left font-normal hover:bg-slate-50 ${
+                                                            !selectedCustomerId
+                                                                ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                                                                : "border-slate-300"
+                                                        }`}
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
                                                                   (customer) => customer.id === selectedCustomerId
                                                               )?.name
-                                                            : "Müşteri seçin (opsiyonel)..."}
+                                                            : "Müşteri seçin (zorunlu)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </PopoverTrigger>
@@ -557,19 +599,6 @@ export default function CreateOfferPage() {
                                                         </CommandEmpty>
                                                         <CommandGroup>
                                                             <CommandList className="max-h-[200px]">
-                                                                <CommandItem
-                                                                    onSelect={() => setSelectedCustomerId(null)}
-                                                                    className="flex items-center gap-2"
-                                                                >
-                                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
-                                                                        {!selectedCustomerId && (
-                                                                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="text-sm text-slate-500">
-                                                                        Müşteri seçme
-                                                                    </span>
-                                                                </CommandItem>
                                                                 {customers.map((customer) => (
                                                                     <CommandItem
                                                                         key={customer.id}
@@ -756,18 +785,11 @@ export default function CreateOfferPage() {
                                                     />
                                                     <CommandEmpty>
                                                         <div className="flex flex-col items-center py-6 text-center">
-                                                            {loading ? (
+                                                            {productsLoading ? (
                                                                 <>
                                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
                                                                     <p className="text-sm text-muted-foreground">
                                                                         Ürünler yükleniyor...
-                                                                    </p>
-                                                                </>
-                                                            ) : error ? (
-                                                                <>
-                                                                    <Search className="h-8 w-8 text-muted-foreground mb-2" />
-                                                                    <p className="text-sm text-muted-foreground">
-                                                                        {error}
                                                                     </p>
                                                                 </>
                                                             ) : (
@@ -782,7 +804,7 @@ export default function CreateOfferPage() {
                                                     </CommandEmpty>
                                                     <CommandGroup>
                                                         <CommandList className="max-h-[300px]">
-                                                            {products.map((product) => (
+                                                            {filteredProducts.map((product) => (
                                                                 <CommandItem
                                                                     key={product.id}
                                                                     value={`${product.name} ${product.description}`}
@@ -821,19 +843,22 @@ export default function CreateOfferPage() {
                                                                                 <div className="font-bold text-primary text-xs md:text-sm">
                                                                                     €
                                                                                     {formatNumber(
-                                                                                        typeof product.price ===
+                                                                                        typeof product.sale_price ===
                                                                                             "number"
-                                                                                            ? product.price
-                                                                                            : typeof product.price ===
+                                                                                            ? product.sale_price
+                                                                                            : typeof product.sale_price ===
                                                                                               "string"
                                                                                             ? parseFloat(
-                                                                                                  product.price
+                                                                                                  product.sale_price
                                                                                               ) || 0
                                                                                             : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
                                                                                     Birim Fiyat
+                                                                                </div>
+                                                                                <div className="text-xs text-slate-500 hidden md:block">
+                                                                                    {product.unit || "adet"}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -973,6 +998,14 @@ export default function CreateOfferPage() {
                                                                         </Button>
                                                                     </div>
                                                                 </div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs text-slate-500">
+                                                                        Birim:
+                                                                    </span>
+                                                                    <span className="text-xs font-medium text-slate-700">
+                                                                        {item.unit || "adet"}
+                                                                    </span>
+                                                                </div>
 
                                                                 <div className="flex items-center justify-between">
                                                                     <span className="text-sm text-slate-600">
@@ -1038,7 +1071,9 @@ export default function CreateOfferPage() {
                                                         <TableHead className="w-16 text-slate-700">Sıra</TableHead>
                                                         <TableHead className="w-20 text-slate-700">Resim</TableHead>
                                                         <TableHead className="text-slate-700">Ürün</TableHead>
-                                                        <TableHead className="w-32 text-slate-700">Miktar</TableHead>
+                                                        <TableHead className="w-32 text-slate-700">
+                                                            Miktar (Birim)
+                                                        </TableHead>
                                                         <TableHead className="w-32 text-slate-700">
                                                             Birim Fiyat
                                                         </TableHead>
@@ -1087,43 +1122,49 @@ export default function CreateOfferPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="h-8 w-8 p-0 border-slate-300"
-                                                                        onClick={() =>
-                                                                            handleQuantityChange(
-                                                                                index,
-                                                                                item.quantity - 1
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Minus className="h-3 w-3" />
-                                                                    </Button>
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={item.quantity}
-                                                                        onChange={(e) => {
-                                                                            const value = parseInt(e.target.value) || 0;
-                                                                            handleQuantityChange(index, value);
-                                                                        }}
-                                                                        className="w-16 h-8 text-center border-slate-300"
-                                                                        min="1"
-                                                                    />
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="h-8 w-8 p-0 border-slate-300"
-                                                                        onClick={() =>
-                                                                            handleQuantityChange(
-                                                                                index,
-                                                                                item.quantity + 1
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Plus className="h-3 w-3" />
-                                                                    </Button>
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 w-8 p-0 border-slate-300"
+                                                                            onClick={() =>
+                                                                                handleQuantityChange(
+                                                                                    index,
+                                                                                    item.quantity - 1
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Minus className="h-3 w-3" />
+                                                                        </Button>
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={item.quantity}
+                                                                            onChange={(e) => {
+                                                                                const value =
+                                                                                    parseInt(e.target.value) || 0;
+                                                                                handleQuantityChange(index, value);
+                                                                            }}
+                                                                            className="w-16 h-8 text-center border-slate-300"
+                                                                            min="1"
+                                                                        />
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 w-8 p-0 border-slate-300"
+                                                                            onClick={() =>
+                                                                                handleQuantityChange(
+                                                                                    index,
+                                                                                    item.quantity + 1
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Plus className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                    <div className="text-xs text-slate-500 text-center">
+                                                                        {item.unit || "adet"}
+                                                                    </div>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
@@ -1321,6 +1362,7 @@ export default function CreateOfferPage() {
                                                                 oldPrice,
                                                                 total: price * item.quantity,
                                                                 imageUrl: item.image,
+                                                                unit: item.unit, // Ürün birimini ekle
                                                             };
                                                         }),
                                                         notes: notes,
@@ -1528,8 +1570,8 @@ export default function CreateOfferPage() {
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-slate-600">Durum:</span>
                                             <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                                <span className="text-green-700 font-medium">Draft</span>
+                                                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                                                <span className="text-yellow-700 font-medium">Beklemede</span>
                                             </div>
                                         </div>
                                     </div>

@@ -9,6 +9,7 @@ export interface OfferProduct {
     total: number;
     imageUrl?: string;
     oldPrice?: number;
+    unit?: string; // Ürün birimi (Adet, Saat vb.)
 }
 
 export interface OfferPdfPreviewProps {
@@ -145,7 +146,7 @@ export async function generateOfferPdf({
                     ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
                     : { text: "", width: 50, height: 50 },
                 { text: p.name, fontSize: 12, bold: true, alignment: "center", margin: [0, 8, 0, 0] },
-                { text: `${p.quantity} adet`, alignment: "center", fontSize: 10 },
+                { text: `${p.quantity} ${p.unit || "adet"}`, alignment: "center", fontSize: 10 },
             ];
 
             if (!hidePricing) {
@@ -188,21 +189,19 @@ export async function generateOfferPdf({
     ];
 
     // Özet tablosunu hidePricing parametresine göre ayarla
-    const summaryTableBody: (string | { text: string; bold: boolean })[][] = [
-        ["Brüt", `€ ${gross.toFixed(2)}`],
-    ];
-    
+    const summaryTableBody: (string | { text: string; bold: boolean })[][] = [["Brüt", `€ ${gross.toFixed(2)}`]];
+
     // İndirim varsa ekle
     if (discount > 0) {
         summaryTableBody.push(["İndirim", `€ ${discount.toFixed(2)}`]);
     }
-    
+
     summaryTableBody.push(
         ["Net", `€ ${net.toFixed(2)}`],
         ["KDV (%20)", `€ ${vat.toFixed(2)}`],
         ["Toplam", { text: `€ ${total.toFixed(2)}`, bold: true }]
     );
-    
+
     const summaryTable = {
         body: summaryTableBody,
     };

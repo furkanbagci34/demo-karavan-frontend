@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -25,6 +25,7 @@ import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, Fil
 import { formatNumber } from "@/lib/utils";
 import { useOffers, type Offer } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
+import { useProducts } from "@/hooks/api/useProducts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
 import {
@@ -38,6 +39,19 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Türkçe karakterleri normalize eden fonksiyon
+const normalizeTurkishText = (text: string): string => {
+    return text
+        .replace(/İ/g, "i")
+        .replace(/I/g, "ı")
+        .replace(/Ğ/g, "ğ")
+        .replace(/Ü/g, "ü")
+        .replace(/Ş/g, "ş")
+        .replace(/Ö/g, "ö")
+        .replace(/Ç/g, "ç")
+        .toLowerCase();
+};
+
 interface OfferItem {
     id: number;
     productId: number;
@@ -49,6 +63,7 @@ interface OfferItem {
     purchasePrice: number;
     totalPurchasePrice: number;
     image: string;
+    unit?: string; // Ürün birimi (Adet, Saat vb.)
     itemDiscountAmount?: number;
     itemDiscountType?: string;
     itemDiscountValue?: number;
@@ -78,16 +93,27 @@ export default function EditOfferPage() {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{ index: number; name: string; image: string } | null>(null);
 
-    const {
-        products,
-        loading: productsLoading,
-        error: productsError,
-        getProductsForOffer,
-        getOfferById,
-        updateOffer,
-    } = useOffers();
+    const { getOfferById, updateOffer } = useOffers();
+    const { products, isLoading: productsLoading } = useProducts();
     const { customers, isLoading: customersLoading } = useCustomers();
     const isMobile = useIsMobile();
+
+    // Filtrelenmiş ürünler
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return products;
+        }
+
+        const searchNormalized = normalizeTurkishText(searchTerm.trim());
+        return products.filter((product) => {
+            const nameMatch = normalizeTurkishText(product.name).includes(searchNormalized);
+            const codeMatch = product.code ? normalizeTurkishText(product.code).includes(searchNormalized) : false;
+            const descriptionMatch = product.description
+                ? normalizeTurkishText(product.description).includes(searchNormalized)
+                : false;
+            return nameMatch || codeMatch || descriptionMatch;
+        });
+    }, [products, searchTerm]);
 
     // Teklif verilerini yükle
     useEffect(() => {
@@ -156,6 +182,7 @@ export default function EditOfferPage() {
                                 totalPurchasePrice:
                                     ((typedItem.purchasePrice as number) || 0) * (typedItem.quantity as number),
                                 image: (typedItem.productImage as string) || "/images/no-image-placeholder.svg",
+                                unit: (typedItem.productUnit as string) || "Adet", // Ürün birimini al
                                 // İndirim bilgilerini de ekle
                                 itemDiscountAmount: (typedItem.discountAmount as number) || 0,
                                 itemDiscountType: typedItem.discountType as string,
@@ -179,35 +206,21 @@ export default function EditOfferPage() {
         loadOffer();
     }, [offerId, getOfferById, router]);
 
-    // Sayfa yüklendiğinde ürünleri getir
-    useEffect(() => {
-        getProductsForOffer();
-    }, [getProductsForOffer]);
-
-    // Arama yapıldığında ürünleri filtrele
-    useEffect(() => {
-        if (searchTerm.trim()) {
-            getProductsForOffer(searchTerm);
-        } else {
-            getProductsForOffer();
-        }
-    }, [searchTerm, getProductsForOffer]);
-
     const handleAddProduct = (productId: number) => {
-        const product = products.find((p) => p.id === productId);
+        const product = filteredProducts.find((p) => p.id === productId);
         if (!product) return;
 
         let unitPrice: number;
-        if (typeof product.price === "string") {
-            unitPrice = parseFloat(product.price);
-        } else if (typeof product.price === "number") {
-            unitPrice = product.price;
+        if (typeof product.sale_price === "string") {
+            unitPrice = parseFloat(product.sale_price);
+        } else if (typeof product.sale_price === "number") {
+            unitPrice = product.sale_price;
         } else {
             unitPrice = 0;
         }
 
         if (isNaN(unitPrice) || unitPrice < 0) {
-            console.error("Geçersiz fiyat:", product.price);
+            console.error("Geçersiz fiyat:", product.sale_price);
             return;
         }
 
@@ -233,13 +246,14 @@ export default function EditOfferPage() {
                 id: Date.now(),
                 productId: product.id,
                 name: product.name,
-                description: product.description,
+                description: product.description || "",
                 quantity: 1,
                 unitPrice: unitPrice,
                 totalPrice: unitPrice,
                 purchasePrice: purchasePrice,
                 totalPurchasePrice: purchasePrice,
-                image: product.image,
+                image: product.image || "/images/no-image-placeholder.svg",
+                unit: product.unit || "Adet", // Ürün birimini al
             };
 
             setOfferItems([...offerItems, newItem]);
@@ -325,7 +339,7 @@ export default function EditOfferPage() {
     const calculateDiscount = () => {
         if (!discountType || discountValue <= 0) return 0;
 
-        const finalTotal = calculateGrossTotal() + (calculateGrossTotal() * 0.2); // Brüt + KDV
+        const finalTotal = calculateGrossTotal() + calculateGrossTotal() * 0.2; // Brüt + KDV
 
         if (discountType === "percentage") {
             return (finalTotal * discountValue) / 100;
@@ -372,6 +386,13 @@ export default function EditOfferPage() {
     };
 
     const handleUpdateOffer = async () => {
+        if (!selectedCustomerId) {
+            toast.error("Müşteri seçilmedi", {
+                description: "Lütfen bir müşteri seçin",
+            });
+            return;
+        }
+
         if (offerItems.length === 0) {
             toast.error("Ürün eklenmedi", {
                 description: "Lütfen en az bir ürün ekleyin",
@@ -392,7 +413,7 @@ export default function EditOfferPage() {
             vatRate: 20.0,
             vatAmount: calculateVAT(),
             totalAmount: calculateFinalTotal(),
-            status: originalOffer?.status || "draft",
+            status: originalOffer?.status || "beklemede",
             validUntil: validUntil || undefined,
             notes: notes || undefined,
             items: offerItems.map((item, index) => ({
@@ -473,6 +494,7 @@ export default function EditOfferPage() {
                     oldPrice,
                     total,
                     imageUrl: item.image,
+                    unit: item.unit, // Ürün birimini ekle
                 };
             }),
             gross: calculateGrossTotal(),
@@ -564,24 +586,31 @@ export default function EditOfferPage() {
                                             <Input
                                                 placeholder="OFF-2024-001"
                                                 value={offerNumber}
+                                                disabled
                                                 onChange={(e) => setOfferNumber(e.target.value)}
                                                 className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-9"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-sm font-medium text-slate-700">Müşteri Seçimi</label>
+                                            <label className="text-sm font-medium text-slate-700">
+                                                Müşteri Seçimi <span className="text-red-500">*</span>
+                                            </label>
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
-                                                        className="w-full justify-between h-9 text-left font-normal border-slate-300 hover:bg-slate-50"
+                                                        className={`w-full justify-between h-9 text-left font-normal hover:bg-slate-50 ${
+                                                            !selectedCustomerId
+                                                                ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                                                                : "border-slate-300"
+                                                        }`}
                                                     >
                                                         {selectedCustomerId
                                                             ? customers.find(
                                                                   (customer) => customer.id === selectedCustomerId
                                                               )?.name
-                                                            : "Müşteri seçin (opsiyonel)..."}
+                                                            : "Müşteri seçin (zorunlu)..."}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </PopoverTrigger>
@@ -602,19 +631,6 @@ export default function EditOfferPage() {
                                                         </CommandEmpty>
                                                         <CommandGroup>
                                                             <CommandList className="max-h-[200px]">
-                                                                <CommandItem
-                                                                    onSelect={() => setSelectedCustomerId(null)}
-                                                                    className="flex items-center gap-2"
-                                                                >
-                                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
-                                                                        {!selectedCustomerId && (
-                                                                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="text-sm text-slate-500">
-                                                                        Müşteri seçme
-                                                                    </span>
-                                                                </CommandItem>
                                                                 {customers.map((customer) => (
                                                                     <CommandItem
                                                                         key={customer.id}
@@ -717,13 +733,6 @@ export default function EditOfferPage() {
                                                                         Ürünler yükleniyor...
                                                                     </p>
                                                                 </>
-                                                            ) : productsError ? (
-                                                                <>
-                                                                    <Search className="h-8 w-8 text-muted-foreground mb-2" />
-                                                                    <p className="text-sm text-muted-foreground">
-                                                                        {productsError}
-                                                                    </p>
-                                                                </>
                                                             ) : (
                                                                 <>
                                                                     <Search className="h-8 w-8 text-muted-foreground mb-2" />
@@ -736,7 +745,7 @@ export default function EditOfferPage() {
                                                     </CommandEmpty>
                                                     <CommandGroup>
                                                         <CommandList className="max-h-[300px]">
-                                                            {products.map((product) => (
+                                                            {filteredProducts.map((product) => (
                                                                 <CommandItem
                                                                     key={product.id}
                                                                     value={`${product.name} ${product.description}`}
@@ -775,19 +784,22 @@ export default function EditOfferPage() {
                                                                                 <div className="font-bold text-primary text-xs md:text-sm">
                                                                                     €
                                                                                     {formatNumber(
-                                                                                        typeof product.price ===
+                                                                                        typeof product.sale_price ===
                                                                                             "number"
-                                                                                            ? product.price
-                                                                                            : typeof product.price ===
+                                                                                            ? product.sale_price
+                                                                                            : typeof product.sale_price ===
                                                                                               "string"
                                                                                             ? parseFloat(
-                                                                                                  product.price
+                                                                                                  product.sale_price
                                                                                               ) || 0
                                                                                             : 0
                                                                                     )}
                                                                                 </div>
                                                                                 <div className="text-xs text-muted-foreground hidden md:block">
                                                                                     Birim Fiyat
+                                                                                </div>
+                                                                                <div className="text-xs text-slate-500 hidden md:block">
+                                                                                    {product.unit || "adet"}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -928,6 +940,14 @@ export default function EditOfferPage() {
                                                                         </Button>
                                                                     </div>
                                                                 </div>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs text-slate-500">
+                                                                        Birim:
+                                                                    </span>
+                                                                    <span className="text-xs font-medium text-slate-700">
+                                                                        {item.unit || "adet"}
+                                                                    </span>
+                                                                </div>
 
                                                                 <div className="flex items-center justify-between">
                                                                     <span className="text-sm text-slate-600">
@@ -995,7 +1015,9 @@ export default function EditOfferPage() {
                                                         <TableHead className="w-16 text-slate-700">Sıra</TableHead>
                                                         <TableHead className="w-20 text-slate-700">Resim</TableHead>
                                                         <TableHead className="text-slate-700">Ürün</TableHead>
-                                                        <TableHead className="w-32 text-slate-700">Miktar</TableHead>
+                                                        <TableHead className="w-32 text-slate-700">
+                                                            Miktar (Birim)
+                                                        </TableHead>
                                                         <TableHead className="w-32 text-slate-700">
                                                             Birim Fiyat
                                                         </TableHead>
@@ -1044,43 +1066,49 @@ export default function EditOfferPage() {
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="h-8 w-8 p-0 border-slate-300"
-                                                                        onClick={() =>
-                                                                            handleQuantityChange(
-                                                                                index,
-                                                                                item.quantity - 1
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Minus className="h-3 w-3" />
-                                                                    </Button>
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={item.quantity}
-                                                                        onChange={(e) => {
-                                                                            const value = parseInt(e.target.value) || 0;
-                                                                            handleQuantityChange(index, value);
-                                                                        }}
-                                                                        className="w-16 h-8 text-center border-slate-300"
-                                                                        min="1"
-                                                                    />
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="h-8 w-8 p-0 border-slate-300"
-                                                                        onClick={() =>
-                                                                            handleQuantityChange(
-                                                                                index,
-                                                                                item.quantity + 1
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Plus className="h-3 w-3" />
-                                                                    </Button>
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 w-8 p-0 border-slate-300"
+                                                                            onClick={() =>
+                                                                                handleQuantityChange(
+                                                                                    index,
+                                                                                    item.quantity - 1
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Minus className="h-3 w-3" />
+                                                                        </Button>
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={item.quantity}
+                                                                            onChange={(e) => {
+                                                                                const value =
+                                                                                    parseInt(e.target.value) || 0;
+                                                                                handleQuantityChange(index, value);
+                                                                            }}
+                                                                            className="w-16 h-8 text-center border-slate-300"
+                                                                            min="1"
+                                                                        />
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 w-8 p-0 border-slate-300"
+                                                                            onClick={() =>
+                                                                                handleQuantityChange(
+                                                                                    index,
+                                                                                    item.quantity + 1
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Plus className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                    <div className="text-xs text-slate-500 text-center">
+                                                                        {item.unit || "adet"}
+                                                                    </div>
                                                                 </div>
                                                             </TableCell>
                                                             <TableCell>
@@ -1408,9 +1436,23 @@ export default function EditOfferPage() {
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-slate-600">Durum:</span>
                                             <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                                <span className="text-green-700 font-medium">
-                                                    {originalOffer?.status || "Draft"}
+                                                <div
+                                                    className={`w-2 h-2 rounded-full animate-pulse ${
+                                                        originalOffer?.status === "beklemede"
+                                                            ? "bg-yellow-500"
+                                                            : "bg-green-500"
+                                                    }`}
+                                                ></div>
+                                                <span
+                                                    className={`font-medium ${
+                                                        originalOffer?.status === "beklemede"
+                                                            ? "text-yellow-700"
+                                                            : "text-green-700"
+                                                    }`}
+                                                >
+                                                    {originalOffer?.status === "beklemede"
+                                                        ? "Beklemede"
+                                                        : originalOffer?.status || "Draft"}
                                                 </span>
                                             </div>
                                         </div>
@@ -1496,7 +1538,9 @@ export default function EditOfferPage() {
                             )}
                             <div className="flex-1">
                                 <AlertDialogTitle>
-                                    {itemToDelete ? `"${itemToDelete.name}" ürününü kaldırmak istediğinize emin misiniz?` : "Hata"}
+                                    {itemToDelete
+                                        ? `"${itemToDelete.name}" ürününü kaldırmak istediğinize emin misiniz?`
+                                        : "Hata"}
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                     Bu işlem geri alınamaz. Ürün teklif listesinden kaldırılacak.
@@ -1506,9 +1550,7 @@ export default function EditOfferPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDeleteItem}>
-                            Kaldır
-                        </AlertDialogAction>
+                        <AlertDialogAction onClick={confirmDeleteItem}>Kaldır</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
