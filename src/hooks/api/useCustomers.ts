@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Customer, CreateCustomerData, ApiResponse } from "@/lib/api/types";
@@ -82,10 +83,10 @@ export const useCustomers = () => {
     });
 
     // Tekil müşteri getir
-    const getCustomerById = async (id: string): Promise<Customer> => {
+    const getCustomerById = useCallback(async (id: string): Promise<Customer> => {
         const response = await apiClient.get<Customer>(API_ENDPOINTS.customers.getById(id));
         return response;
-    };
+    }, []);
 
     return {
         customers,

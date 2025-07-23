@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
     Breadcrumb,
@@ -20,16 +20,31 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Package, Plus, Trash2, Loader2, Search, Settings } from "lucide-react";
+import { Car, Package, Plus, Trash2, Loader2, Search, Settings, X } from "lucide-react";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { useProducts } from "@/hooks/api/useProducts";
+
+// Türkçe karakterleri normalize eden fonksiyon
+const normalizeTurkishText = (text: string): string => {
+    return text
+        .replace(/İ/g, "i")
+        .replace(/I/g, "ı")
+        .replace(/Ğ/g, "ğ")
+        .replace(/Ü/g, "ü")
+        .replace(/Ş/g, "ş")
+        .replace(/Ö/g, "ö")
+        .replace(/Ç/g, "ç")
+        .toLowerCase();
+};
 
 export default function VehiclePartsPage() {
     const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+    const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
+    const [updatingProductId, setUpdatingProductId] = useState<number | null>(null);
 
     const { vehicles, isLoading: isLoadingVehicles } = useVehicles();
     const { products, isLoading: isLoadingProducts } = useProducts();
@@ -45,17 +60,29 @@ export default function VehiclePartsPage() {
     const selectedVehicle = vehicles.find((v) => v.id.toString() === selectedVehicleId);
 
     // Filtrelenmiş ürünler
-    const filteredProducts = products.filter(
-        (product) =>
-            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (product.code && product.code.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return products;
+        }
+
+        const searchNormalized = normalizeTurkishText(searchTerm.trim());
+        return products.filter((product) => {
+            const nameMatch = normalizeTurkishText(product.name).includes(searchNormalized);
+            const codeMatch = product.code ? normalizeTurkishText(product.code).includes(searchNormalized) : false;
+            return nameMatch || codeMatch;
+        });
+    }, [products, searchTerm]);
 
     // Ürün seçimi toggle
     const toggleProductSelection = (productId: number) => {
         setSelectedProductIds((prev) =>
             prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
         );
+    };
+
+    // Arama terimini temizle
+    const clearSearch = () => {
+        setSearchTerm("");
     };
 
     // Tüm ürünleri seç/kaldır
@@ -105,7 +132,10 @@ export default function VehiclePartsPage() {
 
     // Ürünü product_ids array'inden çıkarıp güncelle
     const handleRemoveProductFromVehicle = async (productId: number) => {
-        if (!vehicleParts[0]) return;
+        if (!vehicleParts[0] || deletingProductId === productId) return;
+
+        setDeletingProductId(productId);
+
         const partId = vehicleParts[0].id.toString();
         const currentProductIds = vehicleParts[0].product_ids;
         const updatedProductIds = currentProductIds.filter((id: number) => id !== productId);
@@ -127,12 +157,16 @@ export default function VehiclePartsPage() {
             toast.error("Ürün çıkarılamadı", {
                 description: errorMessage,
             });
+        } finally {
+            setDeletingProductId(null);
         }
     };
 
     // Miktar güncelleme
     const handleUpdateProductQuantity = async (productId: number, newQuantity: number) => {
-        if (!vehicleParts[0] || newQuantity < 1) return;
+        if (!vehicleParts[0] || newQuantity < 1 || updatingProductId === productId) return;
+
+        setUpdatingProductId(productId);
 
         const partId = vehicleParts[0].id.toString();
         const currentQuantities = vehicleParts[0].quantities || {};
@@ -150,6 +184,8 @@ export default function VehiclePartsPage() {
             toast.error("Miktar güncellenemedi", {
                 description: errorMessage,
             });
+        } finally {
+            setUpdatingProductId(null);
         }
     };
 
@@ -331,13 +367,32 @@ export default function VehiclePartsPage() {
                                         <div className="space-y-4">
                                             {/* Arama */}
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Ürün ara..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="pl-10"
-                                                />
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        placeholder="Ürün adı veya stok kodu ile arayın..."
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        className="pl-10 pr-10"
+                                                    />
+                                                    {searchTerm && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={clearSearch}
+                                                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                {searchTerm && (
+                                                    <p className="text-sm text-muted-foreground mt-2">
+                                                        {filteredProducts.length} ürün bulundu
+                                                        {filteredProducts.length !== products.length &&
+                                                            ` (${products.length} toplam ürün)`}
+                                                    </p>
+                                                )}
                                             </div>
 
                                             {/* Ürün Listesi */}
@@ -415,11 +470,16 @@ export default function VehiclePartsPage() {
                                                                     <h3 className="font-medium text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
                                                                         {product.name}
                                                                     </h3>
-                                                                    {product.code && (
-                                                                        <p className="text-xs text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded inline-block">
-                                                                            {product.code}
-                                                                        </p>
-                                                                    )}
+                                                                    <div className="flex items-center gap-2">
+                                                                        {product.code && (
+                                                                            <p className="text-xs text-muted-foreground font-mono bg-muted/50 px-1.5 py-0.5 rounded inline-block">
+                                                                                {product.code}
+                                                                            </p>
+                                                                        )}
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            {product.unit || "Adet"}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
 
                                                                 {/* Hover Overlay */}
@@ -517,8 +577,13 @@ export default function VehiclePartsPage() {
                                                         size="sm"
                                                         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 w-7 p-0"
                                                         onClick={() => handleRemoveProductFromVehicle(product.id)}
+                                                        disabled={deletingProductId === product.id}
                                                     >
-                                                        <Trash2 className="h-3 w-3" />
+                                                        {deletingProductId === product.id ? (
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="h-3 w-3" />
+                                                        )}
                                                     </Button>
                                                 </div>
                                             </div>
@@ -527,11 +592,16 @@ export default function VehiclePartsPage() {
                                                     <h3 className="font-medium text-sm line-clamp-2 leading-tight">
                                                         {product.name}
                                                     </h3>
-                                                    {product.code && (
-                                                        <p className="text-xs text-muted-foreground font-mono mt-1">
-                                                            {product.code}
-                                                        </p>
-                                                    )}
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        {product.code && (
+                                                            <p className="text-xs text-muted-foreground font-mono">
+                                                                {product.code}
+                                                            </p>
+                                                        )}
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {product.unit || "Adet"}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-1">
@@ -546,8 +616,13 @@ export default function VehiclePartsPage() {
                                                                     ] || 1;
                                                                 handleUpdateProductQuantity(product.id, currentQty + 1);
                                                             }}
+                                                            disabled={updatingProductId === product.id}
                                                         >
-                                                            +
+                                                            {updatingProductId === product.id ? (
+                                                                <Loader2 className="h-2 w-2 animate-spin" />
+                                                            ) : (
+                                                                "+"
+                                                            )}
                                                         </Button>
                                                         <span className="text-xs font-medium px-2">
                                                             {vehicleParts[0]?.quantities?.[product.id.toString()] || 1}
@@ -568,8 +643,13 @@ export default function VehiclePartsPage() {
                                                                     );
                                                                 }
                                                             }}
+                                                            disabled={updatingProductId === product.id}
                                                         >
-                                                            -
+                                                            {updatingProductId === product.id ? (
+                                                                <Loader2 className="h-2 w-2 animate-spin" />
+                                                            ) : (
+                                                                "-"
+                                                            )}
                                                         </Button>
                                                     </div>
                                                 </div>

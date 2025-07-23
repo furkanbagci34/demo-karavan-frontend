@@ -9,6 +9,7 @@ export interface Product {
     price: number;
     purchase_price?: number;
     image: string;
+    unit?: string; // Ürün birimi (Adet, Saat vb.)
 }
 
 export interface OfferItem {

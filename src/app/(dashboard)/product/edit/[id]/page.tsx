@@ -49,7 +49,6 @@ export default function EditProductPage() {
     const [isLoadingProduct, setIsLoadingProduct] = useState(true);
     const [productData, setProductData] = useState<Product | null>(null);
     const [isFormInitialized, setIsFormInitialized] = useState(false);
-    const [isImageInitialized, setIsImageInitialized] = useState(false);
 
     const form = useForm<ProductFormData>({
         resolver: zodResolver(productSchema),
@@ -70,11 +69,8 @@ export default function EditProductPage() {
             try {
                 const data = await getProductById(id);
                 setProductData(data);
-                // imagePreview'i sadece ilk yüklemede set et
-                if (!isImageInitialized) {
-                    setImagePreview(data.image || null);
-                    setIsImageInitialized(true);
-                }
+                // imagePreview'i set et
+                setImagePreview(data.image || null);
             } catch (error: unknown) {
                 console.error("Ürün yüklenirken hata:", error);
                 const errorMessage = error instanceof Error ? error.message : "Ürün yüklenemedi";
@@ -90,7 +86,7 @@ export default function EditProductPage() {
         if (id) {
             loadProduct();
         }
-    }, [id, getProductById, router, isImageInitialized]);
+    }, [id, getProductById, router]);
 
     // Ürün yüklendiğinde form'u doldur (sadece bir kez)
     useEffect(() => {

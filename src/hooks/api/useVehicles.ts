@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Vehicle, CreateVehicleData, UpdateVehicleData, ApiResponse } from "@/lib/api/types";
@@ -81,10 +82,10 @@ export const useVehicles = () => {
     });
 
     // Tekil araç getir
-    const getVehicleById = async (id: string): Promise<Vehicle> => {
+    const getVehicleById = useCallback(async (id: string): Promise<Vehicle> => {
         const response = await apiClient.get<Vehicle>(API_ENDPOINTS.vehicles.getById(id));
         return response;
-    };
+    }, []);
 
     return {
         vehicles,

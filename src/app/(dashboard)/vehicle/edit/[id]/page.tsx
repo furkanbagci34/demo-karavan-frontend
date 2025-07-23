@@ -41,7 +41,6 @@ export default function EditVehiclePage() {
     const [isLoadingVehicle, setIsLoadingVehicle] = useState(true);
     const [vehicleData, setVehicleData] = useState<Vehicle | null>(null);
     const [isFormInitialized, setIsFormInitialized] = useState(false);
-    const [isImageInitialized, setIsImageInitialized] = useState(false);
 
     const form = useForm<VehicleFormData>({
         resolver: zodResolver(vehicleSchema),
@@ -57,11 +56,8 @@ export default function EditVehiclePage() {
             try {
                 const data = await getVehicleById(id);
                 setVehicleData(data);
-                // imagePreview'i sadece ilk yüklemede set et
-                if (!isImageInitialized) {
-                    setImagePreview(data.image || null);
-                    setIsImageInitialized(true);
-                }
+                // imagePreview'i set et
+                setImagePreview(data.image || null);
             } catch (error: unknown) {
                 console.error("Araç yüklenirken hata:", error);
                 const errorMessage = error instanceof Error ? error.message : "Araç yüklenemedi";
@@ -77,7 +73,7 @@ export default function EditVehiclePage() {
         if (id) {
             loadVehicle();
         }
-    }, [id, getVehicleById, router, isImageInitialized]);
+    }, [id, getVehicleById, router]);
 
     // Araç yüklendiğinde form'u doldur (sadece bir kez)
     useEffect(() => {
@@ -287,7 +283,10 @@ export default function EditVehiclePage() {
                                             <FormItem>
                                                 <FormLabel>Marka Model</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Örn: Volkswagen Transporter, Mercedes Sprinter" {...field} />
+                                                    <Input
+                                                        placeholder="Örn: Volkswagen Transporter, Mercedes Sprinter"
+                                                        {...field}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
