@@ -32,6 +32,7 @@ export const useProducts = () => {
                 stockQuantity: data.stockQuantity,
                 description: data.description,
                 image: data.image,
+                unit: data.unit,
                 isActive: data.isActive,
             };
 

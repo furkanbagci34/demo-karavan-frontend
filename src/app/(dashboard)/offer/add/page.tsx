@@ -98,14 +98,9 @@ export default function CreateOfferPage() {
         }
     }, [searchTerm, getProductsForOffer]);
 
-    // Araç seçildiğinde parçalarını logla ve teklife ekle
+    // Araç seçildiğinde parçalarını teklife ekle
     useEffect(() => {
         if (selectedVehicleId && vehicleParts.length > 0) {
-            console.log("🚗 Seçili araç parçaları:", {
-                vehicleId: selectedVehicleId,
-                vehicleName: vehicles.find((v) => v.id === selectedVehicleId)?.name,
-                parts: vehicleParts,
-            });
 
             // Araç parçalarını teklife ekle (handleAddProduct mantığıyla)
             vehicleParts.forEach((vehiclePart) => {

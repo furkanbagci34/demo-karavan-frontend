@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useProducts } from "@/hooks/api/useProducts";
@@ -34,6 +35,7 @@ const productSchema = z.object({
     stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek"),
     description: z.string().optional(),
     image: z.string().optional(),
+    unit: z.enum(["Adet", "Saat"]).optional().default("Adet"),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -101,6 +103,7 @@ export default function EditProductPage() {
                 salePrice: productData.sale_price || 0,
                 stockQuantity: productData.stock_quantity || 0,
                 description: productData.description || "",
+                unit: productData.unit || "Adet",
             };
 
             form.reset(formData);
@@ -189,6 +192,7 @@ export default function EditProductPage() {
                 salePrice: data.salePrice,
                 stockQuantity: data.stockQuantity,
                 description: data.description || null,
+                unit: data.unit,
                 image: imagePreview,
             };
 
@@ -351,19 +355,47 @@ export default function EditProductPage() {
                                                 </FormItem>
                                             )}
                                         />
-                                        <FormField
-                                            control={form.control}
-                                            name="stockQuantity"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Stok Miktarı</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" min="0" placeholder="0" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="stockQuantity"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Stok Miktarı</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="number" min="0" placeholder="0" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={form.control}
+                                                name="unit"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Birim</FormLabel>
+                                                        <Select 
+                                                            onValueChange={field.onChange} 
+                                                            value={field.value}
+                                                            key={field.value}
+                                                        >
+                                                            <FormControl>
+                                                                <SelectTrigger className="h-10 w-full">
+                                                                    <SelectValue placeholder="Birim" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="Adet">Adet</SelectItem>
+                                                                <SelectItem value="Saat">Saat</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
                                     </div>
                                     <FormField
                                         control={form.control}

@@ -119,6 +119,7 @@ export interface Product {
     stock_quantity?: number;
     description?: string;
     image?: string;
+    unit?: string;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -132,6 +133,7 @@ export interface CreateProductData {
     stockQuantity?: number;
     description?: string;
     image?: string;
+    unit?: string;
     isActive?: boolean;
 }
 
@@ -143,6 +145,7 @@ export interface UpdateProductData {
     stockQuantity?: number;
     description?: string;
     image?: string;
+    unit?: string;
     isActive?: boolean;
 }
 

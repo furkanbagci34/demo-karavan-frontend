@@ -13,9 +13,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Package, Pencil, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Package, Pencil, Trash2, Loader2, AlertTriangle, Search, X } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { useProducts } from "@/hooks/api/useProducts";
 import { Product } from "@/lib/api/types";
@@ -34,13 +35,46 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 const PAGE_SIZE = 10;
 
+// Türkçe karakterleri normalize eden fonksiyon
+const normalizeTurkishText = (text: string): string => {
+    return text
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'ı')
+        .replace(/Ğ/g, 'ğ')
+        .replace(/Ü/g, 'ü')
+        .replace(/Ş/g, 'ş')
+        .replace(/Ö/g, 'ö')
+        .replace(/Ç/g, 'ç')
+        .toLowerCase();
+};
+
 export default function ProductListPage() {
     const [currentPage, setCurrentPage] = React.useState(1);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedProductImage, setSelectedProductImage] = useState<{ src: string; alt: string } | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
     const { products, deleteProduct, isLoading } = useProducts();
+
+    // Filtrelenmiş ürünler
+    const filteredProducts = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return products;
+        }
+
+        const searchNormalized = normalizeTurkishText(searchTerm.trim());
+        return products.filter((product) => {
+            const nameMatch = normalizeTurkishText(product.name).includes(searchNormalized);
+            const codeMatch = product.code ? normalizeTurkishText(product.code).includes(searchNormalized) : false;
+            return nameMatch || codeMatch;
+        });
+    }, [products, searchTerm]);
+
+    // Arama terimi değiştiğinde ilk sayfaya dön
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     // Ürün pasif hale getirme dialog'unu aç
     const openDeleteDialog = (product: Product) => {
@@ -81,9 +115,14 @@ export default function ProductListPage() {
         }
     };
 
+    // Arama terimini temizle
+    const clearSearch = () => {
+        setSearchTerm("");
+    };
+
     // Pagination hesaplamaları
-    const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
-    const paginatedProducts = products.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+    const paginatedProducts = filteredProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     // Sayfa değiştiğinde scroll'u yukarı çek
     useEffect(() => {
@@ -124,6 +163,35 @@ export default function ProductListPage() {
                     </Button>
                 </div>
 
+                {/* Arama Alanı */}
+                <div className="relative">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Ürün adı veya stok kodu ile arayın..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-10"
+                        />
+                        {searchTerm && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={clearSearch}
+                                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                    {searchTerm && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            {filteredProducts.length} ürün bulundu
+                            {filteredProducts.length !== products.length && ` (${products.length} toplam ürün)`}
+                        </p>
+                    )}
+                </div>
+
                 <Card>
                     <CardHeader>
                         <CardTitle>Ürün Listesi</CardTitle>
@@ -138,6 +206,7 @@ export default function ProductListPage() {
                                         <TableHead>Ürün Adı</TableHead>
                                         <TableHead>Stok Kodu</TableHead>
                                         <TableHead className="text-right">Stok</TableHead>
+                                        <TableHead className="text-center">Birim</TableHead>
                                         <TableHead className="text-right">Alış (€)</TableHead>
                                         <TableHead className="text-right">Satış (€)</TableHead>
                                         <TableHead>Açıklama</TableHead>
@@ -147,7 +216,7 @@ export default function ProductListPage() {
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-8">
+                                            <TableCell colSpan={9} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                     Ürünler yükleniyor...
@@ -177,6 +246,9 @@ export default function ProductListPage() {
                                                 <TableCell>{product.code || "-"}</TableCell>
                                                 <TableCell className="text-right">
                                                     {product.stock_quantity || 0}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    {product.unit || "-"}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     {product.purchase_price
@@ -257,6 +329,9 @@ export default function ProductListPage() {
                                                     </p>
                                                     <div className="flex items-center gap-4 mt-2 text-xs">
                                                         <span className="text-muted-foreground">
+                                                            Birim: {product.unit || "-"}
+                                                        </span>
+                                                        <span className="text-muted-foreground">
                                                             Alış:{" "}
                                                             {product.purchase_price
                                                                 ? product.purchase_price.toLocaleString("tr-TR", {
@@ -305,10 +380,12 @@ export default function ProductListPage() {
                             )}
                         </div>
 
-                        {!isLoading && products.length === 0 && (
-                            <div className="p-8 text-center text-muted-foreground">Kayıtlı ürün bulunamadı.</div>
+                        {!isLoading && filteredProducts.length === 0 && (
+                            <div className="p-8 text-center text-muted-foreground">
+                                {searchTerm ? "Arama kriterlerinize uygun ürün bulunamadı." : "Kayıtlı ürün bulunamadı."}
+                            </div>
                         )}
-                        {!isLoading && products.length > 0 && totalPages > 1 && (
+                        {!isLoading && filteredProducts.length > 0 && totalPages > 1 && (
                             <div className="py-4 flex justify-center">
                                 <Pagination
                                     currentPage={currentPage}

@@ -13,9 +13,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, Pencil, Trash2, Loader2, AlertTriangle, Mail, Phone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Users, Pencil, Trash2, Loader2, AlertTriangle, Mail, Phone, Search, X } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { Customer } from "@/lib/api/types";
@@ -33,11 +34,45 @@ import {
 
 const PAGE_SIZE = 10;
 
+// Türkçe karakterleri normalize eden fonksiyon
+const normalizeTurkishText = (text: string): string => {
+    return text
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'ı')
+        .replace(/Ğ/g, 'ğ')
+        .replace(/Ü/g, 'ü')
+        .replace(/Ş/g, 'ş')
+        .replace(/Ö/g, 'ö')
+        .replace(/Ç/g, 'ç')
+        .toLowerCase();
+};
+
 export default function CustomerListPage() {
     const [currentPage, setCurrentPage] = React.useState(1);
     const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
     const { customers, deleteCustomer, isLoading } = useCustomers();
+
+    // Filtrelenmiş müşteriler
+    const filteredCustomers = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return customers;
+        }
+
+        const searchNormalized = normalizeTurkishText(searchTerm.trim());
+        return customers.filter((customer) => {
+            const nameMatch = normalizeTurkishText(customer.name).includes(searchNormalized);
+            const emailMatch = customer.email ? normalizeTurkishText(customer.email).includes(searchNormalized) : false;
+            const phoneMatch = customer.phone_number ? normalizeTurkishText(customer.phone_number).includes(searchNormalized) : false;
+            return nameMatch || emailMatch || phoneMatch;
+        });
+    }, [customers, searchTerm]);
+
+    // Arama terimi değiştiğinde ilk sayfaya dön
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     // Müşteri silme dialog'unu aç
     const openDeleteDialog = (customer: Customer) => {
@@ -67,9 +102,14 @@ export default function CustomerListPage() {
         }
     };
 
+    // Arama terimini temizle
+    const clearSearch = () => {
+        setSearchTerm("");
+    };
+
     // Pagination hesaplamaları
-    const totalPages = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
-    const paginatedCustomers = customers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+    const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     // Sayfa değiştiğinde scroll'u yukarı çek
     useEffect(() => {
@@ -108,6 +148,35 @@ export default function CustomerListPage() {
                             Yeni Müşteri Ekle
                         </Link>
                     </Button>
+                </div>
+
+                {/* Arama Alanı */}
+                <div className="relative">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Müşteri adı, e-posta veya telefon ile arayın..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-10"
+                        />
+                        {searchTerm && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={clearSearch}
+                                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
+                    {searchTerm && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                            {filteredCustomers.length} müşteri bulundu
+                            {filteredCustomers.length !== customers.length && ` (${customers.length} toplam müşteri)`}
+                        </p>
+                    )}
                 </div>
 
                 <Card>
@@ -268,10 +337,12 @@ export default function CustomerListPage() {
                             )}
                         </div>
 
-                        {!isLoading && customers.length === 0 && (
-                            <div className="p-8 text-center text-muted-foreground">Kayıtlı müşteri bulunamadı.</div>
+                        {!isLoading && filteredCustomers.length === 0 && (
+                            <div className="p-8 text-center text-muted-foreground">
+                                {searchTerm ? "Arama kriterlerinize uygun müşteri bulunamadı." : "Kayıtlı müşteri bulunamadı."}
+                            </div>
                         )}
-                        {!isLoading && customers.length > 0 && totalPages > 1 && (
+                        {!isLoading && filteredCustomers.length > 0 && totalPages > 1 && (
                             <div className="py-4 flex justify-center">
                                 <Pagination
                                     currentPage={currentPage}
