@@ -127,13 +127,13 @@ export async function generateOfferPdf({
             ? [
                   { text: "", alignment: "center" },
                   { text: "", alignment: "center" },
-                  { text: "Ürün İsmi", alignment: "center" },
+                  { text: "Ürün İsmi", alignment: "left" },
                   { text: "Miktar", alignment: "center" },
               ]
             : [
                   { text: "", alignment: "center" },
                   { text: "", alignment: "center" },
-                  { text: "Ürün İsmi", alignment: "center" },
+                  { text: "Ürün İsmi", alignment: "left" },
                   { text: "Miktar", alignment: "center" },
                   { text: "Fiyat", alignment: "center" },
                   { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
@@ -145,7 +145,7 @@ export async function generateOfferPdf({
                 productImages[i]
                     ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
                     : { text: "", width: 50, height: 50 },
-                { text: p.name, fontSize: 12, bold: true, alignment: "center", margin: [0, 8, 0, 0] },
+                { text: p.name, fontSize: 12, bold: true, alignment: "left", margin: [0, 8, 0, 0] },
                 { text: `${p.quantity} ${p.unit || "adet"}`, alignment: "center", fontSize: 10 },
             ];
 

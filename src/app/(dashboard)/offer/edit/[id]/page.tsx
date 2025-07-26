@@ -339,12 +339,12 @@ export default function EditOfferPage() {
     const calculateDiscount = () => {
         if (!discountType || discountValue <= 0) return 0;
 
-        const finalTotal = calculateGrossTotal() + calculateGrossTotal() * 0.2; // Brüt + KDV
+        const grossTotal = calculateGrossTotal(); // Sadece brüt tutar
 
         if (discountType === "percentage") {
-            return (finalTotal * discountValue) / 100;
+            return (grossTotal * discountValue) / 100;
         } else {
-            return Math.min(discountValue, finalTotal);
+            return Math.min(discountValue, grossTotal);
         }
     };
 
@@ -370,19 +370,19 @@ export default function EditOfferPage() {
 
     const calculateNetTotal = () => {
         const grossTotal = calculateGrossTotal();
-        const vat = grossTotal * 0.2; // %20 KDV
-        const finalTotal = grossTotal + vat;
         const discount = discountMethod === "total" ? calculateDiscount() : 0;
-        return finalTotal - discount;
+        return grossTotal - discount; // KDV hariç net toplam
     };
 
     const calculateVAT = () => {
-        const grossTotal = calculateGrossTotal();
-        return grossTotal * 0.2; // %20 KDV
+        const netTotal = calculateNetTotal(); // KDV hariç net toplam
+        return netTotal * 0.2; // %20 KDV
     };
 
     const calculateFinalTotal = () => {
-        return calculateNetTotal(); // Artık net total zaten KDV dahil toplam - indirim
+        const netTotal = calculateNetTotal(); // KDV hariç net toplam
+        const vat = calculateVAT(); // KDV
+        return netTotal + vat; // KDV dahil genel toplam
     };
 
     const handleUpdateOffer = async () => {
