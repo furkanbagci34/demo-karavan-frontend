@@ -149,6 +149,41 @@ export interface UpdateProductData {
     isActive?: boolean;
 }
 
+// Warehouse (Depo) tipleri
+export interface Warehouse {
+    id: number;
+    name: string;
+}
+
+// Product Stock Status tipleri - Product interface ile aynı field adlarını kullanıyor
+export interface ProductStockStatus {
+    id: number;
+    name: string;
+    code?: string | null;
+    image?: string | null;
+    warehouse_id: number;
+    warehouse_name: string;
+    stock_quantity: number;
+}
+
+export interface GroupedProductStock {
+    productId: number;
+    productName: string;
+    productCode?: string;
+    productImage?: string;
+    warehouses: {
+        warehouseId: number;
+        warehouseName: string;
+        quantity: number;
+    }[];
+}
+
+export interface UpdateStockQuantityData {
+    [key: string]: unknown;
+    quantity: number;
+    warehouseId: number;
+}
+
 // Customer tipleri
 export interface Customer {
     id: number;
@@ -225,3 +260,26 @@ export interface UpdateVehiclePartData {
     productIds?: number[];
     quantities?: Record<string, number>; // Her product ID için miktar bilgisi
 }
+
+// Warehouse tipleri
+export interface Warehouse {
+    id: number;
+    name: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateWarehouseData {
+    name: string;
+    description?: string;
+    isActive?: boolean;
+}
+
+export interface UpdateWarehouseData {
+    name?: string;
+    description?: string;
+    isActive?: boolean;
+}
+

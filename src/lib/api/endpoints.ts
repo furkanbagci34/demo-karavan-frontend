@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/products/${id}`,
         delete: (id: string) => `/api/products/${id}`,
         updateStockQuantity: (id: string) => `/api/products/${id}/stock-quantity`,
+        getStockStatusAll: "/api/products/stock-status/all",
     },
     customers: {
         create: "/api/customers",
@@ -47,6 +48,13 @@ export const API_ENDPOINTS = {
         deletePart: (vehicleId: string, partId: string) => `/api/vehicles/${vehicleId}/parts/${partId}`,
         getPartById: (vehicleId: string, partId: string) => `/api/vehicles/${vehicleId}/parts/${partId}`,
     },
+    warehouses: {
+        create: "/api/warehouses",
+        getAll: "/api/warehouses",
+        getById: (id: string) => `/api/warehouses/${id}`,
+        update: (id: string) => `/api/warehouses/${id}`,
+        delete: (id: string) => `/api/warehouses/${id}`,
+    },
     dashboard: {
         summary: "/api/dashboard/summary",
         monthlyRevenue: "/api/dashboard/monthly-revenue",
@@ -56,3 +64,4 @@ export const API_ENDPOINTS = {
         offerStatusDistribution: "/api/dashboard/offer-status-distribution",
     },
 } as const;
+

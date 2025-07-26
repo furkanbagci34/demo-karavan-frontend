@@ -38,13 +38,13 @@ const PAGE_SIZE = 10;
 // Türkçe karakterleri normalize eden fonksiyon
 const normalizeTurkishText = (text: string): string => {
     return text
-        .replace(/İ/g, 'i')
-        .replace(/I/g, 'ı')
-        .replace(/Ğ/g, 'ğ')
-        .replace(/Ü/g, 'ü')
-        .replace(/Ş/g, 'ş')
-        .replace(/Ö/g, 'ö')
-        .replace(/Ç/g, 'ç')
+        .replace(/İ/g, "i")
+        .replace(/I/g, "ı")
+        .replace(/Ğ/g, "ğ")
+        .replace(/Ü/g, "ü")
+        .replace(/Ş/g, "ş")
+        .replace(/Ö/g, "ö")
+        .replace(/Ç/g, "ç")
         .toLowerCase();
 };
 
@@ -205,7 +205,6 @@ export default function ProductListPage() {
                                         <TableHead className="w-16">Fotoğraf</TableHead>
                                         <TableHead>Ürün Adı</TableHead>
                                         <TableHead>Stok Kodu</TableHead>
-                                        <TableHead className="text-right">Stok</TableHead>
                                         <TableHead className="text-center">Birim</TableHead>
                                         <TableHead className="text-right">Alış (€)</TableHead>
                                         <TableHead className="text-right">Satış (€)</TableHead>
@@ -244,12 +243,7 @@ export default function ProductListPage() {
                                                 </TableCell>
                                                 <TableCell className="font-medium">{product.name}</TableCell>
                                                 <TableCell>{product.code || "-"}</TableCell>
-                                                <TableCell className="text-right">
-                                                    {product.stock_quantity || 0}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {product.unit || "-"}
-                                                </TableCell>
+                                                <TableCell className="text-center">{product.unit || "-"}</TableCell>
                                                 <TableCell className="text-right">
                                                     {product.purchase_price
                                                         ? product.purchase_price.toLocaleString("tr-TR", {
@@ -382,7 +376,9 @@ export default function ProductListPage() {
 
                         {!isLoading && filteredProducts.length === 0 && (
                             <div className="p-8 text-center text-muted-foreground">
-                                {searchTerm ? "Arama kriterlerinize uygun ürün bulunamadı." : "Kayıtlı ürün bulunamadı."}
+                                {searchTerm
+                                    ? "Arama kriterlerinize uygun ürün bulunamadı."
+                                    : "Kayıtlı ürün bulunamadı."}
                             </div>
                         )}
                         {!isLoading && filteredProducts.length > 0 && totalPages > 1 && (

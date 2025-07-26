@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car } from "lucide-react";
+import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car, Warehouse } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -67,6 +67,21 @@ const adminMenus: MenuGroup[] = [
                 ],
             },
             {
+                title: "Teklifler",
+                url: "/offer",
+                icon: FileText,
+                items: [
+                    {
+                        title: "Teklif Listesi",
+                        url: "/offer",
+                    },
+                    {
+                        title: "Yeni Teklif Oluştur",
+                        url: "/offer/add",
+                    },
+                ],
+            },
+            {
                 title: "Ürünler",
                 url: "/product",
                 icon: Newspaper,
@@ -86,17 +101,17 @@ const adminMenus: MenuGroup[] = [
                 ],
             },
             {
-                title: "Teklifler",
-                url: "/offer",
-                icon: FileText,
+                title: "Depolar",
+                url: "/warehouse",
+                icon: Warehouse,
                 items: [
                     {
-                        title: "Teklif Listesi",
-                        url: "/offer",
+                        title: "Depo Listesi",
+                        url: "/warehouse",
                     },
                     {
-                        title: "Yeni Teklif Oluştur",
-                        url: "/offer/add",
+                        title: "Yeni Depo Ekle",
+                        url: "/warehouse/add",
                     },
                 ],
             },
@@ -159,6 +174,21 @@ const userMenus: MenuGroup[] = [
                 ],
             },
             {
+                title: "Teklifler",
+                url: "/offer",
+                icon: FileText,
+                items: [
+                    {
+                        title: "Teklif Listesi",
+                        url: "/offer",
+                    },
+                    {
+                        title: "Yeni Teklif Oluştur",
+                        url: "/offer/add",
+                    },
+                ],
+            },
+            {
                 title: "Ürünler",
                 url: "/product",
                 icon: Newspaper,
@@ -178,6 +208,21 @@ const userMenus: MenuGroup[] = [
                 ],
             },
             {
+                title: "Depolar",
+                url: "/warehouse",
+                icon: Warehouse,
+                items: [
+                    {
+                        title: "Depo Listesi",
+                        url: "/warehouse",
+                    },
+                    {
+                        title: "Yeni Depo Ekle",
+                        url: "/warehouse/add",
+                    },
+                ],
+            },
+            {
                 title: "Araçlar",
                 url: "/vehicle",
                 icon: Car,
@@ -193,21 +238,6 @@ const userMenus: MenuGroup[] = [
                     {
                         title: "Araç Parçaları",
                         url: "/vehicle/parts",
-                    },
-                ],
-            },
-            {
-                title: "Teklifler",
-                url: "/offer",
-                icon: FileText,
-                items: [
-                    {
-                        title: "Teklif Listesi",
-                        url: "/offer",
-                    },
-                    {
-                        title: "Yeni Teklif Oluştur",
-                        url: "/offer/add",
                     },
                 ],
             },
