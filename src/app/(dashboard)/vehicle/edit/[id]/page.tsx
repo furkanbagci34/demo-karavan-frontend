@@ -24,6 +24,17 @@ import { Car, Upload, ImageIcon, Save, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { Vehicle } from "@/lib/api/types";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 const vehicleSchema = z.object({
     name: z.string().min(1, "Araç adı gereklidir").max(500, "Araç adı çok uzun"),
@@ -41,6 +52,7 @@ export default function EditVehiclePage() {
     const [isLoadingVehicle, setIsLoadingVehicle] = useState(true);
     const [vehicleData, setVehicleData] = useState<Vehicle | null>(null);
     const [isFormInitialized, setIsFormInitialized] = useState(false);
+    const [isDeleteImageDialogOpen, setIsDeleteImageDialogOpen] = useState(false);
 
     const form = useForm<VehicleFormData>({
         resolver: zodResolver(vehicleSchema),
@@ -157,7 +169,13 @@ export default function EditVehiclePage() {
     };
 
     const removeImage = () => {
+        setIsDeleteImageDialogOpen(true);
+    };
+
+    const confirmRemoveImage = () => {
         setImagePreview(null);
+        setIsDeleteImageDialogOpen(false);
+        toast.success("Fotoğraf kaldırıldı");
     };
 
     const onSubmit = async (data: VehicleFormData) => {
@@ -378,6 +396,30 @@ export default function EditVehiclePage() {
                     </form>
                 </Form>
             </div>
+
+            {/* Resim Silme Dialog'u */}
+            <AlertDialog open={isDeleteImageDialogOpen} onOpenChange={setIsDeleteImageDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            Fotoğrafı Kaldır
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu aracın fotoğrafını kaldırmak istediğinizden emin misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmRemoveImage}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Kaldır
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

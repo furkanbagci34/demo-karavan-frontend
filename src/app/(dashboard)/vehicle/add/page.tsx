@@ -23,6 +23,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Car, Upload, ImageIcon, Save, X } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 // Form doğrulama şeması
 const vehicleSchema = z.object({
@@ -35,6 +46,7 @@ type VehicleFormData = z.infer<typeof vehicleSchema>;
 export default function AddVehiclePage() {
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [isDeleteImageDialogOpen, setIsDeleteImageDialogOpen] = useState(false);
     const router = useRouter();
     const { createVehicle, isLoading } = useVehicles();
 
@@ -131,8 +143,13 @@ export default function AddVehiclePage() {
     };
 
     const removeImage = () => {
-        setSelectedImage(null);
+        setIsDeleteImageDialogOpen(true);
+    };
+
+    const confirmRemoveImage = () => {
         setImagePreview(null);
+        setIsDeleteImageDialogOpen(false);
+        toast.success("Fotoğraf kaldırıldı");
     };
 
     const onSubmit = async (data: VehicleFormData) => {
@@ -252,7 +269,10 @@ export default function AddVehiclePage() {
                                             <FormItem>
                                                 <FormLabel>Marka Model</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Örn: Volkswagen Transporter, Mercedes Sprinter" {...field} />
+                                                    <Input
+                                                        placeholder="Örn: Volkswagen Transporter, Mercedes Sprinter"
+                                                        {...field}
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -351,6 +371,30 @@ export default function AddVehiclePage() {
                     </form>
                 </Form>
             </div>
+
+            {/* Resim Silme Dialog'u */}
+            <AlertDialog open={isDeleteImageDialogOpen} onOpenChange={setIsDeleteImageDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            Fotoğrafı Kaldır
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu aracın fotoğrafını kaldırmak istediğinizden emin misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmRemoveImage}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Kaldır
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

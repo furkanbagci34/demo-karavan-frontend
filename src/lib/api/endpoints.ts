@@ -55,6 +55,20 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/warehouses/${id}`,
         delete: (id: string) => `/api/warehouses/${id}`,
     },
+    operations: {
+        create: "/api/operations",
+        getAll: "/api/operations",
+        getById: (id: string) => `/api/operations/${id}`,
+        update: (id: string) => `/api/operations/${id}`,
+        delete: (id: string) => `/api/operations/${id}`,
+    },
+    stations: {
+        create: "/api/stations",
+        getAll: "/api/stations",
+        getById: (id: string) => `/api/stations/${id}`,
+        update: (id: string) => `/api/stations/${id}`,
+        delete: (id: string) => `/api/stations/${id}`,
+    },
     dashboard: {
         summary: "/api/dashboard/summary",
         monthlyRevenue: "/api/dashboard/monthly-revenue",
@@ -64,4 +78,3 @@ export const API_ENDPOINTS = {
         offerStatusDistribution: "/api/dashboard/offer-status-distribution",
     },
 } as const;
-

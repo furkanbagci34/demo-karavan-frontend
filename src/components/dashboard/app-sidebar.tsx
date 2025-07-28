@@ -60,9 +60,20 @@ const adminMenus: MenuGroup[] = [
                         title: "Müşteri Listesi",
                         url: "/customer",
                     },
+                ],
+            },
+            {
+                title: "Ürünler",
+                url: "/product",
+                icon: Newspaper,
+                items: [
                     {
-                        title: "Yeni Müşteri Ekle",
-                        url: "/customer/add",
+                        title: "Ürün Listesi",
+                        url: "/product",
+                    },
+                    {
+                        title: "Ürün Stok Durumu",
+                        url: "/product/stock",
                     },
                 ],
             },
@@ -82,25 +93,6 @@ const adminMenus: MenuGroup[] = [
                 ],
             },
             {
-                title: "Ürünler",
-                url: "/product",
-                icon: Newspaper,
-                items: [
-                    {
-                        title: "Ürün Listesi",
-                        url: "/product",
-                    },
-                    {
-                        title: "Yeni Ürün Ekle",
-                        url: "/product/add",
-                    },
-                    {
-                        title: "Ürün Stok Durumu",
-                        url: "/product/stock",
-                    },
-                ],
-            },
-            {
                 title: "Depolar",
                 url: "/warehouse",
                 icon: Warehouse,
@@ -108,10 +100,6 @@ const adminMenus: MenuGroup[] = [
                     {
                         title: "Depo Listesi",
                         url: "/warehouse",
-                    },
-                    {
-                        title: "Yeni Depo Ekle",
-                        url: "/warehouse/add",
                     },
                 ],
             },
@@ -125,10 +113,6 @@ const adminMenus: MenuGroup[] = [
                         url: "/vehicle",
                     },
                     {
-                        title: "Yeni Araç Ekle",
-                        url: "/vehicle/add",
-                    },
-                    {
                         title: "Araç Parçaları",
                         url: "/vehicle/parts",
                     },
@@ -138,6 +122,16 @@ const adminMenus: MenuGroup[] = [
                 title: "Üretim",
                 url: "/manufacture",
                 icon: Factory,
+                items: [
+                    {
+                        title: "İstasyonlar",
+                        url: "/stations",
+                    },
+                    {
+                        title: "Operasyonlar",
+                        url: "/operations",
+                    },
+                ],
             },
             {
                 title: "Kullanıcılar",
@@ -167,9 +161,20 @@ const userMenus: MenuGroup[] = [
                         title: "Müşteri Listesi",
                         url: "/customer",
                     },
+                ],
+            },
+            {
+                title: "Ürünler",
+                url: "/product",
+                icon: Newspaper,
+                items: [
                     {
-                        title: "Yeni Müşteri Ekle",
-                        url: "/customer/add",
+                        title: "Ürün Listesi",
+                        url: "/product",
+                    },
+                    {
+                        title: "Ürün Stok Durumu",
+                        url: "/product/stock",
                     },
                 ],
             },
@@ -189,25 +194,6 @@ const userMenus: MenuGroup[] = [
                 ],
             },
             {
-                title: "Ürünler",
-                url: "/product",
-                icon: Newspaper,
-                items: [
-                    {
-                        title: "Ürün Listesi",
-                        url: "/product",
-                    },
-                    {
-                        title: "Yeni Ürün Ekle",
-                        url: "/product/add",
-                    },
-                    {
-                        title: "Ürün Stok Durumu",
-                        url: "/product/stock",
-                    },
-                ],
-            },
-            {
                 title: "Depolar",
                 url: "/warehouse",
                 icon: Warehouse,
@@ -215,10 +201,6 @@ const userMenus: MenuGroup[] = [
                     {
                         title: "Depo Listesi",
                         url: "/warehouse",
-                    },
-                    {
-                        title: "Yeni Depo Ekle",
-                        url: "/warehouse/add",
                     },
                 ],
             },
@@ -232,10 +214,6 @@ const userMenus: MenuGroup[] = [
                         url: "/vehicle",
                     },
                     {
-                        title: "Yeni Araç Ekle",
-                        url: "/vehicle/add",
-                    },
-                    {
                         title: "Araç Parçaları",
                         url: "/vehicle/parts",
                     },
@@ -245,6 +223,16 @@ const userMenus: MenuGroup[] = [
                 title: "Üretim",
                 url: "/manufacture",
                 icon: Factory,
+                items: [
+                    {
+                        title: "İstasyonlar",
+                        url: "/stations",
+                    },
+                    {
+                        title: "Operasyonlar",
+                        url: "/operations",
+                    },
+                ],
             },
         ],
     },

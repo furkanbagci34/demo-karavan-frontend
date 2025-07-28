@@ -13,7 +13,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Warehouse, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Warehouse, Pencil, Trash2, Loader2, Settings } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
@@ -30,6 +30,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const PAGE_SIZE = 10;
 
@@ -158,22 +164,33 @@ export default function WarehouseListPage() {
                                                 <TableCell>
                                                     {new Date(warehouse.created_at).toLocaleDateString("tr-TR")}
                                                 </TableCell>
-                                                <TableCell className="flex items-center justify-center gap-2">
-                                                    <Link
-                                                        href={`/warehouse/edit/${warehouse.id}`}
-                                                        title="Düzenle"
-                                                        className="text-blue-600 hover:text-blue-800"
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                    </Link>
-                                                    <button
-                                                        type="button"
-                                                        className="text-red-600 hover:text-red-800 cursor-pointer"
-                                                        title="Pasif Hale Getir"
-                                                        onClick={() => openDeleteDialog(warehouse)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                <TableCell className="flex items-center justify-center">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">İşlemler</span>
+                                                                <Settings className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem asChild>
+                                                                <Link
+                                                                    href={`/warehouse/edit/${warehouse.id}`}
+                                                                    className="flex items-center"
+                                                                >
+                                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                                    <span>Düzenle</span>
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                className="text-red-600 focus:text-red-600"
+                                                                onClick={() => openDeleteDialog(warehouse)}
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                <span>Sil</span>
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -217,22 +234,33 @@ export default function WarehouseListPage() {
                                                             {new Date(warehouse.created_at).toLocaleDateString("tr-TR")}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <Link
-                                                            href={`/warehouse/edit/${warehouse.id}`}
-                                                            title="Düzenle"
-                                                            className="text-blue-600 hover:text-blue-800"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </Link>
-                                                        <button
-                                                            type="button"
-                                                            className="text-red-600 hover:text-red-800 cursor-pointer"
-                                                            title="Pasif Hale Getir"
-                                                            onClick={() => openDeleteDialog(warehouse)}
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                    <div className="flex items-center justify-end">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                    <span className="sr-only">İşlemler</span>
+                                                                    <Settings className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link
+                                                                        href={`/warehouse/edit/${warehouse.id}`}
+                                                                        className="flex items-center"
+                                                                    >
+                                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                                        <span>Düzenle</span>
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    className="text-red-600 focus:text-red-600"
+                                                                    onClick={() => openDeleteDialog(warehouse)}
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    <span>Sil</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </div>
                                             </div>

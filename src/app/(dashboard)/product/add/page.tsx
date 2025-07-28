@@ -25,6 +25,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 // Form doğrulama şeması
 const productSchema = z.object({
@@ -42,6 +53,7 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function AddProductPage() {
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [isDeleteImageDialogOpen, setIsDeleteImageDialogOpen] = useState(false);
     const router = useRouter();
     const { createProduct, isLoading } = useProducts();
 
@@ -144,8 +156,13 @@ export default function AddProductPage() {
     };
 
     const removeImage = () => {
-        setSelectedImage(null);
+        setIsDeleteImageDialogOpen(true);
+    };
+
+    const confirmRemoveImage = () => {
         setImagePreview(null);
+        setIsDeleteImageDialogOpen(false);
+        toast.success("Fotoğraf kaldırıldı");
     };
 
     const onSubmit: SubmitHandler<ProductFormData> = async (data) => {
@@ -464,7 +481,7 @@ export default function AddProductPage() {
                                 className="w-full sm:w-auto"
                                 onClick={() => {
                                     form.reset();
-                                    removeImage();
+                                    setImagePreview(null); // Reset image preview
                                 }}
                             >
                                 Temizle
@@ -481,6 +498,30 @@ export default function AddProductPage() {
                     </form>
                 </Form>
             </div>
+
+            {/* Resim Silme Dialog'u */}
+            <AlertDialog open={isDeleteImageDialogOpen} onOpenChange={setIsDeleteImageDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            Fotoğrafı Kaldır
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu ürünün fotoğrafını kaldırmak istediğinizden emin misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmRemoveImage}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Kaldır
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

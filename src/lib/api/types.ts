@@ -283,3 +283,48 @@ export interface UpdateWarehouseData {
     isActive?: boolean;
 }
 
+// Operation tipleri
+export interface Operation {
+    id: number;
+    name: string;
+    quality_control: boolean;
+    target_duration?: number;
+    is_active: boolean;
+    created_by: number;
+    updated_by: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateOperationData {
+    name: string;
+    qualityControl?: boolean;
+    targetDuration?: number;
+}
+
+export interface UpdateOperationData {
+    name?: string;
+    qualityControl?: boolean;
+    targetDuration?: number;
+}
+
+// Station tipleri
+export interface Station {
+    id: number;
+    name: string;
+    is_active: boolean;
+    created_by: number;
+    updated_by: number;
+    created_at: string;
+    updated_at: string;
+    created_by_name?: string;
+    updated_by_name?: string;
+}
+
+export interface CreateStationData {
+    name: string;
+}
+
+export interface UpdateStationData {
+    name?: string;
+}

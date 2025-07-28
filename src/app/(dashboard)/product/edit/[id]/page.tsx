@@ -26,6 +26,17 @@ import { Package, Upload, ImageIcon, Save, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useProducts } from "@/hooks/api/useProducts";
 import { Product } from "@/lib/api/types";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 const productSchema = z.object({
     name: z.string().min(1, "Ürün adı gereklidir").max(100, "Ürün adı çok uzun"),
@@ -49,6 +60,7 @@ export default function EditProductPage() {
     const [isLoadingProduct, setIsLoadingProduct] = useState(true);
     const [productData, setProductData] = useState<Product | null>(null);
     const [isFormInitialized, setIsFormInitialized] = useState(false);
+    const [isDeleteImageDialogOpen, setIsDeleteImageDialogOpen] = useState(false);
 
     const form = useForm<ProductFormData>({
         resolver: zodResolver(productSchema),
@@ -175,7 +187,13 @@ export default function EditProductPage() {
     };
 
     const removeImage = () => {
+        setIsDeleteImageDialogOpen(true);
+    };
+
+    const confirmRemoveImage = () => {
         setImagePreview(null);
+        setIsDeleteImageDialogOpen(false);
+        toast.success("Fotoğraf kaldırıldı");
     };
 
     const onSubmit = async (data: ProductFormData) => {
@@ -496,6 +514,30 @@ export default function EditProductPage() {
                     </form>
                 </Form>
             </div>
+
+            {/* Resim Silme Dialog'u */}
+            <AlertDialog open={isDeleteImageDialogOpen} onOpenChange={setIsDeleteImageDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            Fotoğrafı Kaldır
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Bu ürünün fotoğrafını kaldırmak istediğinizden emin misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmRemoveImage}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Kaldır
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

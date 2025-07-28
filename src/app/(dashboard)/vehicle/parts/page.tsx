@@ -20,10 +20,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Package, Plus, Trash2, Loader2, Search, Settings, X } from "lucide-react";
+import { Car, Package, Plus, Trash2, Loader2, Search, Settings, X, AlertTriangle } from "lucide-react";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { useProducts } from "@/hooks/api/useProducts";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Türkçe karakterleri normalize eden fonksiyon
 const normalizeTurkishText = (text: string): string => {
@@ -45,6 +55,8 @@ export default function VehiclePartsPage() {
     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
     const [deletingProductId, setDeletingProductId] = useState<number | null>(null);
     const [updatingProductId, setUpdatingProductId] = useState<number | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<{ id: number; name: string } | null>(null);
 
     const { vehicles, isLoading: isLoadingVehicles } = useVehicles();
     const { products, isLoading: isLoadingProducts } = useProducts();
@@ -130,7 +142,7 @@ export default function VehiclePartsPage() {
         }
     };
 
-    // Ürünü product_ids array'inden çıkarıp güncelle
+    // Ürün çıkarma işlemi
     const handleRemoveProductFromVehicle = async (productId: number) => {
         if (!vehicleParts[0] || deletingProductId === productId) return;
 
@@ -160,6 +172,21 @@ export default function VehiclePartsPage() {
         } finally {
             setDeletingProductId(null);
         }
+    };
+
+    // Silme dialog'unu aç
+    const openDeleteDialog = (product: { id: number; name: string }) => {
+        setProductToDelete(product);
+        setIsDeleteDialogOpen(true);
+    };
+
+    // Silme işlemini onayla
+    const confirmDeleteProduct = async () => {
+        if (!productToDelete) return;
+
+        await handleRemoveProductFromVehicle(productToDelete.id);
+        setIsDeleteDialogOpen(false);
+        setProductToDelete(null);
     };
 
     // Miktar güncelleme
@@ -576,7 +603,9 @@ export default function VehiclePartsPage() {
                                                         variant="destructive"
                                                         size="sm"
                                                         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 w-7 p-0"
-                                                        onClick={() => handleRemoveProductFromVehicle(product.id)}
+                                                        onClick={() =>
+                                                            openDeleteDialog({ id: product.id, name: product.name })
+                                                        }
                                                         disabled={deletingProductId === product.id}
                                                     >
                                                         {deletingProductId === product.id ? (
@@ -679,6 +708,31 @@ export default function VehiclePartsPage() {
                     </Card>
                 )}
             </div>
+
+            {/* Ürün Silme Dialog'u */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            Ürünü Araçtan Çıkar
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            <strong>{productToDelete?.name}</strong> ürününü araçtan çıkarmak istediğinizden emin
+                            misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>İptal</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDeleteProduct}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Çıkar
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
