@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { Station, CreateStationData, UpdateStationData, ApiResponse } from "@/lib/api/types";
@@ -25,16 +24,23 @@ export const useStations = () => {
             toast.success("İstasyon başarıyla oluşturuldu.");
             queryClient.invalidateQueries({ queryKey: ["stations"] });
         },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || "İstasyon oluşturulurken bir hata oluştu.");
+        onError: (error: unknown) => {
+            const errorMessage =
+                typeof error === "object" &&
+                error !== null &&
+                "response" in error &&
+                typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+                    ? (error as { response?: { data?: { message?: string } } }).response!.data!.message!
+                    : "İstasyon oluşturulurken bir hata oluştu.";
+            toast.error(errorMessage);
         },
     });
 
     const update = useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: UpdateStationData }): Promise<ApiResponse<any>> => {
-            const response = await apiClient.put<ApiResponse<any>>(
+        mutationFn: async ({ id, data }: { id: number; data: UpdateStationData }): Promise<ApiResponse<Station>> => {
+            const response = await apiClient.put<ApiResponse<Station>>(
                 API_ENDPOINTS.stations.update(id.toString()),
-                data as any
+                data as Record<string, unknown>
             );
             return response;
         },
@@ -42,22 +48,38 @@ export const useStations = () => {
             toast.success("İstasyon başarıyla güncellendi.");
             queryClient.invalidateQueries({ queryKey: ["stations"] });
         },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || "İstasyon güncellenirken bir hata oluştu.");
+        onError: (error: unknown) => {
+            let errorMessage = "İstasyon güncellenirken bir hata oluştu.";
+            if (typeof error === "object" && error !== null && "response" in error) {
+                const errObj = error as { response?: { data?: { message?: string } } };
+                if (typeof errObj.response?.data?.message === "string") {
+                    errorMessage = errObj.response.data.message;
+                }
+            }
+            toast.error(errorMessage);
         },
     });
 
     const remove = useMutation({
-        mutationFn: async (id: number): Promise<ApiResponse<any>> => {
-            const response = await apiClient.delete<ApiResponse<any>>(API_ENDPOINTS.stations.delete(id.toString()));
+        mutationFn: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
+            const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(
+                API_ENDPOINTS.stations.delete(id.toString())
+            );
             return response;
         },
         onSuccess: () => {
             toast.success("İstasyon başarıyla silindi.");
             queryClient.invalidateQueries({ queryKey: ["stations"] });
         },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || "İstasyon silinirken bir hata oluştu.");
+        onError: (error: unknown) => {
+            let errorMessage = "İstasyon silinirken bir hata oluştu.";
+            if (typeof error === "object" && error !== null && "response" in error) {
+                const errObj = error as { response?: { data?: { message?: string } } };
+                if (typeof errObj.response?.data?.message === "string") {
+                    errorMessage = errObj.response.data.message;
+                }
+            }
+            toast.error(errorMessage);
         },
     });
 
@@ -69,7 +91,7 @@ export const useStations = () => {
         },
     });
 
-    const getById = useCallback((id: number | null) => {
+    const useStationById = (id: number | null) => {
         return useQuery({
             queryKey: ["stations", id],
             queryFn: async (): Promise<Station> => {
@@ -78,14 +100,14 @@ export const useStations = () => {
             },
             enabled: !!id,
         });
-    }, []);
+    };
 
     return {
         create,
         update,
         remove,
         get,
-        getById,
+        useStationById,
         isLoading: create.isPending || update.isPending || remove.isPending,
     };
 };
