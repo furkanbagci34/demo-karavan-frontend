@@ -86,10 +86,6 @@ const adminMenus: MenuGroup[] = [
                         title: "Teklif Listesi",
                         url: "/offer",
                     },
-                    {
-                        title: "Yeni Teklif Oluştur",
-                        url: "/offer/add",
-                    },
                 ],
             },
             {
@@ -186,10 +182,6 @@ const userMenus: MenuGroup[] = [
                     {
                         title: "Teklif Listesi",
                         url: "/offer",
-                    },
-                    {
-                        title: "Yeni Teklif Oluştur",
-                        url: "/offer/add",
                     },
                 ],
             },

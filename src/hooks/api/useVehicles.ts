@@ -27,6 +27,7 @@ export const useVehicles = () => {
         mutationFn: async (data: CreateVehicleData): Promise<ApiResponse<{ vehicleId: number }>> => {
             const backendData = {
                 name: data.name,
+                brandModel: data.brandModel,
                 image: data.image,
                 isActive: data.isActive,
             };
