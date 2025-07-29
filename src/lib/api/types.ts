@@ -328,3 +328,60 @@ export interface CreateStationData {
 export interface UpdateStationData {
     name?: string;
 }
+
+// Production Plan tipleri
+export interface ProductionPlan {
+    id: number;
+    name: string;
+    vehicle_id: number;
+    vehicle_name: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    created_by_name?: string;
+    updated_by_name?: string;
+    stations?: ProductionPlanStation[];
+}
+
+export interface ProductionPlanStation {
+    id: number;
+    station_id: number;
+    station_name: string;
+    sort_order: number;
+    operations: ProductionPlanOperation[];
+}
+
+export interface ProductionPlanOperation {
+    id: number;
+    operation_id: number;
+    operation_name: string;
+    quality_control: boolean;
+    sort_order: number;
+}
+
+export interface CreateProductionPlanData {
+    name: string;
+    vehicleId: number;
+    description?: string;
+    stations: {
+        stationId: number;
+        operations: {
+            operationId: number;
+            sortOrder: number;
+        }[];
+    }[];
+}
+
+export interface UpdateProductionPlanData {
+    name?: string;
+    vehicleId?: number;
+    description?: string;
+    stations?: {
+        stationId: number;
+        operations: {
+            operationId: number;
+            sortOrder: number;
+        }[];
+    }[];
+}

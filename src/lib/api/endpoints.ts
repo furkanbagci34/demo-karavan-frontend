@@ -69,6 +69,14 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/stations/${id}`,
         delete: (id: string) => `/api/stations/${id}`,
     },
+    productionPlans: {
+        create: "/api/production-plans",
+        getAll: "/api/production-plans",
+        getById: (id: string) => `/api/production-plans/${id}`,
+        update: (id: string) => `/api/production-plans/${id}`,
+        delete: (id: string) => `/api/production-plans/${id}`,
+        getByVehicle: (vehicleId: string) => `/api/production-plans/vehicle/${vehicleId}`,
+    },
     dashboard: {
         summary: "/api/dashboard/summary",
         monthlyRevenue: "/api/dashboard/monthly-revenue",
