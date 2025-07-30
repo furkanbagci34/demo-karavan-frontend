@@ -309,10 +309,18 @@ export interface UpdateOperationData {
 }
 
 // Station tipleri
+export interface StationAuthorizedUser {
+    id: number;
+    name: string;
+    surname: string;
+    email: string;
+}
+
 export interface Station {
     id: number;
     name: string;
     is_active: boolean;
+    authorized_users?: StationAuthorizedUser[];
     created_by: number;
     updated_by: number;
     created_at: string;
@@ -323,10 +331,12 @@ export interface Station {
 
 export interface CreateStationData {
     name: string;
+    authorized_users?: number[];
 }
 
 export interface UpdateStationData {
     name?: string;
+    authorized_users?: number[];
 }
 
 // Production Plan tipleri

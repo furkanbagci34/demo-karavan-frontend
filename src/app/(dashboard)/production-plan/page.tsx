@@ -37,12 +37,6 @@ interface Station {
     operations: StationOperation[];
 }
 
-interface ProductionRecipe {
-    vehicleId: number;
-    vehicleName: string;
-    stations: Station[];
-}
-
 export default function ManufacturePage() {
     const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
     const [selectedStations, setSelectedStations] = useState<number[]>([]);
@@ -51,7 +45,7 @@ export default function ManufacturePage() {
     const [draggedOperation, setDraggedOperation] = useState<{ stationId: string; operationIndex: number } | null>(
         null
     );
-    const [stationOperationSelections, setStationOperationSelections] = useState<{ [stationId: number]: number[] }>({});
+
     const [openOperationPopover, setOpenOperationPopover] = useState<{ [stationId: number]: boolean }>({});
 
     // API hooks
@@ -66,7 +60,7 @@ export default function ManufacturePage() {
         if (selectedStations.length > 0) {
             const newStations: Station[] = [];
             selectedStations.forEach((stationId, index) => {
-                const stationData = stationsData.find((s: any) => s.id === stationId);
+                const stationData = stationsData.find((s) => s.id === stationId);
 
                 // Mevcut istasyonun operasyonlarını koru
                 const existingStation = stations.find((s) => s.stationId === stationId);
@@ -92,20 +86,6 @@ export default function ManufacturePage() {
         }
     };
 
-    // İstasyon seçildiğinde
-    const handleStationSelect = (stationIndex: number, stationId: string) => {
-        const station = stationsData.find((s: any) => s.id === parseInt(stationId));
-        if (station) {
-            const updatedStations = [...stations];
-            updatedStations[stationIndex] = {
-                ...updatedStations[stationIndex],
-                stationId: station.id,
-                stationName: station.name,
-            };
-            setStations(updatedStations);
-        }
-    };
-
     // Operasyon ekle
     const addOperation = (stationId: number, operationId: number) => {
         const operation = operations.find((o) => o.id === operationId);
@@ -127,35 +107,6 @@ export default function ManufacturePage() {
                 return station;
             });
             setStations(updatedStations);
-
-            // Seçilen operasyonu state'den kaldır
-            setStationOperationSelections((prev) => ({
-                ...prev,
-                [stationId]: prev[stationId] ? prev[stationId].filter((id) => id !== operationId) : [],
-            }));
-        }
-    };
-
-    // Operasyon seçildiğinde
-    const handleOperationSelect = (stationId: string, operationIndex: number, operationId: string) => {
-        const operation = operations.find((o) => o.id === parseInt(operationId));
-        if (operation) {
-            const updatedStations = stations.map((station) => {
-                if (station.id === stationId) {
-                    const updatedOperations = [...station.operations];
-                    updatedOperations[operationIndex] = {
-                        operationId: operation.id,
-                        operationName: operation.name,
-                        quality_control: operation.quality_control,
-                    };
-                    return {
-                        ...station,
-                        operations: updatedOperations,
-                    };
-                }
-                return station;
-            });
-            setStations(updatedStations);
         }
     };
 
@@ -167,22 +118,6 @@ export default function ManufacturePage() {
                 return {
                     ...station,
                     operations: updatedOperations,
-                };
-            }
-            return station;
-        });
-        setStations(updatedStations);
-    };
-
-    // İstasyonu kaldır
-    const removeStation = (stationId: string) => {
-        const updatedStations = stations.map((station) => {
-            if (station.id === stationId) {
-                return {
-                    ...station,
-                    stationId: 0,
-                    stationName: "",
-                    operations: [],
                 };
             }
             return station;
@@ -433,7 +368,7 @@ export default function ManufacturePage() {
                                                 />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {stationsData.map((stationData: any) => (
+                                                {stationsData.map((stationData) => (
                                                     <SelectItem
                                                         key={stationData.id}
                                                         value={stationData.id.toString()}
@@ -455,7 +390,7 @@ export default function ManufacturePage() {
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedStations.map((stationId, index) => {
                                                         const stationData = stationsData.find(
-                                                            (s: any) => s.id === stationId
+                                                            (s) => s.id === stationId
                                                         );
                                                         return (
                                                             <Badge
@@ -520,11 +455,6 @@ export default function ManufacturePage() {
 
                                 <div className="space-y-4">
                                     {stations.map((station, stationIndex) => {
-                                        // Seçilen istasyonun verisini bul
-                                        const selectedStationData = stationsData.find(
-                                            (s: any) => s.id === station.stationId
-                                        );
-
                                         return (
                                             <Card
                                                 key={station.id}

@@ -5,7 +5,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useStations } from "@/hooks/api/useStations";
+import { useUsers } from "@/hooks/api/useUsers";
+import { User } from "@/lib/api/types";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -20,11 +23,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { MapPin, Save, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MapPin, Save, Plus, Users, Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Form doğrulama şeması
 const stationSchema = z.object({
     name: z.string().min(2, "İstasyon adı en az 2 karakter olmalıdır").max(50, "İstasyon adı çok uzun"),
+    authorized_users: z.array(z.number()).optional(),
 });
 
 type StationFormData = z.infer<typeof stationSchema>;
@@ -32,18 +40,49 @@ type StationFormData = z.infer<typeof stationSchema>;
 export default function AddStationPage() {
     const router = useRouter();
     const { create, isLoading } = useStations();
+    const { users, isLoading: isLoadingUsers } = useUsers({ limit: 100 });
+    const [open, setOpen] = useState(false);
+    const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
     const form = useForm<StationFormData>({
         resolver: zodResolver(stationSchema),
         defaultValues: {
             name: "",
+            authorized_users: [],
         },
     });
+
+    const handleUserSelect = (user: User) => {
+        const isSelected = selectedUsers.some((u) => u.id === user.id);
+        let newSelectedUsers: User[];
+
+        if (isSelected) {
+            newSelectedUsers = selectedUsers.filter((u) => u.id !== user.id);
+        } else {
+            newSelectedUsers = [...selectedUsers, user];
+        }
+
+        setSelectedUsers(newSelectedUsers);
+        form.setValue(
+            "authorized_users",
+            newSelectedUsers.map((u) => u.id)
+        );
+    };
+
+    const removeUser = (userId: number) => {
+        const newSelectedUsers = selectedUsers.filter((u) => u.id !== userId);
+        setSelectedUsers(newSelectedUsers);
+        form.setValue(
+            "authorized_users",
+            newSelectedUsers.map((u) => u.id)
+        );
+    };
 
     const onSubmit = async (data: StationFormData) => {
         try {
             const stationData = {
                 name: data.name,
+                authorized_users: data.authorized_users || [],
             };
 
             await create.mutateAsync(stationData);
@@ -126,6 +165,97 @@ export default function AddStationPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="authorized_users"
+                                        render={() => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel>Yetkili Kullanıcılar</FormLabel>
+                                                <Popover open={open} onOpenChange={setOpen}>
+                                                    <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                            <Button
+                                                                variant="outline"
+                                                                role="combobox"
+                                                                aria-expanded={open}
+                                                                className="w-full justify-between"
+                                                                disabled={isLoadingUsers}
+                                                            >
+                                                                {selectedUsers.length === 0
+                                                                    ? "Kullanıcı seçiniz..."
+                                                                    : `${selectedUsers.length} kullanıcı seçildi`}
+                                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                            </Button>
+                                                        </FormControl>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-full p-0" align="start">
+                                                        <Command>
+                                                            <CommandInput placeholder="Kullanıcı ara..." />
+                                                            <CommandList>
+                                                                <CommandEmpty>Kullanıcı bulunamadı.</CommandEmpty>
+                                                                <CommandGroup>
+                                                                    {users.map((user) => (
+                                                                        <CommandItem
+                                                                            key={user.id}
+                                                                            value={`${user.name} ${user.surname} ${user.email}`}
+                                                                            onSelect={() => handleUserSelect(user)}
+                                                                        >
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    "mr-2 h-4 w-4",
+                                                                                    selectedUsers.some(
+                                                                                        (u) => u.id === user.id
+                                                                                    )
+                                                                                        ? "opacity-100"
+                                                                                        : "opacity-0"
+                                                                                )}
+                                                                            />
+                                                                            <div className="flex flex-col">
+                                                                                <span className="font-medium">
+                                                                                    {user.name} {user.surname}
+                                                                                </span>
+                                                                                <span className="text-sm text-muted-foreground">
+                                                                                    {user.email}
+                                                                                </span>
+                                                                            </div>
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandGroup>
+                                                            </CommandList>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* Seçilen kullanıcıları göster */}
+                                    {selectedUsers.length > 0 && (
+                                        <div className="space-y-2">
+                                            <FormLabel className="text-sm font-medium">Seçilen Kullanıcılar:</FormLabel>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedUsers.map((user) => (
+                                                    <Badge
+                                                        key={user.id}
+                                                        variant="secondary"
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        <Users className="h-3 w-3" />
+                                                        {user.name} {user.surname}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeUser(user.id)}
+                                                            className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5"
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
 
@@ -152,11 +282,12 @@ export default function AddStationPage() {
                                         </div>
 
                                         <div className="p-4 bg-green-50 rounded-lg">
-                                            <h4 className="font-medium text-green-900 mb-2">Önemli Notlar</h4>
+                                            <h4 className="font-medium text-green-900 mb-2">Yetkili Kullanıcılar</h4>
                                             <ul className="space-y-1 text-green-800">
-                                                <li>• İstasyon bilgileri güvenli şekilde saklanır</li>
-                                                <li>• İstasyon adı sistem genelinde kullanılır</li>
-                                                <li>• İstasyon ekledikten sonra düzenleyebilirsiniz</li>
+                                                <li>• İstasyona yetkili kullanıcılar atayabilirsiniz</li>
+                                                <li>• Birden fazla kullanıcı seçebilirsiniz</li>
+                                                <li>• Kullanıcı arama yapabilirsiniz</li>
+                                                <li>• Seçilen kullanıcılar istasyon işlemlerini yapabilir</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -172,6 +303,7 @@ export default function AddStationPage() {
                                 className="w-full sm:w-auto"
                                 onClick={() => {
                                     form.reset();
+                                    setSelectedUsers([]);
                                 }}
                             >
                                 Temizle
