@@ -120,7 +120,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                     id: `station-${index}`,
                     stationId: station.station_id,
                     stationName: station.station_name,
-                    operations: station.operations.map((operation, opIndex) => ({
+                    operations: station.operations.map((operation) => ({
                         operationId: operation.operation_id,
                         operationName: operation.operation_name,
                         quality_control: operation.quality_control,
@@ -164,7 +164,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
         if (selectedStations.length > 0 && isFormInitialized) {
             const newStations: Station[] = [];
             selectedStations.forEach((stationId, index) => {
-                const stationData = stationsData.find((s: any) => s.id === stationId);
+                const stationData = stationsData.find((s) => s.id === stationId);
                 const existingStation = stations.find((s) => s.stationId === stationId);
 
                 newStations.push({
@@ -598,7 +598,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                                 <SelectValue placeholder="İstasyon seçin" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {stationsData.map((stationData: any) => (
+                                                {stationsData.map((stationData) => (
                                                     <SelectItem
                                                         key={stationData.id}
                                                         value={stationData.id.toString()}
@@ -620,7 +620,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                                 <div className="flex flex-wrap gap-2">
                                                     {selectedStations.map((stationId, index) => {
                                                         const stationData = stationsData.find(
-                                                            (s: any) => s.id === stationId
+                                                            (s) => s.id === stationId
                                                         );
                                                         return (
                                                             <Badge
