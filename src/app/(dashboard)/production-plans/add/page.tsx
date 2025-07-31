@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -21,6 +22,7 @@ import { Car, MapPin, Wrench, Trash2, X, GripVertical, Save } from "lucide-react
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useStations } from "@/hooks/api/useStations";
 import { useOperations } from "@/hooks/api/useOperations";
+import { useProductionPlans } from "@/hooks/api/useProductionPlans";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -37,13 +39,8 @@ interface Station {
     operations: StationOperation[];
 }
 
-interface ProductionRecipe {
-    vehicleId: number;
-    vehicleName: string;
-    stations: Station[];
-}
-
 export default function ManufacturePage() {
+    const router = useRouter();
     const [selectedVehicle, setSelectedVehicle] = useState<number | null>(null);
     const [selectedStations, setSelectedStations] = useState<number[]>([]);
     const [stations, setStations] = useState<Station[]>([]);
@@ -58,6 +55,7 @@ export default function ManufacturePage() {
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
     const { get: stationsQuery, isLoading: stationsLoading } = useStations();
     const { operations, isLoading: operationsLoading } = useOperations();
+    const { create: createProductionPlan } = useProductionPlans();
 
     const stationsData = stationsQuery.data || [];
 
@@ -89,20 +87,6 @@ export default function ManufacturePage() {
         const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
         if (vehicle) {
             setSelectedVehicle(parseInt(vehicleId));
-        }
-    };
-
-    // İstasyon seçildiğinde
-    const handleStationSelect = (stationIndex: number, stationId: string) => {
-        const station = stationsData.find((s: any) => s.id === parseInt(stationId));
-        if (station) {
-            const updatedStations = [...stations];
-            updatedStations[stationIndex] = {
-                ...updatedStations[stationIndex],
-                stationId: station.id,
-                stationName: station.name,
-            };
-            setStations(updatedStations);
         }
     };
 
@@ -297,15 +281,38 @@ export default function ManufacturePage() {
             return;
         }
 
-        const recipe = {
+        const selectedVehicleData = vehicles.find((v) => v.id === selectedVehicle);
+
+        const productionPlanData = {
+            name: `Üretim Planı - ${
+                selectedVehicleData?.brand_model || selectedVehicleData?.name || "Bilinmeyen Araç"
+            }`,
             vehicleId: selectedVehicle,
-            vehicleName: vehicles.find((v) => v.id === selectedVehicle)?.name,
-            stations: stations,
+            description: `${stations.length} istasyonlu üretim planı`,
+            stations: stations.map((station) => ({
+                stationId: station.stationId,
+                operations: station.operations.map((operation, index) => ({
+                    operationId: operation.operationId,
+                    sortOrder: index,
+                })),
+            })),
         };
 
-        console.log("Üretim Reçetesi:", recipe);
-        toast.success("Üretim reçetesi başarıyla oluşturuldu!", {
-            description: `${recipe.vehicleName} için ${stations.length} istasyonlu reçete kaydedildi.`,
+        createProductionPlan.mutate(productionPlanData, {
+            onSuccess: () => {
+                toast.success("Üretim planı başarıyla oluşturuldu!", {
+                    description: `${selectedVehicleData?.brand_model || selectedVehicleData?.name} için ${
+                        stations.length
+                    } istasyonlu plan kaydedildi.`,
+                });
+
+                // Üretim planları listesi ekranına yönlendir
+                router.push("/production-plans");
+            },
+            onError: (error) => {
+                console.error("Üretim planı oluşturma hatası:", error);
+                toast.error("Üretim planı oluşturulurken bir hata oluştu");
+            },
         });
     };
 
@@ -506,6 +513,7 @@ export default function ManufacturePage() {
                                         onClick={handleSaveRecipe}
                                         className="bg-green-600 hover:bg-green-700"
                                         disabled={
+                                            createProductionPlan.isPending ||
                                             stations.some((station) => station.stationId === 0) ||
                                             stations.some((station) => station.operations.length === 0) ||
                                             stations.some((station) =>
@@ -514,7 +522,7 @@ export default function ManufacturePage() {
                                         }
                                     >
                                         <Save className="h-4 w-4 mr-2" />
-                                        Reçeteyi Kaydet
+                                        {createProductionPlan.isPending ? "Kaydediliyor..." : "Üretim Planını Kaydet"}
                                     </Button>
                                 </div>
 

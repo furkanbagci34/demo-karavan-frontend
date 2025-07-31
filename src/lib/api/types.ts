@@ -335,6 +335,7 @@ export interface ProductionPlan {
     name: string;
     vehicle_id: number;
     vehicle_name: string;
+    vehicle_brand_model?: string;
     description?: string;
     is_active: boolean;
     created_at: string;
@@ -377,6 +378,7 @@ export interface UpdateProductionPlanData {
     name?: string;
     vehicleId?: number;
     description?: string;
+    isActive?: boolean;
     stations?: {
         stationId: number;
         operations: {

@@ -120,8 +120,8 @@ const adminMenus: MenuGroup[] = [
                 icon: Factory,
                 items: [
                     {
-                        title: "Üretim Planı",
-                        url: "/production-plan",
+                        title: "Üretim Planları",
+                        url: "/production-plans",
                     },
                     {
                         title: "İstasyonlar",
@@ -221,8 +221,8 @@ const userMenus: MenuGroup[] = [
                 icon: Factory,
                 items: [
                     {
-                        title: "Üretim Planı",
-                        url: "/manufacture",
+                        title: "Üretim Planları",
+                        url: "/production-plans",
                     },
                     {
                         title: "İstasyonlar",
