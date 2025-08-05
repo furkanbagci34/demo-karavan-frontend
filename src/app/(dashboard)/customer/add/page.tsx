@@ -6,6 +6,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useCustomers } from "@/hooks/api/useCustomers";
+import { getErrorMessage } from "@/lib/utils";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -66,10 +67,8 @@ export default function AddCustomerPage() {
             // Müşteriler sayfasına yönlendir
             router.push("/customer");
         } catch (error: unknown) {
-            console.error("Müşteri ekleme hatası:", error);
-            const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
             toast.error("Müşteri eklenemedi", {
-                description: errorMessage,
+                description: getErrorMessage(error, "Müşteri eklenirken bir hata oluştu"),
             });
         }
     };

@@ -31,9 +31,13 @@ export const API_ENDPOINTS = {
         create: "/api/offers",
         getAll: "/api/offers",
         getById: (id: string) => `/api/offers/${id}`,
+        getByUid: (uid: string) => `/api/offers/uid/${uid}`,
+        updateStatus: (uid: string) => `/api/offers/uid/${uid}/status`,
         update: (id: string) => `/api/offers/${id}`,
         delete: (id: string) => `/api/offers/${id}`,
         getLastId: "/api/offers/last-id",
+        sendOffer: (id: string) => `/api/offers/send-offer/${id}`,
+        getHistory: (id: string) => `/api/offers/${id}/history`,
     },
     vehicles: {
         create: "/api/vehicles",

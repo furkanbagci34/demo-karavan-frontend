@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
     Breadcrumb,
@@ -20,12 +21,24 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus, Minus, ShoppingCart, ChevronsUpDown, Package, Search, FileText } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import {
+    Trash2,
+    Plus,
+    Minus,
+    ShoppingCart,
+    ChevronsUpDown,
+    Package,
+    Search,
+    FileText,
+    Loader2,
+    History,
+} from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { useOffers } from "@/hooks/api/useOffers";
+import { format, parseISO, addHours } from "date-fns";
+import { tr } from "date-fns/locale";
+import { useOffers, type Offer, type OfferHistory } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
-import { useVehicles } from "@/hooks/api/useVehicles";
-import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { useProducts } from "@/hooks/api/useProducts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
@@ -39,6 +52,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { OfferStatus } from "@/lib/enums";
 
 // Türkçe karakterleri normalize eden fonksiyon
 const normalizeTurkishText = (text: string): string => {
@@ -65,38 +79,76 @@ interface OfferItem {
     totalPurchasePrice: number;
     image: string;
     unit?: string; // Ürün birimi (Adet, Saat vb.)
+    itemDiscountAmount?: number;
+    itemDiscountType?: string;
+    itemDiscountValue?: number;
 }
 
-export default function CreateOfferPage() {
+export default function EditOfferPage() {
+    const params = useParams();
+    const router = useRouter();
+
+    // offerId'yi memoize et - gereksiz re-calculation'ları önler
+    const offerId = useMemo(() => {
+        const id = Number(params.id);
+        return id;
+    }, [params.id]);
+
     const [open, setOpen] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
     const [offerItems, setOfferItems] = useState<OfferItem[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [offerNumber, setOfferNumber] = useState("");
-    const [validUntil, setValidUntil] = useState(() => {
-        const today = new Date();
-        const validDate = new Date(today);
-        validDate.setDate(today.getDate() + 15);
-        return validDate.toISOString().split("T")[0];
-    });
+    const [validUntil, setValidUntil] = useState("");
     const [notes, setNotes] = useState("");
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-    const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
     const [discountType, setDiscountType] = useState<"percentage" | "amount" | null>(null);
     const [discountValue, setDiscountValue] = useState<number>(0);
     const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>("total");
     const [showPricingInPdf, setShowPricingInPdf] = useState(true); // PDF'de fiyat gösterimi için switch
 
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [isSaved, setIsSaved] = useState(false); // Yeni teklif başlangıçta kaydedilmemiş
+    const [originalOffer, setOriginalOffer] = useState<Offer | null>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<{ index: number; name: string; image: string } | null>(null);
+    const [showEmailUpdateDialog, setShowEmailUpdateDialog] = useState(false);
+    const [localEmail, setLocalEmail] = useState(""); // Local state for input
+    const [updatingEmail, setUpdatingEmail] = useState(false);
 
-    const { getLastOfferId, createOffer } = useOffers();
+    // Confirmation dialog states
+    const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
+    const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
+    const [sending, setSending] = useState(false);
+
+    // History modal states
+    const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+    const [historyData, setHistoryData] = useState<OfferHistory[]>([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+    const historyItemsPerPage = 10;
+
+    // Email input handler - sadece local state günceller, performanslı
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalEmail(e.target.value);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && !updatingEmail) {
+            e.preventDefault();
+            handleUpdateEmail();
+        }
+    };
+
+    // Dialog açıldığında local state'i sıfırla
+    const openEmailDialog = () => {
+        setLocalEmail("");
+        setShowEmailUpdateDialog(true);
+    };
+
+    const { getOfferById, updateOffer, sendOffer, getOfferHistory } = useOffers();
     const { products, isLoading: productsLoading } = useProducts();
-    const { customers, isLoading: customersLoading } = useCustomers();
-    const { vehicles, isLoading: vehiclesLoading } = useVehicles();
-    const { vehicleParts } = useVehicleParts(selectedVehicleId?.toString());
+    const { customers, isLoading: customersLoading, updateCustomer } = useCustomers();
     const isMobile = useIsMobile();
 
     // Filtrelenmiş ürünler
@@ -116,217 +168,243 @@ export default function CreateOfferPage() {
         });
     }, [products, searchTerm]);
 
-    // Sayfa yüklendiğinde teklif numarasını oluştur
+    // Teklif verilerini yükle
     useEffect(() => {
-        generateOfferNumber();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        const loadOffer = async () => {
+            if (!offerId || isNaN(offerId)) return;
 
-    // Araç seçildiğinde parçalarını teklife ekle
-    useEffect(() => {
-        if (selectedVehicleId && vehicleParts.length > 0) {
-            // Araç parçalarını teklife ekle (handleAddProduct mantığıyla)
-            vehicleParts.forEach((vehiclePart) => {
-                if (vehiclePart.products && vehiclePart.products.length > 0) {
-                    vehiclePart.products.forEach((product) => {
-                        // handleAddProduct mantığını kullan
-                        // Fiyatı number'a çevir ve güvenlik kontrolü yap
-                        let unitPrice: number;
-                        if (typeof product.sale_price === "string") {
-                            unitPrice = parseFloat(product.sale_price);
-                        } else if (typeof product.sale_price === "number") {
-                            unitPrice = product.sale_price;
+            try {
+                setLoading(true);
+                const offerData = await getOfferById(offerId);
+
+                if (offerData) {
+                    setOriginalOffer(offerData);
+                    setOfferNumber(offerData.offer_number || "");
+                    setValidUntil(offerData.valid_until ? offerData.valid_until.split("T")[0] : "");
+                    setNotes(offerData.notes || "");
+                    setSelectedCustomerId(offerData.customer_id || null);
+
+                    // İndirim bilgilerini ayarla
+                    if (offerData.discount_amount > 0) {
+                        // Backend'den gelen indirim tipini kullan
+                        if (offerData.discount_type === "percentage") {
+                            setDiscountType("percentage");
+                            setDiscountValue(offerData.discount_value || 0);
+                        } else if (offerData.discount_type === "amount") {
+                            setDiscountType("amount");
+                            setDiscountValue(offerData.discount_amount);
                         } else {
-                            unitPrice = 0;
-                        }
-
-                        if (isNaN(unitPrice) || unitPrice < 0) {
-                            console.error("Geçersiz fiyat:", product.sale_price);
-                            return;
-                        }
-
-                        // Alış fiyatını al
-                        let purchasePrice: number;
-                        if (typeof product.purchase_price === "string") {
-                            purchasePrice = parseFloat(product.purchase_price);
-                        } else if (typeof product.purchase_price === "number") {
-                            purchasePrice = product.purchase_price;
-                        } else {
-                            purchasePrice = 0;
-                        }
-
-                        if (isNaN(purchasePrice) || purchasePrice < 0) {
-                            purchasePrice = 0;
-                        }
-
-                        // Yeni ürün oluştur ve ekle
-                        const newItem: OfferItem = {
-                            id: Date.now() + Math.random(),
-                            productId: product.id,
-                            name: product.name || "Ürün",
-                            description: product.description || product.code || product.name || "Ürün açıklaması",
-                            quantity: vehiclePart.quantities?.[product.id.toString()] || 1,
-                            unitPrice: unitPrice,
-                            totalPrice: unitPrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
-                            purchasePrice: purchasePrice,
-                            totalPurchasePrice: purchasePrice * (vehiclePart.quantities?.[product.id.toString()] || 1),
-                            image: product.image || "/images/no-image-placeholder.svg",
-                            unit: product.unit || "Adet", // Ürün birimini al
-                        };
-
-                        setOfferItems((prev) => {
-                            // Aynı ürün zaten eklenmişse miktarını artır
-                            const existingItemIndex = prev.findIndex((item) => item.productId === product.id);
-                            if (existingItemIndex >= 0) {
-                                const updated = [...prev];
-                                updated[existingItemIndex].quantity += 1;
-                                updated[existingItemIndex].totalPrice =
-                                    updated[existingItemIndex].unitPrice * updated[existingItemIndex].quantity;
-                                updated[existingItemIndex].totalPurchasePrice =
-                                    updated[existingItemIndex].purchasePrice * updated[existingItemIndex].quantity;
-                                return updated;
+                            // Eski veriler için fallback
+                            const discountPercentage = (offerData.discount_amount / offerData.subtotal) * 100;
+                            if (discountPercentage <= 100) {
+                                setDiscountType("percentage");
+                                setDiscountValue(discountPercentage);
                             } else {
-                                return [...prev, newItem];
+                                setDiscountType("amount");
+                                setDiscountValue(offerData.discount_amount);
                             }
+                        }
+
+                        // İndirim yöntemini belirle - eğer herhangi bir item'da indirim varsa "distribute", yoksa "total"
+                        const hasItemDiscounts =
+                            offerData.items &&
+                            offerData.items.some(
+                                (item: unknown) =>
+                                    typeof item === "object" &&
+                                    item !== null &&
+                                    "discountAmount" in item &&
+                                    typeof (item as { discountAmount?: number }).discountAmount === "number" &&
+                                    (item as { discountAmount: number }).discountAmount > 0
+                            );
+                        setDiscountMethod(hasItemDiscounts ? "distribute" : "total");
+                    }
+
+                    // Ürünleri yükle
+                    if (offerData.items && offerData.items.length > 0) {
+                        const items: OfferItem[] = offerData.items.map((item: unknown) => {
+                            const typedItem = item as Record<string, unknown>;
+                            return {
+                                id: (typedItem.id as number) || Date.now(),
+                                productId: typedItem.productId as number,
+                                name: (typedItem.productName as string) || "",
+                                description: (typedItem.productDescription as string) || "",
+                                quantity: typedItem.quantity as number,
+                                unitPrice: typedItem.unitPrice as number,
+                                totalPrice: typedItem.totalPrice as number,
+                                purchasePrice: (typedItem.purchasePrice as number) || 0,
+                                totalPurchasePrice:
+                                    ((typedItem.purchasePrice as number) || 0) * (typedItem.quantity as number),
+                                image: (typedItem.productImage as string) || "/images/no-image-placeholder.svg",
+                                unit: (typedItem.productUnit as string) || "Adet", // Ürün birimini al
+                                // İndirim bilgilerini de ekle
+                                itemDiscountAmount: (typedItem.discountAmount as number) || 0,
+                                itemDiscountType: typedItem.discountType as string,
+                                itemDiscountValue: (typedItem.discountValue as number) || 0,
+                            };
                         });
-                    });
+                        setOfferItems(items);
+                    }
+                }
+            } catch (error) {
+                console.error("Teklif yüklenemedi", error);
+                toast.error("Teklif yüklenemedi", {
+                    description: "Teklif bilgileri alınırken bir hata oluştu.",
+                });
+                router.push("/offer");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadOffer();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [offerId]); // Sadece offerId yeterli - getOfferById ve router zaten stable
+
+    const handleAddProduct = useCallback(
+        (productId: number) => {
+            const product = filteredProducts.find((p) => p.id === productId);
+            if (!product) return;
+
+            let unitPrice: number;
+            if (typeof product.sale_price === "string") {
+                unitPrice = parseFloat(product.sale_price);
+            } else if (typeof product.sale_price === "number") {
+                unitPrice = product.sale_price;
+            } else {
+                unitPrice = 0;
+            }
+
+            if (isNaN(unitPrice) || unitPrice < 0) {
+                console.error("Geçersiz fiyat:", product.sale_price);
+                return;
+            }
+
+            let purchasePrice: number;
+            if (typeof product.purchase_price === "string") {
+                purchasePrice = parseFloat(product.purchase_price);
+            } else if (typeof product.purchase_price === "number") {
+                purchasePrice = product.purchase_price;
+            } else {
+                purchasePrice = 0;
+            }
+
+            if (isNaN(purchasePrice) || purchasePrice < 0) {
+                purchasePrice = 0;
+            }
+
+            setOfferItems((prevItems) => {
+                const existingItemIndex = prevItems.findIndex((item) => item.productId === product.id);
+
+                if (existingItemIndex >= 0) {
+                    const updatedItems = [...prevItems];
+                    updatedItems[existingItemIndex].quantity += 1;
+                    const unitPrice = updatedItems[existingItemIndex].unitPrice;
+                    const purchasePrice = updatedItems[existingItemIndex].purchasePrice;
+                    updatedItems[existingItemIndex].totalPrice = updatedItems[existingItemIndex].quantity * unitPrice;
+                    updatedItems[existingItemIndex].totalPurchasePrice =
+                        updatedItems[existingItemIndex].quantity * purchasePrice;
+                    return updatedItems;
+                } else {
+                    const newItem: OfferItem = {
+                        id: Date.now(),
+                        productId: product.id,
+                        name: product.name,
+                        description: product.description || "",
+                        quantity: 1,
+                        unitPrice: unitPrice,
+                        totalPrice: unitPrice,
+                        purchasePrice: purchasePrice,
+                        totalPurchasePrice: purchasePrice,
+                        image: product.image || "/images/no-image-placeholder.svg",
+                        unit: product.unit || "Adet", // Ürün birimini al
+                    };
+
+                    return [...prevItems, newItem];
                 }
             });
 
-            toast.success("Araç parçaları teklife eklendi", {
-                description: `${
-                    vehicles.find((v) => v.id === selectedVehicleId)?.name
-                } aracının parçaları teklif listesine eklendi.`,
-            });
-        }
-    }, [selectedVehicleId, vehicleParts, vehicles]);
+            setSelectedProductId(null);
+            setOpen(false);
+        },
+        [filteredProducts]
+    );
 
-    const handleAddProduct = (productId: number) => {
-        const product = filteredProducts.find((p) => p.id === productId);
-        if (!product) return;
+    const handleRemoveItem = useCallback(
+        (index: number) => {
+            const itemToRemove = offerItems[index];
+            setItemToDelete({ index, name: itemToRemove.name, image: itemToRemove.image });
+            setShowDeleteDialog(true);
+        },
+        [offerItems]
+    );
 
-        // Fiyatı number'a çevir ve güvenlik kontrolü yap
-        let unitPrice: number;
-        if (typeof product.sale_price === "string") {
-            unitPrice = parseFloat(product.sale_price);
-        } else if (typeof product.sale_price === "number") {
-            unitPrice = product.sale_price;
-        } else {
-            unitPrice = 0;
-        }
-
-        if (isNaN(unitPrice) || unitPrice < 0) {
-            console.error("Geçersiz fiyat:", product.sale_price);
-            return;
-        }
-
-        // Alış fiyatını al
-        let purchasePrice: number;
-        if (typeof product.purchase_price === "string") {
-            purchasePrice = parseFloat(product.purchase_price);
-        } else if (typeof product.purchase_price === "number") {
-            purchasePrice = product.purchase_price;
-        } else {
-            purchasePrice = 0;
-        }
-
-        if (isNaN(purchasePrice) || purchasePrice < 0) {
-            purchasePrice = 0;
-        }
-
-        // Aynı ürün zaten eklenmişse miktarını artır
-        const existingItemIndex = offerItems.findIndex((item) => item.productId === product.id);
-
-        if (existingItemIndex >= 0) {
-            handleQuantityChange(existingItemIndex, offerItems[existingItemIndex].quantity + 1);
-        } else {
-            const newItem: OfferItem = {
-                id: Date.now() + Math.random(),
-                productId: product.id,
-                name: product.name,
-                description: product.description || "",
-                quantity: 1,
-                unitPrice: unitPrice,
-                totalPrice: unitPrice,
-                purchasePrice: purchasePrice,
-                totalPurchasePrice: purchasePrice,
-                image: product.image || "/images/no-image-placeholder.svg",
-                unit: product.unit || "Adet", // Ürün birimini al
-            };
-
-            setOfferItems([...offerItems, newItem]);
-        }
-
-        setSelectedProductId(null);
-        setOpen(false);
-    };
-
-    const handleRemoveItem = (index: number) => {
-        const itemToRemove = offerItems[index];
-        setItemToDelete({ index, name: itemToRemove.name, image: itemToRemove.image });
-        setShowDeleteDialog(true);
-    };
-
-    const confirmDeleteItem = () => {
+    const confirmDeleteItem = useCallback(() => {
         if (itemToDelete) {
-            const updatedItems = offerItems.filter((_, i) => i !== itemToDelete.index);
-            setOfferItems(updatedItems);
+            setOfferItems((prevItems) => prevItems.filter((_, i) => i !== itemToDelete.index));
             toast.success("Ürün kaldırıldı", {
                 description: `${itemToDelete.name} teklif listesinden kaldırıldı.`,
             });
         }
         setShowDeleteDialog(false);
         setItemToDelete(null);
-    };
+    }, [itemToDelete]);
 
-    const handleQuantityChange = (index: number, newQuantity: number) => {
-        if (newQuantity <= 0) {
-            handleRemoveItem(index);
-            return;
-        }
+    const handleQuantityChange = useCallback(
+        (index: number, newQuantity: number) => {
+            if (newQuantity <= 0) {
+                handleRemoveItem(index);
+                return;
+            }
 
-        const updatedItems = [...offerItems];
-        updatedItems[index].quantity = newQuantity;
+            setOfferItems((prevItems) => {
+                const updatedItems = [...prevItems];
+                updatedItems[index].quantity = newQuantity;
 
-        // Güvenli hesaplama
-        const unitPrice =
-            typeof updatedItems[index].unitPrice === "number" && !isNaN(updatedItems[index].unitPrice)
-                ? updatedItems[index].unitPrice
-                : 0;
-        const purchasePrice =
-            typeof updatedItems[index].purchasePrice === "number" && !isNaN(updatedItems[index].purchasePrice)
-                ? updatedItems[index].purchasePrice
-                : 0;
-        updatedItems[index].totalPrice = newQuantity * unitPrice;
-        updatedItems[index].totalPurchasePrice = newQuantity * purchasePrice;
+                const unitPrice =
+                    typeof updatedItems[index].unitPrice === "number" && !isNaN(updatedItems[index].unitPrice)
+                        ? updatedItems[index].unitPrice
+                        : 0;
+                const purchasePrice =
+                    typeof updatedItems[index].purchasePrice === "number" && !isNaN(updatedItems[index].purchasePrice)
+                        ? updatedItems[index].purchasePrice
+                        : 0;
 
-        setOfferItems(updatedItems);
-    };
+                updatedItems[index].totalPrice = newQuantity * unitPrice;
+                updatedItems[index].totalPurchasePrice = newQuantity * purchasePrice;
 
-    const handlePriceChange = (index: number, newPrice: number) => {
+                return updatedItems;
+            });
+        },
+        [handleRemoveItem]
+    );
+
+    const handlePriceChange = useCallback((index: number, newPrice: number) => {
         if (newPrice < 0 || isNaN(newPrice)) return;
 
-        const updatedItems = [...offerItems];
-        updatedItems[index].unitPrice = newPrice;
+        setOfferItems((prevItems) => {
+            const updatedItems = [...prevItems];
+            updatedItems[index].unitPrice = newPrice;
 
-        // Güvenli hesaplama
-        const quantity =
-            typeof updatedItems[index].quantity === "number" && !isNaN(updatedItems[index].quantity)
-                ? updatedItems[index].quantity
-                : 0;
-        updatedItems[index].totalPrice = quantity * newPrice;
+            const quantity =
+                typeof updatedItems[index].quantity === "number" && !isNaN(updatedItems[index].quantity)
+                    ? updatedItems[index].quantity
+                    : 0;
 
-        setOfferItems(updatedItems);
-    };
+            updatedItems[index].totalPrice = quantity * newPrice;
 
-    const calculateGrossTotal = () => {
+            return updatedItems;
+        });
+    }, []);
+
+    // Hesaplama fonksiyonlarını useMemo ile optimize et
+    const grossTotal = useMemo(() => {
         return offerItems.reduce((total, item) => {
             const itemTotal = typeof item.totalPrice === "number" && !isNaN(item.totalPrice) ? item.totalPrice : 0;
             return total + itemTotal;
         }, 0);
-    };
+    }, [offerItems]);
 
-    const calculatePurchaseTotal = () => {
+    const purchaseTotal = useMemo(() => {
         return offerItems.reduce((total, item) => {
             const itemTotal =
                 typeof item.totalPurchasePrice === "number" && !isNaN(item.totalPurchasePrice)
@@ -334,74 +412,124 @@ export default function CreateOfferPage() {
                     : 0;
             return total + itemTotal;
         }, 0);
-    };
+    }, [offerItems]);
 
-    const calculateDiscount = () => {
-        if (!discountType || discountValue === 0) return 0;
-
-        const grossTotal = calculateGrossTotal(); // Sadece brüt tutar
-
-        if (discountType === "amount") {
-            // Tutarsal indirim - brüt tutar üzerinden
-            return Math.min(discountValue, grossTotal);
-        } else if (discountType === "percentage") {
-            // Yüzdesel indirim - brüt tutar üzerinden
-            return (grossTotal * discountValue) / 100;
-        }
-
-        return 0;
-    };
-
-    const calculateItemDiscount = (itemTotal: number) => {
-        if (!discountType || discountValue === 0 || discountMethod !== "distribute") return 0;
-
-        const grossTotal = calculateGrossTotal();
-        if (grossTotal === 0) return 0;
+    const discount = useMemo(() => {
+        if (!discountType || discountValue <= 0) return 0;
 
         if (discountType === "percentage") {
-            // Satırsal yüzdesel indirim - her satıra orantılı dağıt
-            const itemDiscountPercentage = (itemTotal / grossTotal) * discountValue;
-            return (itemTotal * itemDiscountPercentage) / 100;
-        } else if (discountType === "amount") {
-            // Satırsal tutarsal indirim - her satıra orantılı dağıt
-            const totalDiscount = Math.min(discountValue, grossTotal);
-            return (itemTotal / grossTotal) * totalDiscount;
+            return (grossTotal * discountValue) / 100;
+        } else {
+            return Math.min(discountValue, grossTotal);
         }
+    }, [discountType, discountValue, grossTotal]);
 
-        return 0;
-    };
+    const calculateItemDiscount = useMemo(() => {
+        return (itemTotal: number, itemIndex?: number) => {
+            // Eğer mevcut item'da indirim varsa onu kullan
+            if (
+                itemIndex !== undefined &&
+                offerItems[itemIndex]?.itemDiscountAmount &&
+                offerItems[itemIndex].itemDiscountAmount > 0
+            ) {
+                return offerItems[itemIndex].itemDiscountAmount;
+            }
 
-    const calculateNetTotal = () => {
-        const grossTotal = calculateGrossTotal();
-        const discount = discountMethod === "total" ? calculateDiscount() : 0;
-        return grossTotal - discount; // KDV hariç net toplam
-    };
+            // Yoksa yeni hesaplama yap
+            if (!discountType || discountMethod !== "distribute" || discountValue <= 0) return 0;
 
-    const calculateVAT = () => {
-        const netTotal = calculateNetTotal(); // KDV hariç net toplam
+            if (grossTotal === 0) return 0;
+
+            return (itemTotal / grossTotal) * discount;
+        };
+    }, [offerItems, discountType, discountMethod, discountValue, grossTotal, discount]);
+
+    const netTotal = useMemo(() => {
+        const discountAmount = discountMethod === "total" ? discount : 0;
+        return grossTotal - discountAmount; // KDV hariç net toplam
+    }, [grossTotal, discount, discountMethod]);
+
+    const vatAmount = useMemo(() => {
         return netTotal * 0.2; // %20 KDV
-    };
+    }, [netTotal]);
 
-    const calculateFinalTotal = () => {
-        const netTotal = calculateNetTotal(); // KDV hariç net toplam
-        const vat = calculateVAT(); // KDV
-        return netTotal + vat; // KDV dahil genel toplam
-    };
+    const finalTotal = useMemo(() => {
+        return netTotal + vatAmount; // KDV dahil genel toplam
+    }, [netTotal, vatAmount]);
 
-    const handleClearAll = () => {
-        setOfferItems([]);
-        setSelectedCustomerId(null);
-        setSelectedVehicleId(null);
-        setDiscountType(null);
+    // Backward compatibility için wrapper fonksiyonlar
+    const calculateGrossTotal = () => grossTotal;
+    const calculatePurchaseTotal = () => purchaseTotal;
+    const calculateDiscount = () => discount;
+    const calculateNetTotal = () => netTotal;
+    const calculateVAT = () => vatAmount;
+    const calculateFinalTotal = () => finalTotal;
+
+    // Input handler'larını optimize et
+    const handleOfferNumberChange = useCallback((value: string) => {
+        setOfferNumber(value);
+    }, []);
+
+    const handleValidUntilChange = useCallback((value: string) => {
+        setValidUntil(value);
+    }, []);
+
+    const handleNotesChange = useCallback((value: string) => {
+        setNotes(value);
+    }, []);
+
+    const handleDiscountTypeChange = useCallback((type: "percentage" | "amount") => {
+        setDiscountType(type);
         setDiscountValue(0);
-        setDiscountMethod(null);
-        setNotes("");
-        toast.success("Tüm liste temizlendi", {
-            description: "Teklif listesi başarıyla sıfırlandı.",
-        });
-    };
+        setDiscountMethod("total");
+    }, []);
 
-    const handleSaveOffer = async () => {
+    const handleDiscountValueChange = useCallback((value: number) => {
+        setDiscountValue(value);
+    }, []);
+
+    // Memoized handlers - cache them properly to avoid recreation
+    const quantityChangeHandlers = useMemo(() => {
+        return offerItems.map((_, index) => (e: React.ChangeEvent<HTMLInputElement>) => {
+            const value = parseInt(e.target.value) || 0;
+            handleQuantityChange(index, value);
+        });
+    }, [offerItems, handleQuantityChange]);
+
+    const priceChangeHandlers = useMemo(() => {
+        return offerItems.map((_, index) => (e: React.ChangeEvent<HTMLInputElement>) => {
+            const value = parseFloat(e.target.value) || 0;
+            handlePriceChange(index, value);
+        });
+    }, [offerItems, handlePriceChange]);
+
+    const quantityIncrementHandlers = useMemo(() => {
+        return offerItems.map((item, index) => () => {
+            handleQuantityChange(index, item.quantity + 1);
+        });
+    }, [offerItems, handleQuantityChange]);
+
+    const quantityDecrementHandlers = useMemo(() => {
+        return offerItems.map((item, index) => () => {
+            handleQuantityChange(index, item.quantity - 1);
+        });
+    }, [offerItems, handleQuantityChange]);
+
+    const removeItemHandlers = useMemo(() => {
+        return offerItems.map((_, index) => () => handleRemoveItem(index));
+    }, [offerItems, handleRemoveItem]);
+
+    const imageErrorHandler = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+        const target = e.target as HTMLImageElement;
+        target.src = "/images/no-image-placeholder.svg";
+    }, []);
+
+    // Memoize item discounts to prevent recalculation on every render
+    const itemDiscounts = useMemo(() => {
+        return offerItems.map((item, index) => calculateItemDiscount(item.totalPrice, index));
+    }, [offerItems, calculateItemDiscount]);
+
+    const handleUpdateOffer = async () => {
         if (!selectedCustomerId) {
             toast.error("Müşteri seçilmedi", {
                 description: "Lütfen bir müşteri seçin",
@@ -421,7 +549,6 @@ export default function CreateOfferPage() {
         const offerData = {
             offerNumber: offerNumber || undefined,
             customerId: selectedCustomerId || undefined,
-            vehicleId: selectedVehicleId || undefined,
             subtotal: calculateGrossTotal(),
             discountType: discountType || undefined,
             discountValue: discountValue,
@@ -430,40 +557,36 @@ export default function CreateOfferPage() {
             vatRate: 20.0,
             vatAmount: calculateVAT(),
             totalAmount: calculateFinalTotal(),
-            status: "beklemede",
+            status: originalOffer?.status || OfferStatus.TASLAK,
             validUntil: validUntil || undefined,
             notes: notes || undefined,
-            items: offerItems.map((item) => ({
+            items: offerItems.map((item, index) => ({
                 productId: item.productId,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 totalPrice: item.totalPrice,
-                discountAmount: discountMethod === "distribute" ? calculateItemDiscount(item.totalPrice) : 0,
+                discountAmount: discountMethod === "distribute" ? calculateItemDiscount(item.totalPrice, index) : 0,
                 discountType: discountMethod === "distribute" ? discountType || undefined : undefined,
                 discountValue: discountMethod === "distribute" ? discountValue : 0,
             })),
         };
 
         try {
-            const result = await createOffer(offerData);
+            const result = await updateOffer(offerId, offerData);
 
-            if (result && result.offerId) {
-                setIsSaved(true); // Teklif başarıyla kaydedildi
-                toast.success("Teklif başarıyla oluşturuldu!", {
-                    description: "Yeni teklif sisteme kaydedildi.",
+            if (result) {
+                toast.success("Teklif başarıyla güncellendi!", {
+                    description: "Teklif bilgileri başarıyla güncellendi.",
                 });
-
-                // Teklif kaydedildikten sonra yeni teklif numarası oluştur
-                await generateOfferNumber();
             } else {
-                toast.error("Teklif kaydedilemedi", {
+                toast.error("Teklif güncellenemedi", {
                     description: "Beklenmeyen bir hata oluştu",
                 });
             }
         } catch (error: unknown) {
-            console.error("Teklif kaydedilirken hata:", error);
-            const errorMessage = error instanceof Error ? error.message : "Teklif kaydedilirken bir hata oluştu";
-            toast.error("Teklif kaydedilemedi", {
+            console.error("Teklif güncellenirken hata:", error);
+            const errorMessage = error instanceof Error ? error.message : "Teklif güncellenirken bir hata oluştu";
+            toast.error("Teklif güncellenemedi", {
                 description: errorMessage,
             });
         } finally {
@@ -471,28 +594,282 @@ export default function CreateOfferPage() {
         }
     };
 
-    const generateOfferNumber = async () => {
-        try {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, "0");
-            const day = String(today.getDate()).padStart(2, "0");
-            const dateString = `${year}-${month}-${day}`;
+    const handleSendOffer = () => {
+        // 1. Müşteri seçimi kontrolü
+        if (!selectedCustomerId) {
+            toast.error("👤 Müşteri Seçilmedi", {
+                description: "Teklif göndermek için önce bir müşteri seçmeniz gerekiyor.",
+            });
+            return;
+        }
 
-            const lastOfferResponse = await getLastOfferId();
-            const nextId = lastOfferResponse.lastId || 1;
+        // 2. Ürün kontrolü
+        if (offerItems.length === 0) {
+            toast.error("📦 Ürün Eklenmedi", {
+                description: "Teklif göndermek için en az bir ürün eklemeniz gerekiyor.",
+            });
+            return;
+        }
 
-            setOfferNumber(`${dateString}-${nextId}`);
-        } catch (error) {
-            console.error("Teklif numarası oluşturulurken hata:", error);
-            // Fallback olarak timestamp kullan
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, "0");
-            const day = String(today.getDate()).padStart(2, "0");
-            setOfferNumber(`${year}-${month}-${day}-${Date.now()}`);
+        // 3. Müşteri email kontrol
+        const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+        if (!selectedCustomer) {
+            toast.error("⚠️ Müşteri Bulunamadı", {
+                description: "Seçili müşteri sistemde bulunamadı. Lütfen farklı bir müşteri seçin.",
+            });
+            return;
+        }
+
+        if (selectedCustomer.email && selectedCustomer.email.trim()) {
+            // Email varsa confirmation dialog'unu göster
+            setShowSendConfirmDialog(true);
+        } else {
+            // Email yoksa direkt email güncelleme dialog'unu aç
+            openEmailDialog();
         }
     };
+
+    const confirmSendOffer = async () => {
+        const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+        if (!selectedCustomer) {
+            toast.error("⚠️ Müşteri Bulunamadı", {
+                description: "Seçili müşteri sistemde bulunamadı. Lütfen farklı bir müşteri seçin.",
+            });
+            return;
+        }
+
+        try {
+            setSending(true);
+            setShowSendConfirmDialog(false);
+
+            // Önce teklifi güncelle
+            const offerData = {
+                offerNumber: offerNumber || undefined,
+                customerId: selectedCustomerId || undefined,
+                subtotal: calculateGrossTotal(),
+                discountType: discountType || undefined,
+                discountValue: discountValue,
+                discountAmount: calculateDiscount(),
+                netTotal: calculateNetTotal(),
+                vatRate: 20.0,
+                vatAmount: calculateVAT(),
+                totalAmount: calculateFinalTotal(),
+                status: OfferStatus.GONDERILDI, // Status'u güncelle
+                validUntil: validUntil || undefined,
+                notes: notes || undefined,
+                items: offerItems.map((item, index) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    totalPrice: item.totalPrice,
+                    discountAmount: discountMethod === "distribute" ? calculateItemDiscount(item.totalPrice, index) : 0,
+                    discountType: discountMethod === "distribute" ? discountType || undefined : undefined,
+                    discountValue: discountMethod === "distribute" ? discountValue : 0,
+                })),
+            };
+
+            // Teklifi güncelle
+            await updateOffer(offerId, offerData);
+
+            // Sonra gönder
+            await sendOffer(offerId);
+
+            toast.success("✅ Teklif Başarıyla Gönderildi", {
+                description: `${selectedCustomer.name} adlı müşteriye teklif e-posta ile gönderildi`,
+            });
+
+            // Teklif listesine yönlendir
+            router.push("/offer");
+        } catch (error: unknown) {
+            console.error("Teklif gönderilirken hata:", error);
+            const errorMessage = error instanceof Error ? error.message : "Teklif gönderilirken bir hata oluştu";
+            toast.error("❌ Teklif Gönderilemedi", {
+                description: errorMessage,
+            });
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleUpdateEmailClick = () => {
+        // Önce confirmation dialog'unu göster
+        setShowEmailConfirmDialog(true);
+    };
+
+    const handleUpdateEmail = async () => {
+        // Local email'i kullan
+        const emailToUpdate = localEmail.trim();
+
+        if (!selectedCustomerId || !emailToUpdate) {
+            toast.error("⚠️ Email Gerekli", {
+                description: "Lütfen geçerli bir email adresi girin",
+            });
+            return;
+        }
+
+        // Email format kontrolü
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailToUpdate)) {
+            toast.error("❌ Geçersiz Email Formatı", {
+                description: "Lütfen geçerli bir email formatı girin (örnek: kullanici@domain.com)",
+            });
+            return;
+        }
+
+        try {
+            setUpdatingEmail(true);
+            setShowEmailConfirmDialog(false);
+
+            await updateCustomer(selectedCustomerId.toString(), { email: emailToUpdate });
+
+            toast.success("📧 Email Başarıyla Güncellendi", {
+                description: "Müşteri email adresi başarıyla güncellendi ve kaydedildi",
+            });
+
+            setShowEmailUpdateDialog(false);
+            setLocalEmail("");
+
+            // Email güncellendikten sonra teklifi gönder
+            try {
+                // Önce teklifi güncelle
+                const offerData = {
+                    offerNumber: offerNumber || undefined,
+                    customerId: selectedCustomerId || undefined,
+                    subtotal: calculateGrossTotal(),
+                    discountType: discountType || undefined,
+                    discountValue: discountValue,
+                    discountAmount: calculateDiscount(),
+                    netTotal: calculateNetTotal(),
+                    vatRate: 20.0,
+                    vatAmount: calculateVAT(),
+                    totalAmount: calculateFinalTotal(),
+                    status: OfferStatus.GONDERILDI,
+                    validUntil: validUntil || undefined,
+                    notes: notes || undefined,
+                    items: offerItems.map((item, index) => ({
+                        productId: item.productId,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        totalPrice: item.totalPrice,
+                        discountAmount:
+                            discountMethod === "distribute" ? calculateItemDiscount(item.totalPrice, index) : 0,
+                        discountType: discountMethod === "distribute" ? discountType || undefined : undefined,
+                        discountValue: discountMethod === "distribute" ? discountValue : 0,
+                    })),
+                };
+
+                await updateOffer(offerId, offerData);
+                await sendOffer(offerId);
+
+                const updatedCustomer = customers.find((c) => c.id === selectedCustomerId);
+                toast.success("✅ Teklif Başarıyla Gönderildi", {
+                    description: `${updatedCustomer?.name} adlı müşteriye teklif e-posta ile gönderildi`,
+                });
+
+                // Teklif listesine yönlendir
+                router.push("/offer");
+            } catch (sendError) {
+                console.error("Teklif gönderilirken hata:", sendError);
+                toast.error("❌ Teklif Gönderilemedi", {
+                    description: "Email güncellendi ancak teklif gönderilirken bir hata oluştu.",
+                });
+            }
+        } catch (error) {
+            console.error("Email güncellenirken hata:", error);
+            toast.error("❌ Email Güncellenemedi", {
+                description: "Email güncellenirken bir hata oluştu. Lütfen tekrar deneyin.",
+            });
+        } finally {
+            setUpdatingEmail(false);
+        }
+    };
+
+    const handleViewPdf = () => {
+        if (!originalOffer) return;
+
+        const today = new Date();
+        const offerDate = today.toLocaleDateString("tr-TR");
+
+        const offerData = {
+            offerNo: offerNumber,
+            offerDate: offerDate,
+            offerValidUntil: validUntil ? new Date(validUntil).toLocaleDateString("tr-TR") : "Belirtilmemiş",
+            customerName:
+                customers.find((c) => c.id === selectedCustomerId)?.name ||
+                originalOffer.customer_name ||
+                "Müşteri belirtilmemiş",
+            products: offerItems.map((item, index) => {
+                let oldPrice = undefined;
+                let price = item.unitPrice;
+                let total = item.totalPrice;
+
+                // Eğer satırlara dağıtılmış indirim varsa
+                if (discountMethod === "distribute" && discountType && discountValue > 0) {
+                    const itemDiscount = calculateItemDiscount(item.totalPrice, index);
+                    if (itemDiscount > 0) {
+                        oldPrice = item.unitPrice;
+                        price = item.unitPrice - itemDiscount / item.quantity;
+                        total = price * item.quantity;
+                    }
+                }
+                // Eğer item'da mevcut indirim varsa
+                else if (item.itemDiscountAmount && item.itemDiscountAmount > 0) {
+                    oldPrice = item.unitPrice;
+                    price = item.unitPrice - item.itemDiscountAmount / item.quantity;
+                    total = price * item.quantity;
+                }
+
+                return {
+                    id: item.productId,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price,
+                    oldPrice,
+                    total,
+                    imageUrl: item.image,
+                    unit: item.unit, // Ürün birimini ekle
+                };
+            }),
+            gross: calculateGrossTotal(),
+            discount: calculateDiscount(),
+            net: calculateNetTotal(),
+            vat: calculateVAT(),
+            total: calculateFinalTotal(),
+            notes: notes,
+            hidePricing: !showPricingInPdf, // Switch durumuna göre fiyat gösterimi
+        };
+
+        generateOfferPdf(offerData);
+    };
+
+    const handleShowHistory = async () => {
+        setShowHistoryDialog(true);
+        setHistoryLoading(true);
+        setHistoryCurrentPage(1);
+
+        try {
+            const history = await getOfferHistory(offerId);
+            setHistoryData(history);
+        } catch (error) {
+            console.error("İşlem geçmişi yüklenirken hata:", error);
+            toast.error("❌ İşlem Geçmişi Yüklenemedi", {
+                description: "İşlem geçmişi yüklenirken bir hata oluştu. Lütfen tekrar deneyin.",
+            });
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+                <div className="flex items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span>Teklif yükleniyor...</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -511,9 +888,13 @@ export default function CreateOfferPage() {
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator />
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage className="text-slate-900 font-medium">
-                                        Teklif Oluştur
-                                    </BreadcrumbPage>
+                                    <BreadcrumbLink href="/offer" className="text-slate-600 hover:text-slate-900">
+                                        Teklifler
+                                    </BreadcrumbLink>
+                                </BreadcrumbItem>
+                                <BreadcrumbSeparator />
+                                <BreadcrumbItem>
+                                    <BreadcrumbPage className="text-slate-900 font-medium">Teklif Detay</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
@@ -523,11 +904,11 @@ export default function CreateOfferPage() {
 
             {/* Main Content */}
             <div className="flex-1 p-4">
-                <div className="max-w-full mx-auto space-y-6">
+                <div className="max-w-full mx-auto space-y-2">
                     {/* Page Header */}
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-900 mb-2">Teklif Oluştur</h1>
+                            <h1 className="text-3xl font-bold text-slate-900">Teklif Detay</h1>
                         </div>
                     </div>
 
@@ -545,8 +926,8 @@ export default function CreateOfferPage() {
                                         Teklif Bilgileri
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="pt-1">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">
                                                 Teklif Numarası
@@ -555,7 +936,7 @@ export default function CreateOfferPage() {
                                                 placeholder="OFF-2024-001"
                                                 value={offerNumber}
                                                 disabled
-                                                onChange={(e) => setOfferNumber(e.target.value)}
+                                                onChange={(e) => handleOfferNumberChange(e.target.value)}
                                                 className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-9"
                                             />
                                         </div>
@@ -629,104 +1010,13 @@ export default function CreateOfferPage() {
                                             </Popover>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-sm font-medium text-slate-700">Araç Seçimi</label>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        className="w-full justify-between h-9 text-left font-normal border-slate-300 hover:bg-slate-50"
-                                                    >
-                                                        {selectedVehicleId
-                                                            ? vehicles.find(
-                                                                  (vehicle) => vehicle.id === selectedVehicleId
-                                                              )?.name
-                                                            : "Araç seçin (opsiyonel)..."}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-full p-0" align="start">
-                                                    <Command>
-                                                        <CommandInput placeholder="Araç ara..." className="h-9" />
-                                                        <CommandEmpty>
-                                                            {vehiclesLoading ? (
-                                                                <div className="flex items-center justify-center py-4">
-                                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                                                    <span className="ml-2 text-sm">Yükleniyor...</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="py-4 text-center text-sm text-muted-foreground">
-                                                                    Araç bulunamadı
-                                                                </div>
-                                                            )}
-                                                        </CommandEmpty>
-                                                        <CommandGroup>
-                                                            <CommandList className="max-h-[200px]">
-                                                                <CommandItem
-                                                                    onSelect={() => setSelectedVehicleId(null)}
-                                                                    className="flex items-center gap-2"
-                                                                >
-                                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
-                                                                        {!selectedVehicleId && (
-                                                                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="text-sm text-slate-500">
-                                                                        Araç seçme
-                                                                    </span>
-                                                                </CommandItem>
-                                                                {vehicles.map((vehicle) => (
-                                                                    <CommandItem
-                                                                        key={vehicle.id}
-                                                                        onSelect={() =>
-                                                                            setSelectedVehicleId(vehicle.id)
-                                                                        }
-                                                                        className="flex items-center gap-2"
-                                                                    >
-                                                                        <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
-                                                                            {selectedVehicleId === vehicle.id && (
-                                                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            <div className="font-medium text-sm">
-                                                                                {vehicle.name}
-                                                                            </div>
-                                                                            <div className="text-xs text-slate-500">
-                                                                                {vehicle.is_active ? "Aktif" : "Pasif"}
-                                                                            </div>
-                                                                        </div>
-                                                                        {vehicle.image && (
-                                                                            <div className="w-6 h-6 rounded border overflow-hidden flex-shrink-0">
-                                                                                <img
-                                                                                    src={vehicle.image}
-                                                                                    alt={vehicle.name}
-                                                                                    className="w-full h-full object-cover"
-                                                                                    onError={(e) => {
-                                                                                        const target =
-                                                                                            e.target as HTMLImageElement;
-                                                                                        target.src =
-                                                                                            "/images/no-image-placeholder.svg";
-                                                                                    }}
-                                                                                />
-                                                                            </div>
-                                                                        )}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandList>
-                                                        </CommandGroup>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                        <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">
                                                 Geçerlilik Tarihi
                                             </label>
                                             <Input
                                                 type="date"
                                                 value={validUntil}
-                                                onChange={(e) => setValidUntil(e.target.value)}
+                                                onChange={(e) => handleValidUntilChange(e.target.value)}
                                                 className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-9"
                                             />
                                         </div>
@@ -735,7 +1025,7 @@ export default function CreateOfferPage() {
                                             <Input
                                                 placeholder="Teklif notları..."
                                                 value={notes}
-                                                onChange={(e) => setNotes(e.target.value)}
+                                                onChange={(e) => handleNotesChange(e.target.value)}
                                                 className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-9"
                                             />
                                         </div>
@@ -745,18 +1035,16 @@ export default function CreateOfferPage() {
 
                             {/* Ürün Ekleme Formu */}
                             <Card className="border-slate-200 shadow-sm">
-                                <CardHeader className="pb-4">
+                                <CardHeader>
                                     <CardTitle className="flex items-center gap-3 text-lg font-semibold text-slate-900">
                                         <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                                             <Package className="h-4 w-4 text-green-600" />
                                         </div>
                                         Ürün Ekle
                                     </CardTitle>
-                                    <p className="text-sm text-slate-600">Ürün arayın ve teklife ekleyin</p>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        <label className="text-sm font-medium text-slate-700">Ürün Ara ve Seç</label>
                                         <Popover open={open} onOpenChange={setOpen}>
                                             <PopoverTrigger asChild>
                                                 <Button
@@ -821,12 +1109,7 @@ export default function CreateOfferPage() {
                                                                             }
                                                                             alt={product.name}
                                                                             className="w-full h-full object-cover"
-                                                                            onError={(e) => {
-                                                                                const target =
-                                                                                    e.target as HTMLImageElement;
-                                                                                target.src =
-                                                                                    "/images/no-image-placeholder.svg";
-                                                                            }}
+                                                                            onError={imageErrorHandler}
                                                                         />
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
@@ -889,7 +1172,7 @@ export default function CreateOfferPage() {
 
                             {/* Teklif Tablosu */}
                             <Card className="border-slate-200 shadow-sm">
-                                <CardHeader className="pb-4">
+                                <CardHeader>
                                     <div className="flex items-center justify-between">
                                         <CardTitle className="flex items-center gap-3 text-lg font-semibold text-slate-900">
                                             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -905,7 +1188,8 @@ export default function CreateOfferPage() {
                                     </div>
                                     {offerItems.length === 0 && (
                                         <p className="text-sm text-slate-600">
-                                            Ürün ekledikten sonra &quot;Kaydet&quot; butonuna basarak teklifi kaydedin.
+                                            Ürün ekledikten sonra &quot;Güncelle&quot; butonuna basarak teklifi
+                                            güncelleyin.
                                         </p>
                                     )}
                                 </CardHeader>
@@ -927,10 +1211,7 @@ export default function CreateOfferPage() {
                                                                 src={item.image || "/images/no-image-placeholder.svg"}
                                                                 alt={item.name}
                                                                 className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    const target = e.target as HTMLImageElement;
-                                                                    target.src = "/images/no-image-placeholder.svg";
-                                                                }}
+                                                                onError={imageErrorHandler}
                                                             />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -947,7 +1228,7 @@ export default function CreateOfferPage() {
                                                                     variant="outline"
                                                                     size="sm"
                                                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 flex-shrink-0"
-                                                                    onClick={() => handleRemoveItem(index)}
+                                                                    onClick={removeItemHandlers[index]}
                                                                 >
                                                                     <Trash2 className="h-3 w-3" />
                                                                 </Button>
@@ -963,23 +1244,14 @@ export default function CreateOfferPage() {
                                                                             variant="outline"
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
-                                                                            onClick={() =>
-                                                                                handleQuantityChange(
-                                                                                    index,
-                                                                                    item.quantity - 1
-                                                                                )
-                                                                            }
+                                                                            onClick={quantityDecrementHandlers[index]}
                                                                         >
                                                                             <Minus className="h-3 w-3" />
                                                                         </Button>
                                                                         <Input
                                                                             type="number"
                                                                             value={item.quantity}
-                                                                            onChange={(e) => {
-                                                                                const value =
-                                                                                    parseInt(e.target.value) || 0;
-                                                                                handleQuantityChange(index, value);
-                                                                            }}
+                                                                            onChange={quantityChangeHandlers[index]}
                                                                             className="w-16 h-8 text-center border-slate-300"
                                                                             min="1"
                                                                         />
@@ -987,12 +1259,7 @@ export default function CreateOfferPage() {
                                                                             variant="outline"
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
-                                                                            onClick={() =>
-                                                                                handleQuantityChange(
-                                                                                    index,
-                                                                                    item.quantity + 1
-                                                                                )
-                                                                            }
+                                                                            onClick={quantityIncrementHandlers[index]}
                                                                         >
                                                                             <Plus className="h-3 w-3" />
                                                                         </Button>
@@ -1016,11 +1283,7 @@ export default function CreateOfferPage() {
                                                                         step="0.01"
                                                                         min="0"
                                                                         value={item.unitPrice}
-                                                                        onChange={(e) => {
-                                                                            const value =
-                                                                                parseFloat(e.target.value) || 0;
-                                                                            handlePriceChange(index, value);
-                                                                        }}
+                                                                        onChange={priceChangeHandlers[index]}
                                                                         className="w-24 h-8 border-slate-300"
                                                                         placeholder="0.00"
                                                                     />
@@ -1041,18 +1304,14 @@ export default function CreateOfferPage() {
                                                                     </span>
                                                                 </div>
                                                                 {discountMethod === "distribute" &&
-                                                                    calculateItemDiscount(item.totalPrice) > 0 && (
+                                                                    itemDiscounts[index] > 0 && (
                                                                         <div className="flex items-center justify-between pt-1">
                                                                             <span className="text-xs text-red-600">
                                                                                 İndirim:
                                                                             </span>
                                                                             <span className="text-sm font-medium text-red-600">
                                                                                 -€
-                                                                                {formatNumber(
-                                                                                    calculateItemDiscount(
-                                                                                        item.totalPrice
-                                                                                    )
-                                                                                )}
+                                                                                {formatNumber(itemDiscounts[index])}
                                                                             </span>
                                                                         </div>
                                                                     )}
@@ -1103,11 +1362,7 @@ export default function CreateOfferPage() {
                                                                         }
                                                                         alt={item.name}
                                                                         className="w-full h-full object-cover"
-                                                                        onError={(e) => {
-                                                                            const target = e.target as HTMLImageElement;
-                                                                            target.src =
-                                                                                "/images/no-image-placeholder.svg";
-                                                                        }}
+                                                                        onError={imageErrorHandler}
                                                                     />
                                                                 </div>
                                                             </TableCell>
@@ -1128,23 +1383,14 @@ export default function CreateOfferPage() {
                                                                             variant="outline"
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
-                                                                            onClick={() =>
-                                                                                handleQuantityChange(
-                                                                                    index,
-                                                                                    item.quantity - 1
-                                                                                )
-                                                                            }
+                                                                            onClick={quantityDecrementHandlers[index]}
                                                                         >
                                                                             <Minus className="h-3 w-3" />
                                                                         </Button>
                                                                         <Input
                                                                             type="number"
                                                                             value={item.quantity}
-                                                                            onChange={(e) => {
-                                                                                const value =
-                                                                                    parseInt(e.target.value) || 0;
-                                                                                handleQuantityChange(index, value);
-                                                                            }}
+                                                                            onChange={quantityChangeHandlers[index]}
                                                                             className="w-16 h-8 text-center border-slate-300"
                                                                             min="1"
                                                                         />
@@ -1152,12 +1398,7 @@ export default function CreateOfferPage() {
                                                                             variant="outline"
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
-                                                                            onClick={() =>
-                                                                                handleQuantityChange(
-                                                                                    index,
-                                                                                    item.quantity + 1
-                                                                                )
-                                                                            }
+                                                                            onClick={quantityIncrementHandlers[index]}
                                                                         >
                                                                             <Plus className="h-3 w-3" />
                                                                         </Button>
@@ -1173,10 +1414,7 @@ export default function CreateOfferPage() {
                                                                     step="0.01"
                                                                     min="0"
                                                                     value={item.unitPrice}
-                                                                    onChange={(e) => {
-                                                                        const value = parseFloat(e.target.value) || 0;
-                                                                        handlePriceChange(index, value);
-                                                                    }}
+                                                                    onChange={priceChangeHandlers[index]}
                                                                     className="w-28 border-slate-300"
                                                                     placeholder="0.00"
                                                                 />
@@ -1192,12 +1430,10 @@ export default function CreateOfferPage() {
                                                             </TableCell>
                                                             {discountMethod === "distribute" && (
                                                                 <TableCell className="text-red-600 font-medium">
-                                                                    {calculateItemDiscount(item.totalPrice) > 0 ? (
+                                                                    {itemDiscounts[index] > 0 ? (
                                                                         <>
                                                                             -€
-                                                                            {formatNumber(
-                                                                                calculateItemDiscount(item.totalPrice)
-                                                                            )}
+                                                                            {formatNumber(itemDiscounts[index])}
                                                                         </>
                                                                     ) : (
                                                                         <span className="text-slate-400">-</span>
@@ -1209,7 +1445,7 @@ export default function CreateOfferPage() {
                                                                     variant="outline"
                                                                     size="sm"
                                                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-                                                                    onClick={() => handleRemoveItem(index)}
+                                                                    onClick={removeItemHandlers[index]}
                                                                 >
                                                                     <Trash2 className="h-3 w-3" />
                                                                 </Button>
@@ -1228,15 +1464,15 @@ export default function CreateOfferPage() {
                         <div className="xl:col-span-1">
                             <div className="sticky top-6 space-y-3">
                                 {/* Action Buttons */}
-                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                            <FileText className="h-4 w-4 text-blue-600" />
+                                        <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                            <FileText className="h-4 w-4 text-yellow-600" />
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-slate-900 text-sm">Teklif İşlemleri</h3>
                                             <p className="text-xs text-slate-600">
-                                                Teklifinizi kaydedin veya görüntüleyin
+                                                Teklifinizi güncelleyin veya görüntüleyin
                                             </p>
                                         </div>
                                     </div>
@@ -1245,14 +1481,14 @@ export default function CreateOfferPage() {
                                         <Button
                                             variant="default"
                                             size="sm"
-                                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md border-0 h-10 font-medium"
-                                            onClick={handleSaveOffer}
+                                            className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-md border-0 h-10 font-medium"
+                                            onClick={handleUpdateOffer}
                                             disabled={saving}
                                         >
                                             {saving ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                    Kaydediliyor...
+                                                    Güncelleniyor...
                                                 </>
                                             ) : (
                                                 <>
@@ -1271,11 +1507,46 @@ export default function CreateOfferPage() {
                                                             />
                                                         </svg>
                                                     </div>
-                                                    Kaydet
+                                                    Değişiklikleri Kaydet
                                                 </>
                                             )}
                                         </Button>
-
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md border-0 h-10 font-medium"
+                                            onClick={handleSendOffer}
+                                            disabled={saving}
+                                        >
+                                            <>
+                                                <div className="w-4 h-4 mb-1">
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                        style={{ transform: "rotate(60deg)", alignSelf: "center" }}
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                Teklifi Gönder
+                                            </>
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full border-slate-300 hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-sm h-10 font-medium"
+                                            onClick={handleShowHistory}
+                                        >
+                                            <History className="w-4 h-4 mr-2" />
+                                            İşlem Geçmişi
+                                        </Button>
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
@@ -1308,7 +1579,6 @@ export default function CreateOfferPage() {
                                                 <Switch
                                                     checked={showPricingInPdf}
                                                     onCheckedChange={setShowPricingInPdf}
-                                                    className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-200"
                                                 />
                                             </div>
 
@@ -1316,65 +1586,7 @@ export default function CreateOfferPage() {
                                                 variant="outline"
                                                 size="sm"
                                                 className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 h-10 font-medium"
-                                                onClick={() => {
-                                                    if (!isSaved) {
-                                                        toast.error("İlk önce teklifi kaydetmelisiniz", {
-                                                            description:
-                                                                "PDF görüntülemeden önce lütfen teklifi kaydedin.",
-                                                        });
-                                                        return;
-                                                    }
-                                                    if (offerItems.length === 0) {
-                                                        toast.error("Ürün eklenmedi", {
-                                                            description:
-                                                                "PDF görüntülemek için lütfen en az bir ürün ekleyin.",
-                                                        });
-                                                        return;
-                                                    }
-
-                                                    generateOfferPdf({
-                                                        offerNo: offerNumber,
-                                                        offerDate: new Date().toLocaleDateString("tr-TR"),
-                                                        offerValidUntil: validUntil,
-                                                        customerName:
-                                                            customers.find((c) => c.id === selectedCustomerId)?.name ||
-                                                            "Müşteri Adı",
-
-                                                        products: offerItems.map((item) => {
-                                                            let oldPrice = undefined;
-                                                            let price = item.unitPrice;
-                                                            if (
-                                                                discountType &&
-                                                                discountValue > 0 &&
-                                                                discountMethod === "distribute"
-                                                            ) {
-                                                                const itemDiscount = calculateItemDiscount(
-                                                                    item.totalPrice
-                                                                );
-                                                                oldPrice = item.unitPrice;
-                                                                price = item.unitPrice - itemDiscount / item.quantity;
-                                                            }
-                                                            return {
-                                                                id: item.id,
-                                                                name: item.name,
-                                                                quantity: item.quantity,
-                                                                price,
-                                                                oldPrice,
-                                                                total: price * item.quantity,
-                                                                imageUrl: item.image,
-                                                                unit: item.unit, // Ürün birimini ekle
-                                                            };
-                                                        }),
-                                                        notes: notes,
-                                                        gross: calculateGrossTotal(),
-                                                        discount: calculateDiscount(),
-                                                        net: calculateNetTotal(),
-                                                        vat: calculateVAT(),
-                                                        total: calculateFinalTotal(),
-                                                        hidePricing: !showPricingInPdf, // Switch durumuna göre fiyat gösterimi
-                                                    });
-                                                }}
-                                                disabled={offerItems.length === 0}
+                                                onClick={handleViewPdf}
                                             >
                                                 <div className="w-4 h-4 mr-2">
                                                     <svg
@@ -1392,29 +1604,6 @@ export default function CreateOfferPage() {
                                                     </svg>
                                                 </div>
                                                 PDF Görüntüle
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 h-10 font-medium mt-2 relative z-10"
-                                                onClick={handleClearAll}
-                                            >
-                                                <div className="w-4 h-4 mr-2">
-                                                    <svg
-                                                        className="w-4 h-4"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                                Temizle
                                             </Button>
                                         </div>
                                     </div>
@@ -1451,11 +1640,7 @@ export default function CreateOfferPage() {
                                                         variant={discountType === "percentage" ? "default" : "outline"}
                                                         size="sm"
                                                         disabled={offerItems.length === 0}
-                                                        onClick={() => {
-                                                            setDiscountType("percentage");
-                                                            setDiscountValue(0);
-                                                            setDiscountMethod("total");
-                                                        }}
+                                                        onClick={() => handleDiscountTypeChange("percentage")}
                                                         className="flex-1 h-8 text-xs"
                                                     >
                                                         Yüzdesel (%)
@@ -1465,11 +1650,7 @@ export default function CreateOfferPage() {
                                                         variant={discountType === "amount" ? "default" : "outline"}
                                                         size="sm"
                                                         disabled={offerItems.length === 0}
-                                                        onClick={() => {
-                                                            setDiscountType("amount");
-                                                            setDiscountValue(0);
-                                                            setDiscountMethod("total");
-                                                        }}
+                                                        onClick={() => handleDiscountTypeChange("amount")}
                                                         className="flex-1 h-8 text-xs"
                                                     >
                                                         Tutarsal (€)
@@ -1492,7 +1673,7 @@ export default function CreateOfferPage() {
                                                         >
                                                             Genel Toplam
                                                         </Button>
-                                                        {/*<Button
+                                                        <Button
                                                             type="button"
                                                             variant={
                                                                 discountMethod === "distribute" ? "default" : "outline"
@@ -1521,7 +1702,7 @@ export default function CreateOfferPage() {
                                                         max={discountType === "percentage" ? "100" : undefined}
                                                         value={discountValue}
                                                         onChange={(e) =>
-                                                            setDiscountValue(parseFloat(e.target.value) || 0)
+                                                            handleDiscountValueChange(parseFloat(e.target.value) || 0)
                                                         }
                                                         className="border-slate-300 focus:border-red-500 focus:ring-red-500 h-8 text-xs"
                                                         placeholder={discountType === "percentage" ? "10" : "50"}
@@ -1570,8 +1751,24 @@ export default function CreateOfferPage() {
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-slate-600">Durum:</span>
                                             <div className="flex items-center gap-1">
-                                                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                                                <span className="text-yellow-700 font-medium">Beklemede</span>
+                                                <div
+                                                    className={`w-2 h-2 rounded-full animate-pulse ${
+                                                        originalOffer?.status === OfferStatus.TASLAK
+                                                            ? "bg-yellow-500"
+                                                            : "bg-green-500"
+                                                    }`}
+                                                ></div>
+                                                <span
+                                                    className={`font-medium ${
+                                                        originalOffer?.status === OfferStatus.TASLAK
+                                                            ? "text-yellow-700"
+                                                            : "text-green-700"
+                                                    }`}
+                                                >
+                                                    {originalOffer?.status === OfferStatus.TASLAK
+                                                        ? OfferStatus.TASLAK
+                                                        : originalOffer?.status || OfferStatus.TASLAK}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1636,6 +1833,7 @@ export default function CreateOfferPage() {
                     </div>
                 </div>
             </div>
+
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -1646,16 +1844,15 @@ export default function CreateOfferPage() {
                                         src={itemToDelete.image || "/images/no-image-placeholder.svg"}
                                         alt={itemToDelete.name}
                                         className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            const target = e.target as HTMLImageElement;
-                                            target.src = "/images/no-image-placeholder.svg";
-                                        }}
+                                        onError={imageErrorHandler}
                                     />
                                 </div>
                             )}
                             <div className="flex-1">
                                 <AlertDialogTitle>
-                                    {itemToDelete?.name} ürününü kaldırmak istediğinize emin misiniz?
+                                    {itemToDelete
+                                        ? `"${itemToDelete.name}" ürününü kaldırmak istediğinize emin misiniz?`
+                                        : "Hata"}
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                     Bu işlem geri alınamaz. Ürün teklif listesinden kaldırılacak.
@@ -1669,6 +1866,345 @@ export default function CreateOfferPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <AlertDialog
+                open={showEmailUpdateDialog}
+                onOpenChange={(open) => {
+                    setShowEmailUpdateDialog(open);
+                    // localEmail'i sadece iptal butonuna basıldığında sıfırla
+                    // confirmation dialog'u açılırken sıfırlama
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-semibold text-slate-900">
+                            Müşteri Email Güncelle
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-slate-700 mt-2">
+                            Teklifi göndermek için müşteri email adresini güncelleyin.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {selectedCustomerId && (
+                        <div className="space-y-3 px-6">
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                                    <span className="text-sm font-medium text-amber-800">Müşteri Bilgisi</span>
+                                </div>
+                                <p className="text-lg font-semibold text-amber-900">
+                                    {customers.find((c) => c.id === selectedCustomerId)?.name}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                    <span className="text-sm font-medium text-red-800">Email Durumu</span>
+                                </div>
+                                <p className="text-sm text-red-700">Bu müşterinin email adresi bulunmuyor</p>
+                            </div>
+                        </div>
+                    )}
+                    <div className="py-4 px-6">
+                        <label className="text-sm font-medium text-slate-700 mb-2 block">
+                            Email Adresi <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                            type="email"
+                            placeholder="ornek@email.com"
+                            value={localEmail}
+                            onChange={handleEmailChange}
+                            className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                            disabled={updatingEmail}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel
+                            onClick={() => {
+                                setShowEmailUpdateDialog(false);
+                                setLocalEmail("");
+                            }}
+                            disabled={updatingEmail}
+                        >
+                            İptal
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleUpdateEmailClick}
+                            disabled={updatingEmail || !localEmail.trim()}
+                        >
+                            {updatingEmail ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Güncelleniyor...
+                                </>
+                            ) : (
+                                "Email Güncelle"
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Teklif Gönder Confirmation Dialog */}
+            <AlertDialog open={showSendConfirmDialog} onOpenChange={setShowSendConfirmDialog}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg
+                                    className="w-4 h-4 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                    />
+                                </svg>
+                            </div>
+                            Teklifi Gönder
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-slate-700 mt-2">
+                            Teklifi göndermeden önce bilgileri kontrol edin.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Müşteri Bilgisi */}
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-sm font-medium text-blue-800">Müşteri</span>
+                            </div>
+                            <p className="text-lg font-semibold text-blue-900">
+                                {selectedCustomerId
+                                    ? customers.find((c) => c.id === selectedCustomerId)?.name
+                                    : "Müşteri seçilmedi"}
+                            </p>
+                        </div>
+
+                        {/* Fiyat Özeti */}
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-sm font-medium text-green-800">Fiyat Özeti</span>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-green-700">Brüt Toplam:</span>
+                                    <span className="font-medium text-green-900">
+                                        €{formatNumber(calculateGrossTotal())}
+                                    </span>
+                                </div>
+                                {calculateDiscount() > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-green-700">İndirim:</span>
+                                        <span className="font-medium text-red-600">
+                                            -€{formatNumber(calculateDiscount())}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between">
+                                    <span className="text-green-700">Net Toplam:</span>
+                                    <span className="font-medium text-green-900">
+                                        €{formatNumber(calculateNetTotal())}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-green-700">KDV (%20):</span>
+                                    <span className="font-medium text-green-900">€{formatNumber(calculateVAT())}</span>
+                                </div>
+                                <div className="flex justify-between pt-2 border-t border-green-300">
+                                    <span className="font-semibold text-green-800">Genel Toplam:</span>
+                                    <span className="text-lg font-bold text-green-900">
+                                        €{formatNumber(calculateFinalTotal())}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Ürün Sayısı */}
+                        <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">Toplam Ürün:</span>
+                                <span className="font-medium text-slate-900">{offerItems.length} adet</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowSendConfirmDialog(false)} disabled={sending}>
+                            İptal
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmSendOffer}
+                            className="bg-blue-600 hover:bg-blue-700"
+                            disabled={sending}
+                        >
+                            {sending ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Gönderiliyor...
+                                </>
+                            ) : (
+                                "Gönder"
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Email Güncelle Confirmation Dialog */}
+            <AlertDialog open={showEmailConfirmDialog} onOpenChange={setShowEmailConfirmDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <svg
+                                    className="w-4 h-4 text-amber-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                    />
+                                </svg>
+                            </div>
+                            Email Güncelleme Onayı
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-slate-700 mt-2">
+                            Bu işlem müşterinin email adresini kalıcı olarak güncelleyecektir. Emin misiniz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {selectedCustomerId && (
+                        <div className="space-y-3 py-4">
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                                    <span className="text-sm font-medium text-amber-800">Müşteri</span>
+                                </div>
+                                <p className="text-lg font-semibold text-amber-900">
+                                    {customers.find((c) => c.id === selectedCustomerId)?.name}
+                                </p>
+                            </div>
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <span className="text-sm font-medium text-blue-800">Yeni Email</span>
+                                </div>
+                                <p className="text-base font-medium text-blue-900">{localEmail}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowEmailConfirmDialog(false)}>İptal</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleUpdateEmail} className="bg-amber-600 hover:bg-amber-700">
+                            Email Güncelle
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* İşlem Geçmişi Modal */}
+            <AlertDialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+                <AlertDialogContent className="w-[95vw] sm:w-[45vw] max-w-none sm:max-w-none max-h-[85vh] overflow-hidden">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <History className="w-4 h-4 text-blue-600" />
+                            </div>
+                            İşlem Geçmişi
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-base text-slate-700">
+                            Bu teklifin işlem geçmişini görüntüleyebilirsiniz.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="flex-1 overflow-auto">
+                        {historyLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    <span>İşlem geçmişi yükleniyor...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {historyData.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                                            <History className="w-8 h-8 text-slate-400" />
+                                        </div>
+                                        <p className="text-slate-600">Henüz işlem geçmişi bulunmuyor.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-1/2">Açıklama</TableHead>
+                                                    <TableHead className="w-1/4">İşlemi Yapan</TableHead>
+                                                    <TableHead className="w-1/4">Tarih</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {historyData
+                                                    .slice(
+                                                        (historyCurrentPage - 1) * historyItemsPerPage,
+                                                        historyCurrentPage * historyItemsPerPage
+                                                    )
+                                                    .map((item, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell className="font-medium text-slate-900">
+                                                                {item.description}
+                                                            </TableCell>
+                                                            <TableCell className="text-slate-700">
+                                                                {item.created_by_name}
+                                                            </TableCell>
+                                                            <TableCell className="text-slate-600 font-mono text-sm">
+                                                                {format(
+                                                                    addHours(parseISO(item.created_at), 3),
+                                                                    "dd.MM.yyyy HH:mm",
+                                                                    { locale: tr }
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                            </TableBody>
+                                        </Table>
+
+                                        {/* Pagination */}
+                                        {historyData.length > historyItemsPerPage && (
+                                            <div className="mt-4">
+                                                <Pagination
+                                                    currentPage={historyCurrentPage}
+                                                    totalPages={Math.ceil(historyData.length / historyItemsPerPage)}
+                                                    onPageChange={setHistoryCurrentPage}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setShowHistoryDialog(false)}>Kapat</AlertDialogCancel>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
+

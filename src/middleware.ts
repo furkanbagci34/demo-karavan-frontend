@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const AUTH_PAGES = ["/login", "/register"];
+const PUBLIC_PAGES = ["/offer-detail"];
 
 const isAuthPage = (path: string) => AUTH_PAGES.some((p) => path.startsWith(p));
+const isPublicPage = (path: string) => PUBLIC_PAGES.some((p) => path.startsWith(p));
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get("token")?.value;
 
-    // Token yoksa ve auth sayfası DEĞİLSE login'e yönlendir
-    if (!token && !isAuthPage(pathname)) {
+    // Token yoksa ve auth sayfası DEĞİLSE ve public sayfa DEĞİLSE login'e yönlendir
+    if (!token && !isAuthPage(pathname) && !isPublicPage(pathname)) {
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("next", pathname);
         return NextResponse.redirect(loginUrl);

@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Clock, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { OfferStatus } from "@/lib/enums";
 
 interface RecentOffer {
     id: number;
@@ -19,14 +20,16 @@ interface RecentOffersListProps {
 }
 
 const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "pending":
+    switch (status) {
+        case OfferStatus.TASLAK:
             return "bg-yellow-100 text-yellow-800";
-        case "accepted":
+        case OfferStatus.GONDERILDI:
+            return "bg-blue-100 text-blue-800";
+        case OfferStatus.ONAYLANDI:
             return "bg-green-100 text-green-800";
-        case "rejected":
+        case OfferStatus.REDDEDILDI:
             return "bg-red-100 text-red-800";
-        case "draft":
+        case OfferStatus.TAMAMLANDI:
             return "bg-gray-100 text-gray-800";
         default:
             return "bg-blue-100 text-blue-800";
@@ -34,15 +37,17 @@ const getStatusColor = (status: string) => {
 };
 
 const getStatusText = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "pending":
+    switch (status) {
+        case OfferStatus.TASLAK:
             return "Beklemede";
-        case "accepted":
-            return "Kabul Edildi";
-        case "rejected":
+        case OfferStatus.GONDERILDI:
+            return "Gönderildi";
+        case OfferStatus.ONAYLANDI:
+            return "Onaylandı";
+        case OfferStatus.REDDEDILDI:
             return "Reddedildi";
-        case "draft":
-            return "Taslak";
+        case OfferStatus.TAMAMLANDI:
+            return "Tamamlandı";
         default:
             return status;
     }

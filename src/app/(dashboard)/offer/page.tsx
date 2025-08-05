@@ -10,15 +10,17 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Pencil, Trash2, Loader2, AlertTriangle, Settings } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Loader2, AlertTriangle, Settings, ChevronsUpDown, User } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { useOffers } from "@/hooks/api/useOffers";
+import { useCustomers } from "@/hooks/api/useCustomers";
 import { toast } from "sonner";
 import {
     AlertDialog,
@@ -37,26 +39,29 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { OfferStatus } from "@/lib/enums";
 
 const PAGE_SIZE = 10;
 
 // Status renklerini belirleyen fonksiyonlar
 const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "beklemede":
+    switch (status) {
+        case OfferStatus.TASLAK:
             return "bg-yellow-100 text-yellow-800";
-        case "tamamlandı":
+        case OfferStatus.GONDERILDI:
+            return "bg-blue-100 text-blue-800";
+        case OfferStatus.ONAYLANDI:
             return "bg-green-100 text-green-800";
-        case "üretimde":
+        case OfferStatus.IPTAL_EDILDI:
+            return "bg-blue-100 text-blue-800";
+        case OfferStatus.TAMAMLANDI:
+            return "bg-green-100 text-green-800";
+        case OfferStatus.ÜRETIMDE:
             return "bg-purple-100 text-purple-800";
-        case "iptal edildi":
-            return "bg-blue-100 text-blue-800";
-        case "gönderildi":
-            return "bg-blue-100 text-blue-800";
-        case "reddedildi":
+        case OfferStatus.REDDEDILDI:
             return "bg-red-100 text-red-800";
-        case "onaylandı":
-            return "bg-green-100 text-green-800";
         default:
             return "bg-gray-100 text-gray-800";
     }
@@ -64,44 +69,23 @@ const getStatusColor = (status: string) => {
 
 // Satır arka plan rengini belirleyen fonksiyon
 const getRowBackgroundColor = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "beklemede":
+    switch (status) {
+        case OfferStatus.TASLAK:
             return "bg-yellow-50 hover:bg-yellow-100";
-        case "tamamlandı":
+        case OfferStatus.GONDERILDI:
+            return "bg-blue-50 hover:bg-blue-100";
+        case OfferStatus.ONAYLANDI:
             return "bg-green-50 hover:bg-green-100";
-        case "üretimde":
+        case OfferStatus.TAMAMLANDI:
+            return "bg-green-50 hover:bg-green-100";
+        case OfferStatus.ÜRETIMDE:
             return "bg-purple-50 hover:bg-purple-100";
-        case "iptal edildi":
+        case OfferStatus.IPTAL_EDILDI:
             return "bg-blue-50 hover:bg-blue-100";
-        case "gönderildi":
-            return "bg-blue-50 hover:bg-blue-100";
-        case "reddedildi":
+        case OfferStatus.REDDEDILDI:
             return "bg-red-50 hover:bg-red-100";
-        case "onaylandı":
-            return "bg-green-50 hover:bg-green-100";
         default:
             return "bg-gray-50 hover:bg-gray-100";
-    }
-};
-
-const getStatusText = (status: string) => {
-    switch (status.toLowerCase()) {
-        case "beklemede":
-            return "Beklemede";
-        case "tamamlandı":
-            return "Tamamlandı";
-        case "üretimde":
-            return "Üretimde";
-        case "iptal edildi":
-            return "İptal Edildi";
-        case "gönderildi":
-            return "Gönderildi";
-        case "reddedildi":
-            return "Reddedildi";
-        case "onaylandı":
-            return "Onaylandı";
-        default:
-            return status;
     }
 };
 
@@ -126,11 +110,21 @@ interface Offer {
 }
 
 export default function OfferListPage() {
+    const router = useRouter();
     const [currentPage, setCurrentPage] = React.useState(1);
     const [offerToDelete, setOfferToDelete] = useState<Offer | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const { getAllOffers, deleteOffer, loading } = useOffers();
+    const [isCreateOfferModalOpen, setIsCreateOfferModalOpen] = useState(false);
+    const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+    const [isCreatingOffer, setIsCreatingOffer] = useState(false);
+    const [isCustomerSelectorOpen, setIsCustomerSelectorOpen] = useState(false);
+    const { getAllOffers, deleteOffer, createOffer, getLastOfferId, loading } = useOffers();
+    const { customers, isLoading: customersLoading } = useCustomers();
     const [offers, setOffers] = useState<Offer[]>([]);
+
+    const handleRowClick = (offerId: number) => {
+        router.push(`/offer/detail/${offerId}`);
+    };
 
     // Teklifleri yükle
     useEffect(() => {
@@ -181,6 +175,85 @@ export default function OfferListPage() {
         }
     };
 
+    // Yeni teklif oluşturma modal'ını aç
+    const openCreateOfferModal = () => {
+        setSelectedCustomerId(null);
+        setIsCustomerSelectorOpen(false);
+        setIsCreateOfferModalOpen(true);
+    };
+
+    // Yeni teklif oluşturma fonksiyonu
+    const handleCreateOffer = async () => {
+        if (!selectedCustomerId) {
+            toast.error("Müşteri seçilmedi", {
+                description: "Lütfen bir müşteri seçin",
+            });
+            return;
+        }
+
+        setIsCreatingOffer(true);
+
+        try {
+            // Teklif numarası oluştur
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
+            const dateString = `${year}-${month}-${day}`;
+
+            const lastOfferResponse = await getLastOfferId();
+            const nextId = lastOfferResponse.lastId || 1;
+            const offerNumber = `${dateString}-${nextId}`;
+
+            // Geçerlilik tarihi - 15 gün sonra
+            const validDate = new Date();
+            validDate.setDate(validDate.getDate() + 15);
+            const validUntil = validDate.toISOString().split("T")[0];
+
+            // Boş teklif verisi oluştur
+            const offerData = {
+                offerNumber,
+                customerId: selectedCustomerId,
+                subtotal: 0,
+                discountAmount: 0,
+                netTotal: 0,
+                vatRate: 20.0,
+                vatAmount: 0,
+                totalAmount: 0,
+                status: OfferStatus.TASLAK,
+                validUntil,
+                items: [],
+            };
+
+            const result = await createOffer(offerData);
+
+            if (result && result.offerId) {
+                toast.success("Yeni teklif oluşturuldu!", {
+                    description: "Teklif detay sayfasına yönlendiriliyorsunuz.",
+                });
+
+                // Modal'ı kapat
+                setIsCreateOfferModalOpen(false);
+                setSelectedCustomerId(null);
+
+                // Teklif detay sayfasına yönlendir
+                router.push(`/offer/detail/${result.offerId}`);
+            } else {
+                toast.error("Teklif oluşturulamadı", {
+                    description: "Beklenmeyen bir hata oluştu",
+                });
+            }
+        } catch (error: unknown) {
+            console.error("Teklif oluşturma hatası:", error);
+            const errorMessage = error instanceof Error ? error.message : "Teklif oluşturulurken bir hata oluştu";
+            toast.error("Teklif oluşturulamadı", {
+                description: errorMessage,
+            });
+        } finally {
+            setIsCreatingOffer(false);
+        }
+    };
+
     // Pagination hesaplamaları
     const totalPages = Math.max(1, Math.ceil(offers.length / PAGE_SIZE));
     const paginatedOffers = offers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -217,19 +290,18 @@ export default function OfferListPage() {
                         Teklifler
                     </h1>
                     <Button
-                        asChild
+                        onClick={openCreateOfferModal}
                         className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md border-0"
                     >
-                        <Link href="/offer/add">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Yeni Teklif Oluştur
-                        </Link>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Yeni Teklif Oluştur
                     </Button>
                 </div>
 
                 <Card>
                     <CardHeader>
                         <CardTitle>Teklif Listesi</CardTitle>
+                        <CardDescription>Teklif detayına gitmek için satırın üzerine tıklayınız.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
                         {/* Desktop Tablo Görünümü */}
@@ -246,7 +318,7 @@ export default function OfferListPage() {
                                         <TableCell className="text-right">KDV (€)</TableCell>
                                         <TableHead className="text-right">Genel Toplam (€)</TableHead>
                                         <TableHead>Geçerlilik</TableHead>
-                                        <TableHead className="text-center w-20">İşlemler</TableHead>
+                                        <TableHead className="text-center w-20">Sil</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -270,12 +342,16 @@ export default function OfferListPage() {
                                         </TableRow>
                                     ) : (
                                         paginatedOffers.map((offer) => (
-                                            <TableRow key={offer.id} className={getRowBackgroundColor(offer.status)}>
+                                            <TableRow
+                                                key={offer.id}
+                                                className={`${getRowBackgroundColor(offer.status)} cursor-pointer`}
+                                                onClick={() => handleRowClick(offer.id)}
+                                            >
                                                 <TableCell className="font-medium">{offer.offer_number}</TableCell>
                                                 <TableCell>{offer.customer_name || "-"}</TableCell>
                                                 <TableCell>
                                                     <Badge className={getStatusColor(offer.status)}>
-                                                        {getStatusText(offer.status)}
+                                                        {offer.status}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -299,32 +375,17 @@ export default function OfferListPage() {
                                                         : "-"}
                                                 </TableCell>
                                                 <TableCell className="flex items-center justify-center">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">İşlemler</span>
-                                                                <Settings className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
-                                                                <Link
-                                                                    href={`/offer/edit/${offer.id}`}
-                                                                    className="flex items-center"
-                                                                >
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    <span>Düzenle</span>
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(offer)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Sil</span>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                    <Button
+                                                        variant="ghost"
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openDeleteDialog(offer);
+                                                        }}
+                                                    >
+                                                        <span className="sr-only">Sil</span>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -354,7 +415,10 @@ export default function OfferListPage() {
                                     {paginatedOffers.map((offer) => (
                                         <Card
                                             key={offer.id}
-                                            className={`overflow-hidden ${getRowBackgroundColor(offer.status)}`}
+                                            className={`overflow-hidden ${getRowBackgroundColor(
+                                                offer.status
+                                            )} cursor-pointer`}
+                                            onClick={() => handleRowClick(offer.id)}
                                         >
                                             <div className="p-4 space-y-3">
                                                 <div className="flex items-start justify-between">
@@ -365,7 +429,7 @@ export default function OfferListPage() {
                                                         </p>
                                                     </div>
                                                     <Badge className={getStatusColor(offer.status)}>
-                                                        {getStatusText(offer.status)}
+                                                        {offer.status}
                                                     </Badge>
                                                 </div>
 
@@ -414,7 +478,11 @@ export default function OfferListPage() {
                                                     <div className="flex items-center justify-end">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 p-0"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
                                                                     <span className="sr-only">İşlemler</span>
                                                                     <Settings className="h-4 w-4" />
                                                                 </Button>
@@ -422,7 +490,7 @@ export default function OfferListPage() {
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuItem asChild>
                                                                     <Link
-                                                                        href={`/offer/edit/${offer.id}`}
+                                                                        href={`/offer/detail/${offer.id}`}
                                                                         className="flex items-center"
                                                                     >
                                                                         <Pencil className="mr-2 h-4 w-4" />
@@ -431,7 +499,10 @@ export default function OfferListPage() {
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuItem
                                                                     className="text-red-600 focus:text-red-600"
-                                                                    onClick={() => openDeleteDialog(offer)}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openDeleteDialog(offer);
+                                                                    }}
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" />
                                                                     <span>Sil</span>
@@ -479,6 +550,155 @@ export default function OfferListPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Create Offer Modal */}
+            <AlertDialog open={isCreateOfferModalOpen} onOpenChange={setIsCreateOfferModalOpen}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <Plus className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div>
+                                <AlertDialogTitle className="text-lg font-semibold text-slate-900">
+                                    Yeni Teklif Oluştur
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm text-slate-600">
+                                    Hangi müşteri için teklif oluşturmak istiyorsunuz?
+                                </AlertDialogDescription>
+                            </div>
+                        </div>
+                    </AlertDialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">
+                                Müşteri Seçimi <span className="text-red-500">*</span>
+                            </label>
+                            <Popover
+                                open={isCustomerSelectorOpen}
+                                onOpenChange={setIsCustomerSelectorOpen}
+                                modal={true}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isCustomerSelectorOpen}
+                                        className={`w-full justify-between h-10 text-left font-normal ${
+                                            !selectedCustomerId
+                                                ? "border-red-300 focus:border-red-500 focus:ring-red-500 text-slate-500"
+                                                : "border-slate-300"
+                                        }`}
+                                    >
+                                        {selectedCustomerId
+                                            ? customers.find((customer) => customer.id === selectedCustomerId)?.name
+                                            : "Müşteri seçin..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Müşteri ara..." className="h-9" />
+                                        <CommandEmpty>
+                                            {customersLoading ? (
+                                                <div className="flex items-center justify-center py-4">
+                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                    <span className="text-sm">Yükleniyor...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                                    Müşteri bulunamadı
+                                                </div>
+                                            )}
+                                        </CommandEmpty>
+                                        <CommandGroup>
+                                            <CommandList className="max-h-[200px] overflow-y-auto">
+                                                {customers.map((customer) => (
+                                                    <CommandItem
+                                                        key={customer.id}
+                                                        onSelect={() => {
+                                                            setSelectedCustomerId(customer.id);
+                                                            setIsCustomerSelectorOpen(false);
+                                                        }}
+                                                        className="flex items-center gap-3 p-3 cursor-pointer"
+                                                    >
+                                                        <div className="flex items-center gap-3 flex-1">
+                                                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                                                <User className="h-4 w-4 text-blue-600" />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <div className="font-medium text-sm">
+                                                                    {customer.name}
+                                                                </div>
+                                                                <div className="text-xs text-slate-500">
+                                                                    {customer.email}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {selectedCustomerId === customer.id && (
+                                                            <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
+                                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                            </div>
+                                                        )}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandList>
+                                        </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {selectedCustomerId && (
+                            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
+                                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                                    </div>
+                                    <span className="text-sm font-medium text-green-800">
+                                        {customers.find((c) => c.id === selectedCustomerId)?.name} seçildi
+                                    </span>
+                                </div>
+                                <p className="text-xs text-green-700 mt-1 ml-6">
+                                    Bu müşteri için yeni bir taslak teklif oluşturulacak.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <AlertDialogFooter className="gap-3">
+                        <AlertDialogCancel
+                            onClick={() => {
+                                setSelectedCustomerId(null);
+                                setIsCustomerSelectorOpen(false);
+                                setIsCreateOfferModalOpen(false);
+                            }}
+                            className="flex-1"
+                        >
+                            İptal
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleCreateOffer}
+                            disabled={!selectedCustomerId || isCreatingOffer}
+                            className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                        >
+                            {isCreatingOffer ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Oluşturuluyor...
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Teklif Oluşturmaya Başla
+                                </>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
+

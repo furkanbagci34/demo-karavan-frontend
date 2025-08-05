@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import { apiClient } from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import { OfferStatus } from "@/lib/enums";
+import { getErrorMessage } from "@/lib/utils";
 
 export interface Product {
     id: number;
@@ -47,6 +49,30 @@ export interface Offer {
     items?: OfferItem[] | unknown[]; // Backend'den gelen items array
 }
 
+export interface OfferHistory {
+    description: string;
+    created_by_name: string;
+    created_at: string;
+}
+
+export interface OfferPublic {
+    uid: string;
+    offer_number: string;
+    subtotal: number;
+    discount_type: string;
+    discount_value: number;
+    discount_amount: number;
+    net_total: number;
+    vat_rate: number;
+    vat_amount: number;
+    total_amount: number;
+    status: string;
+    valid_until: string;
+    notes: string;
+    created_at: string;
+    customer_name: string;
+}
+
 interface CreateOfferData {
     offerNumber?: string;
     customerId?: number;
@@ -78,7 +104,7 @@ export const useOffers = () => {
             const response = await apiClient.get<Product[]>(API_ENDPOINTS.offers.getProducts(search));
             setProducts(response);
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Ürünler yüklenirken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Ürünler yüklenirken bir hata oluştu");
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -93,7 +119,7 @@ export const useOffers = () => {
             const response = await apiClient.get<{ lastId: number }>(API_ENDPOINTS.offers.getLastId);
             return response;
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Son teklif ID'si alınırken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Son teklif ID'si alınırken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -112,7 +138,7 @@ export const useOffers = () => {
             );
             return response;
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Teklif oluşturulurken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Teklif oluşturulurken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -131,7 +157,7 @@ export const useOffers = () => {
             );
             return response;
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Teklif güncellenirken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Teklif güncellenirken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -147,7 +173,7 @@ export const useOffers = () => {
             const response = await apiClient.get<Offer>(API_ENDPOINTS.offers.getById(offerId.toString()));
             return response;
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Teklif yüklenirken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Teklif yüklenirken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -163,7 +189,7 @@ export const useOffers = () => {
             const response = await apiClient.get<Offer[]>(API_ENDPOINTS.offers.getAll);
             return response;
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Teklifler yüklenirken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Teklifler yüklenirken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -181,7 +207,76 @@ export const useOffers = () => {
             );
             return response;
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : "Teklif silinirken bir hata oluştu";
+            const errorMessage = getErrorMessage(err, "Teklif silinirken bir hata oluştu");
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const sendOffer = useCallback(async (offerId: number) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.post<{ message: string }>(
+                API_ENDPOINTS.offers.sendOffer(offerId.toString()),
+                {}
+            );
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, "Teklif gönderilirken bir hata oluştu");
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const getOfferHistory = useCallback(async (offerId: number): Promise<OfferHistory[]> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.get<OfferHistory[]>(API_ENDPOINTS.offers.getHistory(offerId.toString()));
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, "İşlem geçmişi yüklenirken bir hata oluştu");
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const getOfferByUid = useCallback(async (uid: string): Promise<OfferPublic | null> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.get<OfferPublic>(API_ENDPOINTS.offers.getByUid(uid));
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, "Teklif yüklenirken bir hata oluştu");
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const updateOfferStatus = useCallback(async (uid: string, status: OfferStatus) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.put<{ message: string }>(API_ENDPOINTS.offers.updateStatus(uid), {
+                status,
+            });
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, "Teklif durumu güncellenirken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -198,7 +293,11 @@ export const useOffers = () => {
         createOffer,
         updateOffer,
         getOfferById,
+        getOfferByUid,
+        updateOfferStatus,
         getAllOffers,
         deleteOffer,
+        sendOffer,
+        getOfferHistory,
     };
 };
