@@ -35,8 +35,6 @@ import {
     History,
 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { format, parseISO, addHours } from "date-fns";
-import { tr } from "date-fns/locale";
 import { useOffers, type Offer, type OfferHistory } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useProducts } from "@/hooks/api/useProducts";
@@ -2172,11 +2170,7 @@ export default function EditOfferPage() {
                                                                 {item.created_by_name}
                                                             </TableCell>
                                                             <TableCell className="text-slate-600 font-mono text-sm">
-                                                                {format(
-                                                                    addHours(parseISO(item.created_at), 3),
-                                                                    "dd.MM.yyyy HH:mm",
-                                                                    { locale: tr }
-                                                                )}
+                                                                {new Date(item.created_at).toLocaleString("tr-TR")}
                                                             </TableCell>
                                                         </TableRow>
                                                     ))}
