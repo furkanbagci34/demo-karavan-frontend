@@ -50,6 +50,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { OfferStatus } from "@/lib/enums";
 
 // Türkçe karakterleri normalize eden fonksiyon
@@ -117,7 +125,7 @@ export default function EditOfferPage() {
     // Confirmation dialog states
     const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
     const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
-    const [sending, setSending] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     // History modal states
     const [showHistoryDialog, setShowHistoryDialog] = useState(false);
@@ -637,8 +645,7 @@ export default function EditOfferPage() {
         }
 
         try {
-            setSending(true);
-            setShowSendConfirmDialog(false);
+            setIsSending(true);
 
             // Önce teklifi güncelle
             const offerData = {
@@ -676,8 +683,12 @@ export default function EditOfferPage() {
                 description: `${selectedCustomer.name} adlı müşteriye teklif e-posta ile gönderildi`,
             });
 
-            // Teklif listesine yönlendir
-            router.push("/offer");
+            // İşlem başarılı, dialog'u kapat ve yönlendir
+            setShowSendConfirmDialog(false);
+
+            setTimeout(() => {
+                router.push("/offer");
+            }, 1000);
         } catch (error: unknown) {
             console.error("Teklif gönderilirken hata:", error);
             const errorMessage = error instanceof Error ? error.message : "Teklif gönderilirken bir hata oluştu";
@@ -685,7 +696,7 @@ export default function EditOfferPage() {
                 description: errorMessage,
             });
         } finally {
-            setSending(false);
+            setIsSending(false); // Loading state'ini sıfırla
         }
     };
 
@@ -1945,10 +1956,32 @@ export default function EditOfferPage() {
             </AlertDialog>
 
             {/* Teklif Gönder Confirmation Dialog */}
-            <AlertDialog open={showSendConfirmDialog} onOpenChange={setShowSendConfirmDialog}>
-                <AlertDialogContent className="max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+            <Dialog
+                open={showSendConfirmDialog}
+                onOpenChange={(open) => {
+                    // Loading sırasında dialog kapatılmasını engelle
+                    if (!isSending) {
+                        setShowSendConfirmDialog(open);
+                    }
+                }}
+            >
+                <DialogContent
+                    className="max-w-md"
+                    onPointerDownOutside={(e) => {
+                        // Loading sırasında dialog dışına tıklanmasını engelle
+                        if (isSending) {
+                            e.preventDefault();
+                        }
+                    }}
+                    onInteractOutside={(e) => {
+                        // Loading sırasında dışarıdaki etkileşimleri engelle
+                        if (isSending) {
+                            e.preventDefault();
+                        }
+                    }}
+                >
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold text-slate-900 flex items-center gap-2">
                             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <svg
                                     className="w-4 h-4 text-blue-600"
@@ -1965,11 +1998,11 @@ export default function EditOfferPage() {
                                 </svg>
                             </div>
                             Teklifi Gönder
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-base text-slate-700 mt-2">
+                        </DialogTitle>
+                        <DialogDescription className="text-base text-slate-700 mt-2">
                             Teklifi göndermeden önce bilgileri kontrol edin.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                        </DialogDescription>
+                    </DialogHeader>
 
                     <div className="space-y-4 py-4">
                         {/* Müşteri Bilgisi */}
@@ -2034,27 +2067,42 @@ export default function EditOfferPage() {
                         </div>
                     </div>
 
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setShowSendConfirmDialog(false)} disabled={sending}>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowSendConfirmDialog(false)}
+                            disabled={isSending}
+                            className={isSending ? "opacity-50 cursor-not-allowed" : ""}
+                        >
                             İptal
-                        </AlertDialogCancel>
-                        <AlertDialogAction
+                        </Button>
+                        <Button
                             onClick={confirmSendOffer}
                             className="bg-blue-600 hover:bg-blue-700"
-                            disabled={sending}
+                            disabled={isSending}
                         >
-                            {sending ? (
-                                <>
+                            {isSending ? (
+                                <div className="flex items-center">
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Gönderiliyor...
-                                </>
+                                    <span>Gönderiliyor...</span>
+                                </div>
                             ) : (
-                                "Gönder"
+                                <div className="flex items-center">
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                        />
+                                    </svg>
+                                    Gönder
+                                </div>
                             )}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Email Güncelle Confirmation Dialog */}
             <AlertDialog open={showEmailConfirmDialog} onOpenChange={setShowEmailConfirmDialog}>
