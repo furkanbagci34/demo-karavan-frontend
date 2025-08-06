@@ -38,6 +38,10 @@ import { formatNumber } from "@/lib/utils";
 import { useOffers, type Offer, type OfferHistory } from "@/hooks/api/useOffers";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useProducts } from "@/hooks/api/useProducts";
+import { useVehicles } from "@/hooks/api/useVehicles";
+import { useVehicleParts } from "@/hooks/api/useVehicleParts";
+import { VehiclePart, Product } from "@/lib/api/types";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
 import {
@@ -133,6 +137,8 @@ export default function EditOfferPage() {
     const [historyLoading, setHistoryLoading] = useState(false);
     const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
     const historyItemsPerPage = 10;
+    const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+    const [pendingVehicleId, setPendingVehicleId] = useState<number | null>(null);
 
     // Email input handler - sadece local state günceller, performanslı
     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,6 +161,8 @@ export default function EditOfferPage() {
     const { getOfferById, updateOffer, sendOffer, getOfferHistory } = useOffers();
     const { products, isLoading: productsLoading } = useProducts();
     const { customers, isLoading: customersLoading, updateCustomer } = useCustomers();
+    const { vehicles, isLoading: vehiclesLoading } = useVehicles();
+    const { vehicleParts, isLoading: vehiclePartsLoading } = useVehicleParts(selectedVehicleId?.toString());
     const isMobile = useIsMobile();
 
     // Filtrelenmiş ürünler
@@ -189,6 +197,7 @@ export default function EditOfferPage() {
                     setValidUntil(offerData.valid_until ? offerData.valid_until.split("T")[0] : "");
                     setNotes(offerData.notes || "");
                     setSelectedCustomerId(offerData.customer_id || null);
+                    setSelectedVehicleId(offerData.vehicle_id || null);
 
                     // İndirim bilgilerini ayarla
                     if (offerData.discount_amount > 0) {
@@ -265,6 +274,129 @@ export default function EditOfferPage() {
         loadOffer();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [offerId]); // Sadece offerId yeterli - getOfferById ve router zaten stable
+
+    // Araç parçalarını teklife ekleyen fonksiyon
+    const addVehiclePartsToOffer = useCallback(
+        (vehiclePartsData: VehiclePart[]) => {
+            // Bu fonksiyon sadece parça ekleme işlemi yapar, kontrol useEffect'te yapılır
+
+            // Araç parçalarını teklife ekle
+            vehiclePartsData.forEach((vehiclePart: VehiclePart) => {
+                if (vehiclePart.products && vehiclePart.products.length > 0) {
+                    vehiclePart.products.forEach((product: Product) => {
+                        // Fiyatı number'a çevir ve güvenlik kontrolü yap
+                        let unitPrice: number;
+                        if (typeof product.sale_price === "string") {
+                            unitPrice = parseFloat(product.sale_price);
+                        } else if (typeof product.sale_price === "number") {
+                            unitPrice = product.sale_price;
+                        } else {
+                            unitPrice = 0;
+                        }
+
+                        if (isNaN(unitPrice) || unitPrice < 0) {
+                            console.error("Geçersiz fiyat:", product.sale_price);
+                            return;
+                        }
+
+                        // Alış fiyatını al
+                        let purchasePrice: number;
+                        if (typeof product.purchase_price === "string") {
+                            purchasePrice = parseFloat(product.purchase_price);
+                        } else if (typeof product.purchase_price === "number") {
+                            purchasePrice = product.purchase_price;
+                        } else {
+                            purchasePrice = 0;
+                        }
+
+                        if (isNaN(purchasePrice) || purchasePrice < 0) {
+                            purchasePrice = 0;
+                        }
+
+                        // Araç parçasından gelen miktar
+                        const vehiclePartQuantity = vehiclePart.quantities?.[product.id.toString()] || 1;
+
+                        setOfferItems((prev) => {
+                            // Aynı ürün zaten eklenmişse miktarını artır
+                            const existingItemIndex = prev.findIndex((item) => item.productId === product.id);
+                            if (existingItemIndex >= 0) {
+                                const updated = [...prev];
+                                // Mevcut miktara araç parçasından gelen miktarı ekle
+                                updated[existingItemIndex].quantity += vehiclePartQuantity;
+                                updated[existingItemIndex].totalPrice =
+                                    updated[existingItemIndex].unitPrice * updated[existingItemIndex].quantity;
+                                updated[existingItemIndex].totalPurchasePrice =
+                                    updated[existingItemIndex].purchasePrice * updated[existingItemIndex].quantity;
+                                return updated;
+                            } else {
+                                // Yeni ürün oluştur ve ekle
+                                const newItem: OfferItem = {
+                                    id: Date.now() + Math.random(),
+                                    productId: product.id,
+                                    name: product.name || "Ürün",
+                                    description:
+                                        product.description || product.code || product.name || "Ürün açıklaması",
+                                    quantity: vehiclePartQuantity,
+                                    unitPrice: unitPrice,
+                                    totalPrice: unitPrice * vehiclePartQuantity,
+                                    purchasePrice: purchasePrice,
+                                    totalPurchasePrice: purchasePrice * vehiclePartQuantity,
+                                    image: product.image || "/images/no-image-placeholder.svg",
+                                    unit: product.unit || "Adet",
+                                };
+                                return [...prev, newItem];
+                            }
+                        });
+                    });
+                }
+            });
+        },
+        [setOfferItems]
+    );
+
+    // Araç seçimi değiştiğinde çalışacak fonksiyon
+    const handleVehicleSelect = useCallback(
+        (vehicleId: number | null) => {
+            const previousVehicleId = selectedVehicleId;
+            setSelectedVehicleId(vehicleId);
+
+            // Sadece yeni bir araç seçildiğinde parçaları eklemek için pending işlemi başlat
+            if (vehicleId && vehicleId !== previousVehicleId) {
+                setPendingVehicleId(vehicleId);
+            }
+        },
+        [selectedVehicleId]
+    );
+
+    // vehicleParts güncellendiğinde pending işlemi kontrol et
+    useEffect(() => {
+        // Eğer pending yoksa veya loading yapılıyorsa bekle
+        if (!pendingVehicleId || vehiclePartsLoading) return;
+
+        // Seçili araç ile pending araç eşleşmeli
+        if (selectedVehicleId !== pendingVehicleId) return;
+
+        // Gerçek parça kontrolü: vehicleParts içinde products olan kayıt var mı?
+        const hasProducts = vehicleParts.some((part) => part.products && part.products.length > 0);
+
+        if (hasProducts) {
+            // Parçalar bulundu, ekle
+            addVehiclePartsToOffer(vehicleParts);
+            toast.success("Araç parçaları teklife eklendi", {
+                description: `${
+                    vehicles.find((v) => v.id === pendingVehicleId)?.name
+                } aracının parçaları teklif listesine eklendi.`,
+            });
+        } else {
+            // Parça bulunamadı
+            toast.info("Bu araç için parça bulunamadı", {
+                description: "Seçilen araçta kayıtlı parça bulunmuyor.",
+            });
+        }
+
+        // Pending işlemi tamamlandı
+        setPendingVehicleId(null);
+    }, [vehicleParts, vehiclePartsLoading, pendingVehicleId, selectedVehicleId, addVehiclePartsToOffer, vehicles]);
 
     const handleAddProduct = useCallback(
         (productId: number) => {
@@ -471,10 +603,10 @@ export default function EditOfferPage() {
     const calculateVAT = () => vatAmount;
     const calculateFinalTotal = () => finalTotal;
 
-    // Input handler'larını optimize et
-    const handleOfferNumberChange = useCallback((value: string) => {
-        setOfferNumber(value);
-    }, []);
+    // Status durumlarına göre disable kontrolü
+    const isCustomerVehicleEditable = originalOffer?.status === OfferStatus.TASLAK;
+    const isProductEditable =
+        originalOffer?.status === OfferStatus.TASLAK || originalOffer?.status === OfferStatus.REDDEDILDI;
 
     const handleValidUntilChange = useCallback((value: string) => {
         setValidUntil(value);
@@ -575,6 +707,7 @@ export default function EditOfferPage() {
                 discountType: discountMethod === "distribute" ? discountType || undefined : undefined,
                 discountValue: discountMethod === "distribute" ? discountValue : 0,
             })),
+            vehicleId: selectedVehicleId || undefined,
         };
 
         try {
@@ -677,7 +810,7 @@ export default function EditOfferPage() {
             await updateOffer(offerId, offerData);
 
             // Sonra gönder
-            await sendOffer(offerId);
+            await sendOffer(offerId, !showPricingInPdf);
 
             toast.success("✅ Teklif Başarıyla Gönderildi", {
                 description: `${selectedCustomer.name} adlı müşteriye teklif e-posta ile gönderildi`,
@@ -928,27 +1061,21 @@ export default function EditOfferPage() {
                             {/* Teklif Bilgileri */}
                             <Card className="border-slate-200 shadow-sm">
                                 <CardHeader className="pb-1">
-                                    <CardTitle className="flex items-center gap-3 text-lg font-semibold text-slate-900">
-                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                            <FileText className="h-4 w-4 text-blue-600" />
+                                    <CardTitle className="flex items-center justify-between text-lg font-semibold text-slate-900">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                <FileText className="h-4 w-4 text-blue-600" />
+                                            </div>
+                                            Teklif Bilgileri
                                         </div>
-                                        Teklif Bilgileri
+                                        <div className="flex items-center gap-2 text-sm font-medium text-slate-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-md">
+                                            <span className="text-blue-600 font-semibold">Teklif No:</span>
+                                            <span className="text-slate-800 font-mono">{offerNumber}</span>
+                                        </div>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-sm font-medium text-slate-700">
-                                                Teklif Numarası
-                                            </label>
-                                            <Input
-                                                placeholder="OFF-2024-001"
-                                                value={offerNumber}
-                                                disabled
-                                                onChange={(e) => handleOfferNumberChange(e.target.value)}
-                                                className="border-slate-300 focus:border-blue-500 focus:ring-blue-500 h-9"
-                                            />
-                                        </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">
                                                 Müşteri Seçimi <span className="text-red-500">*</span>
@@ -958,10 +1085,15 @@ export default function EditOfferPage() {
                                                     <Button
                                                         variant="outline"
                                                         role="combobox"
+                                                        disabled={!isCustomerVehicleEditable}
                                                         className={`w-full justify-between h-9 text-left font-normal hover:bg-slate-50 ${
                                                             !selectedCustomerId
                                                                 ? "border-red-300 focus:border-red-500 focus:ring-red-500"
                                                                 : "border-slate-300"
+                                                        } ${
+                                                            !isCustomerVehicleEditable
+                                                                ? "opacity-50 cursor-not-allowed"
+                                                                : ""
                                                         }`}
                                                     >
                                                         {selectedCustomerId
@@ -1019,6 +1151,100 @@ export default function EditOfferPage() {
                                             </Popover>
                                         </div>
                                         <div className="space-y-1">
+                                            <label className="text-sm font-medium text-slate-700">Araç Seçimi</label>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        disabled={!isCustomerVehicleEditable}
+                                                        className={`w-full justify-between h-9 text-left font-normal border-slate-300 hover:bg-slate-50 ${
+                                                            !isCustomerVehicleEditable
+                                                                ? "opacity-50 cursor-not-allowed"
+                                                                : ""
+                                                        }`}
+                                                    >
+                                                        {selectedVehicleId
+                                                            ? vehicles.find(
+                                                                  (vehicle) => vehicle.id === selectedVehicleId
+                                                              )?.name
+                                                            : "Araç seçin (opsiyonel)..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-full p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Araç ara..." className="h-9" />
+                                                        <CommandEmpty>
+                                                            {vehiclesLoading ? (
+                                                                <div className="flex items-center justify-center py-4">
+                                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                                                    <span className="ml-2 text-sm">Yükleniyor...</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                                                    Araç bulunamadı
+                                                                </div>
+                                                            )}
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            <CommandList className="max-h-[200px]">
+                                                                <CommandItem
+                                                                    onSelect={() => handleVehicleSelect(null)}
+                                                                    className="flex items-center gap-2"
+                                                                >
+                                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
+                                                                        {!selectedVehicleId && (
+                                                                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-sm text-slate-500">
+                                                                        Araç seçme
+                                                                    </span>
+                                                                </CommandItem>
+                                                                {vehicles.map((vehicle) => (
+                                                                    <CommandItem
+                                                                        key={vehicle.id}
+                                                                        onSelect={() => handleVehicleSelect(vehicle.id)}
+                                                                        className="flex items-center gap-2"
+                                                                    >
+                                                                        <div className="w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center">
+                                                                            {selectedVehicleId === vehicle.id && (
+                                                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex-1">
+                                                                            <div className="font-medium text-sm">
+                                                                                {vehicle.name}
+                                                                            </div>
+                                                                            <div className="text-xs text-slate-500">
+                                                                                {vehicle.is_active ? "Aktif" : "Pasif"}
+                                                                            </div>
+                                                                        </div>
+                                                                        {vehicle.image && (
+                                                                            <div className="w-6 h-6 rounded border overflow-hidden flex-shrink-0">
+                                                                                <img
+                                                                                    src={vehicle.image}
+                                                                                    alt={vehicle.name}
+                                                                                    className="w-full h-full object-cover"
+                                                                                    onError={(e) => {
+                                                                                        const target =
+                                                                                            e.target as HTMLImageElement;
+                                                                                        target.src =
+                                                                                            "/images/no-image-placeholder.svg";
+                                                                                    }}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandList>
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                        <div className="space-y-1">
                                             <label className="text-sm font-medium text-slate-700">
                                                 Geçerlilik Tarihi
                                             </label>
@@ -1060,7 +1286,10 @@ export default function EditOfferPage() {
                                                     variant="outline"
                                                     role="combobox"
                                                     aria-expanded={open}
-                                                    className="w-full justify-between h-12 text-left font-normal border-slate-300 hover:bg-slate-50"
+                                                    disabled={!isProductEditable}
+                                                    className={`w-full justify-between h-12 text-left font-normal border-slate-300 hover:bg-slate-50 ${
+                                                        !isProductEditable ? "opacity-50 cursor-not-allowed" : ""
+                                                    }`}
                                                 >
                                                     {selectedProductId
                                                         ? products.find((product) => product.id === selectedProductId)
@@ -1236,7 +1465,12 @@ export default function EditOfferPage() {
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 flex-shrink-0"
+                                                                    disabled={!isProductEditable}
+                                                                    className={`h-8 w-8 p-0 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 flex-shrink-0 ${
+                                                                        !isProductEditable
+                                                                            ? "opacity-50 cursor-not-allowed"
+                                                                            : ""
+                                                                    }`}
                                                                     onClick={removeItemHandlers[index]}
                                                                 >
                                                                     <Trash2 className="h-3 w-3" />
@@ -1254,6 +1488,7 @@ export default function EditOfferPage() {
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
                                                                             onClick={quantityDecrementHandlers[index]}
+                                                                            disabled={isProductEditable}
                                                                         >
                                                                             <Minus className="h-3 w-3" />
                                                                         </Button>
@@ -1293,7 +1528,12 @@ export default function EditOfferPage() {
                                                                         min="0"
                                                                         value={item.unitPrice}
                                                                         onChange={priceChangeHandlers[index]}
-                                                                        className="w-24 h-8 border-slate-300"
+                                                                        disabled={!isProductEditable}
+                                                                        className={`w-24 h-8 border-slate-300 ${
+                                                                            !isProductEditable
+                                                                                ? "opacity-50 cursor-not-allowed"
+                                                                                : ""
+                                                                        }`}
                                                                         placeholder="0.00"
                                                                     />
                                                                 </div>
@@ -1393,6 +1633,7 @@ export default function EditOfferPage() {
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
                                                                             onClick={quantityDecrementHandlers[index]}
+                                                                            disabled={!isProductEditable}
                                                                         >
                                                                             <Minus className="h-3 w-3" />
                                                                         </Button>
@@ -1402,12 +1643,14 @@ export default function EditOfferPage() {
                                                                             onChange={quantityChangeHandlers[index]}
                                                                             className="w-16 h-8 text-center border-slate-300"
                                                                             min="1"
+                                                                            disabled={!isProductEditable}
                                                                         />
                                                                         <Button
                                                                             variant="outline"
                                                                             size="sm"
                                                                             className="h-8 w-8 p-0 border-slate-300"
                                                                             onClick={quantityIncrementHandlers[index]}
+                                                                            disabled={!isProductEditable}
                                                                         >
                                                                             <Plus className="h-3 w-3" />
                                                                         </Button>
@@ -1426,6 +1669,7 @@ export default function EditOfferPage() {
                                                                     onChange={priceChangeHandlers[index]}
                                                                     className="w-28 border-slate-300"
                                                                     placeholder="0.00"
+                                                                    disabled={!isProductEditable}
                                                                 />
                                                             </TableCell>
                                                             <TableCell className="font-medium text-slate-900">
@@ -1455,6 +1699,7 @@ export default function EditOfferPage() {
                                                                     size="sm"
                                                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
                                                                     onClick={removeItemHandlers[index]}
+                                                                    disabled={!isProductEditable}
                                                                 >
                                                                     <Trash2 className="h-3 w-3" />
                                                                 </Button>
@@ -1667,36 +1912,6 @@ export default function EditOfferPage() {
                                                 </div>
                                             </div>
 
-                                            {/*{discountType && (
-                                                <div className="space-y-2">
-                                                    <label className="text-xs font-medium text-slate-700">
-                                                        İndirim Yöntemi
-                                                    </label>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            type="button"
-                                                            variant={discountMethod === "total" ? "default" : "outline"}
-                                                            size="sm"
-                                                            onClick={() => setDiscountMethod("total")}
-                                                            className="flex-1 h-8 text-xs"
-                                                        >
-                                                            Genel Toplam
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            variant={
-                                                                discountMethod === "distribute" ? "default" : "outline"
-                                                            }
-                                                            size="sm"
-                                                            onClick={() => setDiscountMethod("distribute")}
-                                                            className="flex-1 h-8 text-xs"
-                                                        >
-                                                            Satırlara Dağıt
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}*/}
-
                                             {discountType && discountMethod && (
                                                 <div className="space-y-2">
                                                     <label className="text-xs font-medium text-slate-700">
@@ -1713,7 +1928,10 @@ export default function EditOfferPage() {
                                                         onChange={(e) =>
                                                             handleDiscountValueChange(parseFloat(e.target.value) || 0)
                                                         }
-                                                        className="border-slate-300 focus:border-red-500 focus:ring-red-500 h-8 text-xs"
+                                                        disabled={!isProductEditable}
+                                                        className={`border-slate-300 focus:border-red-500 focus:ring-red-500 h-8 text-xs ${
+                                                            !isProductEditable ? "opacity-50 cursor-not-allowed" : ""
+                                                        }`}
                                                         placeholder={discountType === "percentage" ? "10" : "50"}
                                                     />
                                                 </div>
@@ -1742,12 +1960,15 @@ export default function EditOfferPage() {
                                                         type="button"
                                                         variant="outline"
                                                         size="sm"
+                                                        disabled={!isProductEditable}
                                                         onClick={() => {
                                                             setDiscountType(null);
                                                             setDiscountValue(0);
                                                             setDiscountMethod(null);
                                                         }}
-                                                        className="h-7 text-xs text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                                                        className={`h-7 text-xs text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 ${
+                                                            !isProductEditable ? "opacity-50 cursor-not-allowed" : ""
+                                                        }`}
                                                     >
                                                         İndirimi Kaldır
                                                     </Button>

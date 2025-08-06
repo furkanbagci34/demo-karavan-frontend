@@ -30,6 +30,7 @@ export interface Offer {
     id: number;
     offer_number: string;
     customer_id?: number;
+    vehicle_id?: number;
     customer_name?: string;
     subtotal: number;
     discount_amount: number;
@@ -215,14 +216,14 @@ export const useOffers = () => {
         }
     }, []);
 
-    const sendOffer = useCallback(async (offerId: number) => {
+    const sendOffer = useCallback(async (offerId: number, hidePricing: boolean = false) => {
         try {
             setLoading(true);
             setError(null);
 
             const response = await apiClient.post<{ message: string }>(
                 API_ENDPOINTS.offers.sendOffer(offerId.toString()),
-                {}
+                { hidePricing }
             );
             return response;
         } catch (err: unknown) {
