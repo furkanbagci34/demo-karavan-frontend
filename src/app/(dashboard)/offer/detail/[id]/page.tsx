@@ -804,6 +804,7 @@ export default function EditOfferPage() {
                     discountType: discountMethod === "distribute" ? discountType || undefined : undefined,
                     discountValue: discountMethod === "distribute" ? discountValue : 0,
                 })),
+                vehicleId: selectedVehicleId || undefined,
             };
 
             // Teklifi güncelle
