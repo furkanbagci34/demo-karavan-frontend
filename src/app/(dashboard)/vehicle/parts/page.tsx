@@ -380,6 +380,7 @@ export default function VehiclePartsPage() {
                                         </p>
                                     </div>
                                 </div>
+                                {/* Parça Ekleme Dialog'u */}
                                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button className="shadow-sm">
@@ -387,7 +388,7 @@ export default function VehiclePartsPage() {
                                             Parça Ekle
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                    <DialogContent className="max-w-[95vw] sm:max-w-6xl lg:max-w-7xl max-h-[95vh] overflow-y-auto">
                                         <DialogHeader>
                                             <DialogTitle>Ürün Seçimi</DialogTitle>
                                         </DialogHeader>
@@ -443,7 +444,7 @@ export default function VehiclePartsPage() {
                                                     </Badge>
                                                 </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[65vh] overflow-y-auto">
                                                     {isLoadingProducts ? (
                                                         <div className="col-span-full flex items-center justify-center py-8">
                                                             <div className="flex items-center gap-2">
