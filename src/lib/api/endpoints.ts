@@ -54,13 +54,11 @@ export const API_ENDPOINTS = {
     },
     vehicleAcceptance: {
         create: "/api/vehicles/acceptance",
-        getAll: "/api/vehicles/acceptance",
+        getAll: "/api/vehicles/acceptance/all",
         getById: (id: string) => `/api/vehicles/acceptance/${id}`,
         update: (id: string) => `/api/vehicles/acceptance/${id}`,
         delete: (id: string) => `/api/vehicles/acceptance/${id}`,
-        getByPlateNumber: (plateNumber: string) => `/api/vehicles/acceptance/plate/${plateNumber}`,
-        getByDateRange: (startDate: string, endDate: string) =>
-            `/api/vehicles/acceptance/date-range?start=${startDate}&end=${endDate}`,
+        getDetailById: (id: string) => `/api/vehicles/acceptance/detail/${id}`,
     },
     warehouses: {
         create: "/api/warehouses",

@@ -8,20 +8,49 @@ import {
     UpdateVehicleAcceptanceData,
     ApiResponse,
 } from "@/lib/api/types";
-import { RequestData } from "@/lib/api/client";
 
 export const useVehicleAcceptance = () => {
     const queryClient = useQueryClient();
+
+    // Tüm araç kabul listesini getir (React Query ile cache'le)
+    const {
+        data: vehicleAcceptances = [],
+        isLoading,
+        error,
+    } = useQuery({
+        queryKey: ["vehicleAcceptances"],
+        queryFn: async (): Promise<VehicleAcceptance[]> => {
+            const response = await apiClient.get<VehicleAcceptance[]>(API_ENDPOINTS.vehicleAcceptance.getAll);
+            return response;
+        },
+        staleTime: 30 * 1000, // 30 saniye cache
+        refetchOnWindowFocus: false,
+    });
 
     // Araç kabul oluştur
     const createVehicleAcceptanceMutation = useMutation({
         mutationFn: async (
             data: CreateVehicleAcceptanceData
         ): Promise<ApiResponse<{ vehicleAcceptanceId: number }>> => {
+            const backendData = {
+                date: data.date,
+                plate_number: data.plate_number,
+                entry_km: data.entry_km,
+                exit_km: data.exit_km,
+                tse_entry_datetime: data.tse_entry_datetime,
+                tse_exit_datetime: data.tse_exit_datetime,
+                delivery_date: data.delivery_date,
+                description: data.description,
+                fuel_level: data.fuel_level,
+                features: data.features,
+                damage_markers: data.damage_markers,
+            };
+
             const response = await apiClient.post<ApiResponse<{ vehicleAcceptanceId: number }>>(
                 API_ENDPOINTS.vehicleAcceptance.create,
-                data as unknown as RequestData
+                backendData
             );
+
             return response;
         },
         onSuccess: () => {
@@ -41,8 +70,9 @@ export const useVehicleAcceptance = () => {
         }): Promise<ApiResponse<{ vehicleAcceptance: VehicleAcceptance }>> => {
             const response = await apiClient.put<ApiResponse<{ vehicleAcceptance: VehicleAcceptance }>>(
                 API_ENDPOINTS.vehicleAcceptance.update(id),
-                data as unknown as RequestData
+                data as Record<string, unknown>
             );
+
             return response;
         },
         onSuccess: () => {
@@ -57,6 +87,7 @@ export const useVehicleAcceptance = () => {
             const response = await apiClient.delete<ApiResponse<{ message: string }>>(
                 API_ENDPOINTS.vehicleAcceptance.delete(id)
             );
+
             return response;
         },
         onSuccess: () => {
@@ -71,35 +102,26 @@ export const useVehicleAcceptance = () => {
         return response;
     }, []);
 
-    // Plaka numarasına göre araç kabul getir
-    const getVehicleAcceptanceByPlateNumber = useCallback(async (plateNumber: string): Promise<VehicleAcceptance[]> => {
-        const response = await apiClient.get<VehicleAcceptance[]>(
-            API_ENDPOINTS.vehicleAcceptance.getByPlateNumber(plateNumber)
-        );
-        return response;
-    }, []);
-
-    // Tarih aralığına göre araç kabul getir
-    const getVehicleAcceptanceByDateRange = useCallback(
-        async (startDate: string, endDate: string): Promise<VehicleAcceptance[]> => {
-            const response = await apiClient.get<VehicleAcceptance[]>(
-                API_ENDPOINTS.vehicleAcceptance.getByDateRange(startDate, endDate)
-            );
-            return response;
-        },
-        []
-    );
-
     return {
+        // Query data
+        vehicleAcceptances,
+
+        // Mutation methods
         createVehicleAcceptance: createVehicleAcceptanceMutation.mutateAsync,
         updateVehicleAcceptance: (id: string, data: UpdateVehicleAcceptanceData) =>
             updateVehicleAcceptanceMutation.mutateAsync({ id, data }),
         deleteVehicleAcceptance: deleteVehicleAcceptanceMutation.mutateAsync,
+
+        // Callback methods
         getVehicleAcceptanceById,
-        getVehicleAcceptanceByPlateNumber,
-        getVehicleAcceptanceByDateRange,
+
+        // Loading states
+        isLoading,
         isLoadingCreate: createVehicleAcceptanceMutation.isPending,
         isLoadingUpdate: updateVehicleAcceptanceMutation.isPending,
         isLoadingDelete: deleteVehicleAcceptanceMutation.isPending,
+
+        // Error handling
+        error: error?.message || null,
     };
 };
