@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
+import { CreateVehicleAcceptanceData, VehicleFeature } from "@/lib/api/types";
+import { toast } from "sonner";
 
 type DamageMarker = {
     id: string;
@@ -26,6 +29,7 @@ type DamageMarker = {
 };
 
 export default function VehicleAcceptancePage() {
+    const { createVehicleAcceptance, isLoadingCreate } = useVehicleAcceptance();
     const [damageMarkers, setDamageMarkers] = useState<DamageMarker[]>([]);
 
     // Form state'leri
@@ -40,6 +44,23 @@ export default function VehicleAcceptancePage() {
     const [fuelLevel, setFuelLevel] = useState(0);
     const [markerType, setMarkerType] = useState<"cross" | "line">("cross");
 
+    // Araç özellikleri state'i
+    const [vehicleFeatures, setVehicleFeatures] = useState<VehicleFeature>({
+        celik_jant: false,
+        garanti_belgesi: false,
+        jant_kapagi: false,
+        koltuk_kilifi: false,
+        paspas: false,
+        ruhsat: false,
+        stepne: false,
+        trafik_sigortasi: false,
+        trafik_seti: false,
+        yangin_tupu: false,
+        yedek_anahtar: false,
+        zincir: false,
+        kriko: false,
+    });
+
     const addDamageMarker = (x: number, y: number) => {
         const newMarker: DamageMarker = {
             id: `marker-${Date.now()}`,
@@ -53,6 +74,14 @@ export default function VehicleAcceptancePage() {
 
     const removeDamageMarker = (markerId: string) => {
         setDamageMarkers((prev) => prev.filter((m) => m.id !== markerId));
+    };
+
+    // Araç özelliği güncelleme
+    const updateVehicleFeature = (featureName: keyof VehicleFeature, value: boolean) => {
+        setVehicleFeatures((prev) => ({
+            ...prev,
+            [featureName]: value,
+        }));
     };
 
     const handleVehicleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -74,6 +103,66 @@ export default function VehicleAcceptancePage() {
             removeDamageMarker(existingMarker.id);
         } else {
             addDamageMarker(normalizedX, normalizedY);
+        }
+    };
+
+    // Form gönderme
+    const handleSubmit = async () => {
+        if (!plateNumber.trim()) {
+            toast.error("Plaka numarası zorunludur");
+            return;
+        }
+
+        try {
+            const formData: CreateVehicleAcceptanceData = {
+                date,
+                plate_number: plateNumber.trim().toUpperCase(),
+                entry_km: entryKm ? parseInt(entryKm) : undefined,
+                exit_km: exitKm ? parseInt(exitKm) : undefined,
+                tse_entry_datetime: tseEntryDateTime || undefined,
+                tse_exit_datetime: tseExitDateTime || undefined,
+                delivery_date: deliveryDate || undefined,
+                description: description.trim() || undefined,
+                fuel_level: fuelLevel,
+                features: vehicleFeatures,
+                damage_markers: damageMarkers.map((marker) => ({
+                    x_coordinate: marker.x,
+                    y_coordinate: marker.y,
+                    marker_type: marker.type,
+                })),
+            };
+
+            await createVehicleAcceptance(formData);
+            toast.success("Araç kabul formu başarıyla kaydedildi");
+
+            // Formu temizle
+            setPlateNumber("");
+            setEntryKm("");
+            setExitKm("");
+            setTseEntryDateTime("");
+            setTseExitDateTime("");
+            setDeliveryDate("");
+            setDescription("");
+            setFuelLevel(0);
+            setVehicleFeatures({
+                celik_jant: false,
+                garanti_belgesi: false,
+                jant_kapagi: false,
+                koltuk_kilifi: false,
+                paspas: false,
+                ruhsat: false,
+                stepne: false,
+                trafik_sigortasi: false,
+                trafik_seti: false,
+                yangin_tupu: false,
+                yedek_anahtar: false,
+                zincir: false,
+                kriko: false,
+            });
+            setDamageMarkers([]);
+        } catch (error) {
+            console.error("Form gönderme hatası:", error);
+            toast.error("Form gönderilirken bir hata oluştu");
         }
     };
 
@@ -116,7 +205,9 @@ export default function VehicleAcceptancePage() {
                         <Button variant="outline" size="sm" onClick={() => window.print()}>
                             Yazdır
                         </Button>
-                        <Button size="sm">Değişiklikleri Kaydet</Button>
+                        <Button size="sm" onClick={handleSubmit} disabled={isLoadingCreate}>
+                            {isLoadingCreate ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                        </Button>
                     </div>
                 </div>
 
@@ -265,6 +356,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="celikJant"
                                                 value="var"
+                                                checked={vehicleFeatures.celik_jant}
+                                                onChange={() => updateVehicleFeature("celik_jant", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -273,7 +366,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="celikJant"
                                                 value="yok"
-                                                defaultChecked
+                                                checked={!vehicleFeatures.celik_jant}
+                                                onChange={() => updateVehicleFeature("celik_jant", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -286,6 +380,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="garantiBelgesi"
                                                 value="var"
+                                                checked={vehicleFeatures.garanti_belgesi}
+                                                onChange={() => updateVehicleFeature("garanti_belgesi", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -293,8 +389,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="garantiBelgesi"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.garanti_belgesi}
+                                                onChange={() => updateVehicleFeature("garanti_belgesi", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -307,6 +404,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="jantKapagi"
                                                 value="var"
+                                                checked={vehicleFeatures.jant_kapagi}
+                                                onChange={() => updateVehicleFeature("jant_kapagi", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -314,8 +413,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="jantKapagi"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.jant_kapagi}
+                                                onChange={() => updateVehicleFeature("jant_kapagi", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -328,6 +428,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="koltukKilifi"
                                                 value="var"
+                                                checked={vehicleFeatures.koltuk_kilifi}
+                                                onChange={() => updateVehicleFeature("koltuk_kilifi", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -335,8 +437,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="koltukKilifi"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.koltuk_kilifi}
+                                                onChange={() => updateVehicleFeature("koltuk_kilifi", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -349,6 +452,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="paspas"
                                                 value="var"
+                                                checked={vehicleFeatures.paspas}
+                                                onChange={() => updateVehicleFeature("paspas", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -356,8 +461,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="paspas"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.paspas}
+                                                onChange={() => updateVehicleFeature("paspas", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -370,6 +476,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="ruhsat"
                                                 value="var"
+                                                checked={vehicleFeatures.ruhsat}
+                                                onChange={() => updateVehicleFeature("ruhsat", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -377,8 +485,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="ruhsat"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.ruhsat}
+                                                onChange={() => updateVehicleFeature("ruhsat", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -391,6 +500,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="stepne"
                                                 value="var"
+                                                checked={vehicleFeatures.stepne}
+                                                onChange={() => updateVehicleFeature("stepne", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -398,8 +509,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="stepne"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.stepne}
+                                                onChange={() => updateVehicleFeature("stepne", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -412,6 +524,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="trafikSigortasi"
                                                 value="var"
+                                                checked={vehicleFeatures.trafik_sigortasi}
+                                                onChange={() => updateVehicleFeature("trafik_sigortasi", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -419,8 +533,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="trafikSigortasi"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.trafik_sigortasi}
+                                                onChange={() => updateVehicleFeature("trafik_sigortasi", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -433,6 +548,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="trafikSeti"
                                                 value="var"
+                                                checked={vehicleFeatures.trafik_seti}
+                                                onChange={() => updateVehicleFeature("trafik_seti", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -440,8 +557,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="trafikSeti"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.trafik_seti}
+                                                onChange={() => updateVehicleFeature("trafik_seti", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -454,6 +572,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="yanginTupu"
                                                 value="var"
+                                                checked={vehicleFeatures.yangin_tupu}
+                                                onChange={() => updateVehicleFeature("yangin_tupu", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -461,8 +581,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="yanginTupu"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.yangin_tupu}
+                                                onChange={() => updateVehicleFeature("yangin_tupu", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -475,6 +596,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="yedekAnahtar"
                                                 value="var"
+                                                checked={vehicleFeatures.yedek_anahtar}
+                                                onChange={() => updateVehicleFeature("yedek_anahtar", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -482,8 +605,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="yedekAnahtar"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.yedek_anahtar}
+                                                onChange={() => updateVehicleFeature("yedek_anahtar", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -496,6 +620,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="zincir"
                                                 value="var"
+                                                checked={vehicleFeatures.zincir}
+                                                onChange={() => updateVehicleFeature("zincir", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -503,8 +629,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="zincir"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.zincir}
+                                                onChange={() => updateVehicleFeature("zincir", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -517,6 +644,8 @@ export default function VehicleAcceptancePage() {
                                                 type="radio"
                                                 name="kriko"
                                                 value="var"
+                                                checked={vehicleFeatures.kriko}
+                                                onChange={() => updateVehicleFeature("kriko", true)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -524,8 +653,9 @@ export default function VehicleAcceptancePage() {
                                             <input
                                                 type="radio"
                                                 name="kriko"
-                                                defaultChecked
                                                 value="yok"
+                                                checked={!vehicleFeatures.kriko}
+                                                onChange={() => updateVehicleFeature("kriko", false)}
                                                 className="w-4 h-4 text-blue-600"
                                             />
                                         </div>
@@ -670,22 +800,6 @@ export default function VehicleAcceptancePage() {
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* Teslim Eden ve Teslim Alan - Sayfanın en altında */}
-                <div className="mt-8 print:mt-0 print:mb-0">
-                    <div className="grid grid-cols-2 gap-8 print:gap-4">
-                        <div className="text-center">
-                            <h3 className="text-lg font-semibold border-b-2 border-gray-400 pb-2 print:text-base print:pb-1">
-                                TESLİM EDEN
-                            </h3>
-                        </div>
-                        <div className="text-center">
-                            <h3 className="text-lg font-semibold border-b-2 border-gray-400 pb-2 print:text-base print:pb-1">
-                                TESLİM ALAN
-                            </h3>
-                        </div>
-                    </div>
-                </div>
             </div>
         </>
     );
