@@ -90,7 +90,7 @@ export default function VehicleAcceptanceFormPage() {
     const [date, setDate] = useState(() => {
         try {
             return new Date().toISOString().split("T")[0];
-        } catch (error) {
+        } catch {
             return "";
         }
     });
@@ -221,7 +221,7 @@ export default function VehicleAcceptanceFormPage() {
 
             // Hasar işaretlerini yükle
             if (data.damage_markers && Array.isArray(data.damage_markers) && data.damage_markers.length > 0) {
-                const markers = data.damage_markers.map((marker: any) => ({
+                const markers = data.damage_markers.map((marker) => ({
                     id: `marker-${Date.now()}-${Math.random()}`,
                     x: Number(marker.x_coordinate) || 0,
                     y: Number(marker.y_coordinate) || 0,

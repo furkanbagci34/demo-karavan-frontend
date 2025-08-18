@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -92,20 +90,11 @@ export function VehicleBodyAssessment({
         return PARTS.map((p) => ({ ...p }));
     }, [value]);
 
-    const [noteFor, setNoteFor] = useState<BodyPart | null>(null);
     const setStatus = (key: string, status: BodyPartStatus) => {
         onChange(parts.map((p) => (p.key === key ? { ...p, status } : p)));
     };
     const setNote = (key: string, note: string) => {
         onChange(parts.map((p) => (p.key === key ? { ...p, note } : p)));
-    };
-    const cycleStatus = (status: BodyPartStatus): BodyPartStatus => {
-        const order: BodyPartStatus[] = ["original", "local_painted", "painted", "replaced"];
-        const idx = order.indexOf(status);
-        return order[(idx + 1) % order.length];
-    };
-    const handleMarkerClick = (key: string) => {
-        // reserved if we want quick cycle; currently popover opens, so do nothing
     };
 
     const setAllOriginal = (checked: boolean) => {
@@ -173,7 +162,6 @@ export function VehicleBodyAssessment({
                                     <PopoverTrigger asChild>
                                         <button
                                             type="button"
-                                            onClick={() => handleMarkerClick(m.key)}
                                             className={cn(
                                                 "absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border bg-white text-xs font-bold",
                                                 part.status !== "original" && meta.color,

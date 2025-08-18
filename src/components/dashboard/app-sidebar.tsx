@@ -1,17 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-    type LucideIcon,
-    Newspaper,
-    House,
-    Users,
-    FileText,
-    Factory,
-    Car,
-    Warehouse,
-    ClipboardCheck,
-} from "lucide-react";
+import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car, Warehouse } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
