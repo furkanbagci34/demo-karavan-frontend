@@ -398,8 +398,254 @@
 }
 
 @media print {
+    /* Yazdırma başlığını tam ortala */
+    .print-title {
+        display: block !important;
+        text-align: center !important;
+        margin: 0 auto 4mm auto !important;
+    }
+    /* Sağ üstte sabit logo */
+    .print-logo-fixed {
+        position: fixed !important;
+        top: 10mm !important;
+        right: 12mm !important;
+        z-index: 9999 !important;
+    }
+    @page {
+        size: A4;
+        margin: 12mm;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    html,
     body {
-        margin: 10px !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Genel görünüm sadeleştirme */
+    header,
+    nav,
+    .no-print {
+        display: none !important;
+    }
+
+    /* Sidebar tüm parçalarını gizle (wrapper'ı GİZLEME) */
+    [data-slot="sidebar"],
+    [data-slot="sidebar-gap"],
+    [data-slot="sidebar-container"],
+    [data-slot="sidebar-inner"],
+    [data-sidebar],
+    aside,
+    .sidebar,
+    .app-sidebar {
+        display: none !important;
+    }
+
+    /* print-only öğelerini görünür yap (daha yüksek özgüllükle) */
+    body .print-only {
+        display: block !important;
+    }
+
+    .print-container {
+        padding: 0 !important;
+        display: block !important;
+        font-size: 11px !important;
+        /* Sabit logo ile çakışmaması için üst boşluk bırak */
+        padding-top: 20mm !important;
+        /* Altta imza alanı için boşluk bırak */
+        padding-bottom: 22mm !important;
+    }
+
+    /* Kartlar arası (özellikle form ve kroki) boşluğu küçült */
+    .print-container > * + * {
+        margin-top: 6px !important;
+    }
+
+    /* Kartların yazıcıya uygun görünmesi */
+    .print-card {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb !important; /* gray-200 */
+        background: #fff !important;
+    }
+
+    /* Kroki kartı için sınırları tamamen kaldır */
+    .print-no-border {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Kart içi paddingi küçült (CardContent) */
+    .print-card > div {
+        padding: 8px !important;
+    }
+
+    /* Çok sıkı boşluklar için */
+    .print-tight {
+        margin: 0 !important;
+    }
+    .print-tight * {
+        margin-top: 2px !important;
+        margin-bottom: 2px !important;
+    }
+    .print-tight .space-y-4 > * + * {
+        margin-top: 4px !important;
+    }
+    .print-tight .space-y-3 > * + * {
+        margin-top: 3px !important;
+    }
+    .print-tight .space-y-2 > * + * {
+        margin-top: 2px !important;
+    }
+    .print-tight .grid {
+        gap: 2px !important;
+    }
+    .print-tight .text-sm {
+        font-size: 11px !important;
+        line-height: 1.15 !important;
+    }
+
+    /* Form ve başlık tiplerini kompaktlaştır */
+    .print-card label {
+        font-size: 11px !important;
+    }
+    .print-card h3,
+    .print-card h4 {
+        font-size: 11px !important;
+    }
+    .print-card input,
+    .print-card textarea {
+        font-size: 11px !important;
+        padding: 2px 4px !important;
+        height: auto !important;
+    }
+    /* Placeholder'ları yazdırmada gizle */
+    .print-card input::placeholder,
+    .print-card textarea::placeholder {
+        color: transparent !important;
+        opacity: 0 !important;
+    }
+    .print-card input::-webkit-input-placeholder,
+    .print-card textarea::-webkit-input-placeholder {
+        color: transparent !important;
+        opacity: 0 !important;
+    }
+    .print-card input::-moz-placeholder,
+    .print-card textarea::-moz-placeholder {
+        color: transparent !important;
+        opacity: 0 !important;
+    }
+    .print-card input:-ms-input-placeholder,
+    .print-card textarea:-ms-input-placeholder {
+        color: transparent !important;
+        opacity: 0 !important;
+    }
+    .print-card input::-ms-input-placeholder,
+    .print-card textarea::-ms-input-placeholder {
+        color: transparent !important;
+        opacity: 0 !important;
+    }
+    /* Textbox (girdi) sınırlarını yazdırmada kaldır */
+    .print-card input[type="text"],
+    .print-card input[type="number"],
+    .print-card input[type="date"],
+    .print-card input[type="datetime-local"],
+    .print-card input[type="time"],
+    .print-card input[type="email"],
+    .print-card input[type="tel"],
+    .print-card input[type="search"],
+    .print-card select,
+    .print-card textarea {
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        background: transparent !important;
+    }
+    .print-card input[type="radio"] {
+        transform: scale(0.7);
+    }
+    .print-card .grid {
+        gap: 2px !important;
+    }
+
+    /* Tarih/saat alanlarındaki takvim/saat ikonlarını yazdırmada gizle */
+    .print-card input[type="date"],
+    .print-card input[type="datetime-local"],
+    .print-card input[type="time"] {
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        background-image: none !important;
+    }
+    .print-card input[type="date"]::-webkit-calendar-picker-indicator,
+    .print-card input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+    .print-card input[type="time"]::-webkit-calendar-picker-indicator {
+        display: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+    }
+
+    /* Grid'i tek sütuna indir ve boşlukları sıkılaştır */
+    .print-grid-1 {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    /* İki sütun yan yana */
+    .print-grid-2 {
+        display: grid !important;
+        grid-template-columns: 1.1fr 0.9fr !important;
+        gap: 4px !important;
+        align-items: start !important;
+    }
+
+    /* Sayfa içinde bölünmeyi engelle */
+    .avoid-break-inside {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    /* Görsellerin doğru oranda basılması */
+    img,
+    svg {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Krokiyi yazdırmada küçült */
+    .car-diagram {
+        max-width: 300px !important;
+    }
+    .car-diagram img {
+        display: block !important;
+    }
+
+    /* Yazdırmada hasar işaretlerini küçült */
+    .damage-marker {
+        width: 10px !important;
+        height: 10px !important;
+    }
+    .damage-marker svg {
+        width: 10px !important;
+        height: 10px !important;
+    }
+
+    /* Kart içi büyük boşlukları sıkılaştır */
+    .print-card .space-y-6 > * + * {
+        margin-top: 8px !important;
+    }
+
+    /* Yazdırma sabit alt imza alanı */
+    .print-footer-fixed {
+        position: fixed !important;
+        left: 12mm !important;
+        right: 12mm !important;
+        bottom: 12mm !important;
     }
 }
 
@@ -408,4 +654,9 @@
     width: fit-content;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* Varsayılan olarak gizli, yazdırmada gösterilecek elemanlar için */
+.print-only {
+    display: none !important;
 }

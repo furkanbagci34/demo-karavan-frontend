@@ -2471,4 +2471,3 @@ export default function EditOfferPage() {
         </div>
     );
 }
-

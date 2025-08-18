@@ -397,3 +397,76 @@ export interface UpdateProductionPlanData {
         }[];
     }[];
 }
+
+// Vehicle Acceptance tipleri
+export interface DamageMarker {
+    id?: number;
+    x_coordinate: number;
+    y_coordinate: number;
+    marker_type: "dot" | "cross" | "line";
+}
+
+export interface VehicleFeature {
+    celik_jant: boolean;
+    garanti_belgesi: boolean;
+    jant_kapagi: boolean;
+    koltuk_kilifi: boolean;
+    paspas: boolean;
+    ruhsat: boolean;
+    stepne: boolean;
+    trafik_sigortasi: boolean;
+    trafik_seti: boolean;
+    yangin_tupu: boolean;
+    yedek_anahtar: boolean;
+    zincir: boolean;
+    kriko: boolean;
+}
+
+export interface VehicleAcceptance {
+    id?: number;
+    date: string;
+    plate_number: string;
+    entry_km?: number;
+    exit_km?: number;
+    tse_entry_datetime?: string;
+    tse_exit_datetime?: string;
+    delivery_date?: string;
+    description?: string;
+    fuel_level: number;
+    features: VehicleFeature;
+    damage_markers: DamageMarker[];
+    created_at?: string;
+    updated_at?: string;
+    created_by?: number;
+    created_by_name?: string; // backward compatibility
+    created_user?: string; // concatenated name + surname from backend list query
+}
+
+export interface CreateVehicleAcceptanceData {
+    date: string;
+    plate_number: string;
+    entry_km?: number;
+    exit_km?: number;
+    tse_entry_datetime?: string;
+    tse_exit_datetime?: string;
+    delivery_date?: string;
+    description?: string;
+    fuel_level: number;
+    features: VehicleFeature;
+    damage_markers: DamageMarker[];
+}
+
+export interface UpdateVehicleAcceptanceData {
+    date?: string;
+    plate_number?: string;
+    entry_km?: number;
+    exit_km?: number;
+    tse_entry_datetime?: string;
+    tse_exit_datetime?: string;
+    delivery_date?: string;
+    description?: string;
+    fuel_level?: number;
+    features?: Partial<VehicleFeature>;
+    damage_markers?: DamageMarker[];
+    status?: "active" | "completed" | "cancelled";
+}
