@@ -19,12 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
-import {
-    CreateVehicleAcceptanceData,
-    UpdateVehicleAcceptanceData,
-    VehicleFeature,
-    VehicleAcceptance,
-} from "@/lib/api/types";
+import { CreateVehicleAcceptanceData, UpdateVehicleAcceptanceData, VehicleFeature } from "@/lib/api/types";
 import { toast } from "sonner";
 
 type DamageMarker = {
@@ -86,8 +81,6 @@ export default function VehicleAcceptanceFormPage() {
         getVehicleAcceptanceById,
         isLoadingCreate,
         isLoadingUpdate,
-        deleteVehicleAcceptance,
-        isLoadingDelete,
     } = useVehicleAcceptance();
 
     const [damageMarkers, setDamageMarkers] = useState<DamageMarker[]>([]);
@@ -363,23 +356,6 @@ export default function VehicleAcceptanceFormPage() {
         } catch (error) {
             console.error("Form gönderme hatası:", error);
             toast.error(isEditMode ? "Form güncellenirken bir hata oluştu" : "Form gönderilirken bir hata oluştu");
-        }
-    };
-
-    const handleDelete = async () => {
-        if (!isEditMode || !id) return;
-        const confirmed = window.confirm(
-            "Bu araç kabul kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
-        );
-        if (!confirmed) return;
-
-        try {
-            await deleteVehicleAcceptance(id.toString());
-            toast.success("Araç kabul kaydı silindi");
-            router.push("/vehicle-acceptance");
-        } catch (error) {
-            console.error("Araç kabul silme hatası:", error);
-            toast.error("Araç kabul silinemedi");
         }
     };
 
