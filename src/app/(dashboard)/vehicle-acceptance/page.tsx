@@ -158,17 +158,16 @@ export default function VehicleAcceptancePage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Araç No</TableHead>
                                         <TableHead>Araç Bilgisi</TableHead>
-                                        <TableHead>Plaka</TableHead>
-                                        <TableHead>Kabul Tarihi</TableHead>
+                                        <TableHead>Oluşturan Kullanıcı</TableHead>
+                                        <TableHead>Oluşturma Tarihi</TableHead>
                                         <TableHead className="text-center w-20">İşlemler</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-8">
+                                            <TableCell colSpan={4} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                     Araç kabul listesi yükleniyor...
@@ -177,7 +176,7 @@ export default function VehicleAcceptancePage() {
                                         </TableRow>
                                     ) : vehicleAcceptances.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center py-8">
+                                            <TableCell colSpan={4} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <AlertTriangle className="h-4 w-4" />
                                                     Henüz araç kabul kaydı bulunmuyor
@@ -191,7 +190,6 @@ export default function VehicleAcceptancePage() {
                                                 className={`cursor-pointer`}
                                                 onClick={() => handleRowClick(vehicleAcceptance.id)}
                                             >
-                                                <TableCell className="font-medium">VA-{vehicleAcceptance.id}</TableCell>
                                                 <TableCell>
                                                     <div className="space-y-1">
                                                         <div className="font-medium">
@@ -202,15 +200,16 @@ export default function VehicleAcceptancePage() {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="font-mono">
-                                                    {vehicleAcceptance.plate_number}
+                                                <TableCell>
+                                                    {vehicleAcceptance.created_user ||
+                                                        vehicleAcceptance.created_by_name ||
+                                                        "-"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {vehicleAcceptance.date
-                                                        ? new Date(vehicleAcceptance.date).toLocaleDateString("tr-TR")
+                                                    {vehicleAcceptance.created_at
+                                                        ? new Date(vehicleAcceptance.created_at).toLocaleString("tr-TR")
                                                         : "-"}
                                                 </TableCell>
-                                                <TableCell>{vehicleAcceptance.created_by_name || "-"}</TableCell>
                                                 <TableCell className="flex items-center justify-center">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -284,10 +283,10 @@ export default function VehicleAcceptancePage() {
                                                             VA-{vehicleAcceptance.id}
                                                         </h3>
                                                         <p className="text-sm text-slate-600">
-                                                            {vehicleAcceptance.created_by_name}
+                                                            {vehicleAcceptance.created_user ||
+                                                                vehicleAcceptance.created_by_name}
                                                         </p>
                                                     </div>
-                                                    <Badge>{vehicleAcceptance.status}</Badge>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -304,14 +303,27 @@ export default function VehicleAcceptancePage() {
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
+                                                        <span className="text-slate-600">Oluşturma:</span>
+                                                        <span className="font-medium">
+                                                            {vehicleAcceptance.created_at
+                                                                ? new Date(vehicleAcceptance.created_at).toLocaleString(
+                                                                      "tr-TR"
+                                                                  )
+                                                                : "-"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
                                                         <span className="text-slate-600">Yakıt:</span>
                                                         <span className="font-medium">
                                                             {vehicleAcceptance.fuel_level}/20
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
+                                                        <span className="text-slate-600">Oluşturan:</span>
                                                         <span className="font-medium">
-                                                            {vehicleAcceptance.created_by_name}
+                                                            {vehicleAcceptance.created_user ||
+                                                                vehicleAcceptance.created_by_name ||
+                                                                "-"}
                                                         </span>
                                                     </div>
                                                 </div>

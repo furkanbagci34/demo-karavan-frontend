@@ -34,6 +34,46 @@ type DamageMarker = {
     type: "dot" | "cross" | "line";
 };
 
+// Backend'den gelen tarih string'lerini HTML input formatına dönüştürür
+function padToTwoDigits(value: number): string {
+    return String(value).padStart(2, "0");
+}
+
+function formatDateForInput(value?: string | null): string {
+    if (!value) return "";
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = padToTwoDigits(date.getMonth() + 1);
+        const day = padToTwoDigits(date.getDate());
+        return `${year}-${month}-${day}`;
+    }
+    // Fallback: YYYY-MM-DD ile başlıyorsa ilk 10 karakteri kullan
+    if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+        return value.slice(0, 10);
+    }
+    return "";
+}
+
+function formatDateTimeLocalForInput(value?: string | null): string {
+    if (!value) return "";
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = padToTwoDigits(date.getMonth() + 1);
+        const day = padToTwoDigits(date.getDate());
+        const hours = padToTwoDigits(date.getHours());
+        const minutes = padToTwoDigits(date.getMinutes());
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+    // Fallback: YYYY-MM-DD HH:mm veya YYYY-MM-DDTHH:mm gelir ise normalize et
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+    if (match) {
+        return `${match[1]}T${match[2]}`;
+    }
+    return "";
+}
+
 export default function VehicleAcceptanceFormPage() {
     const router = useRouter();
     const params = useParams();
@@ -46,6 +86,8 @@ export default function VehicleAcceptanceFormPage() {
         getVehicleAcceptanceById,
         isLoadingCreate,
         isLoadingUpdate,
+        deleteVehicleAcceptance,
+        isLoadingDelete,
     } = useVehicleAcceptance();
 
     const [damageMarkers, setDamageMarkers] = useState<DamageMarker[]>([]);
@@ -88,13 +130,9 @@ export default function VehicleAcceptanceFormPage() {
 
     // Edit modunda veri yükleme
     useEffect(() => {
-        console.log("🔄 useEffect çalıştı - isEditMode:", isEditMode, "ID:", id);
-        
         if (isEditMode && id) {
-            console.log("📝 Edit modu aktif, veri yükleniyor...");
             loadVehicleAcceptanceData();
         } else {
-            console.log("🆕 Yeni kayıt modu aktif, varsayılan değerler kullanılıyor");
             // Yeni kayıt modunda varsayılan değerleri kullan
             setVehicleFeatures({
                 celik_jant: false,
@@ -128,13 +166,13 @@ export default function VehicleAcceptanceFormPage() {
             }
 
             // Form alanlarını doldur - tüm alanları kontrol et
-            const newDate = data.date || "";
+            const newDate = formatDateForInput(data.date);
             const newPlateNumber = data.plate_number || "";
             const newEntryKm = data.entry_km !== undefined && data.entry_km !== null ? data.entry_km.toString() : "";
             const newExitKm = data.exit_km !== undefined && data.exit_km !== null ? data.exit_km.toString() : "";
-            const newTseEntryDateTime = data.tse_entry_datetime || "";
-            const newTseExitDateTime = data.tse_exit_datetime || "";
-            const newDeliveryDate = data.delivery_date || "";
+            const newTseEntryDateTime = formatDateTimeLocalForInput(data.tse_entry_datetime);
+            const newTseExitDateTime = formatDateTimeLocalForInput(data.tse_exit_datetime);
+            const newDeliveryDate = formatDateForInput(data.delivery_date);
             const newDescription = data.description || "";
             const newFuelLevel = data.fuel_level !== undefined && data.fuel_level !== null ? data.fuel_level : 0;
 
@@ -328,6 +366,23 @@ export default function VehicleAcceptanceFormPage() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!isEditMode || !id) return;
+        const confirmed = window.confirm(
+            "Bu araç kabul kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+        );
+        if (!confirmed) return;
+
+        try {
+            await deleteVehicleAcceptance(id.toString());
+            toast.success("Araç kabul kaydı silindi");
+            router.push("/vehicle-acceptance");
+        } catch (error) {
+            console.error("Araç kabul silme hatası:", error);
+            toast.error("Araç kabul silinemedi");
+        }
+    };
+
     return (
         <>
             <header className="flex h-16 shrink-0 items-center gap-2 border-b no-print">
@@ -363,29 +418,6 @@ export default function VehicleAcceptanceFormPage() {
                     </div>
                 )}
 
-                {/* Debug bilgileri - sadece development'ta göster */}
-                {process.env.NODE_ENV === 'development' && (
-                    <div className="bg-gray-100 p-4 rounded-lg border no-print">
-                        <h3 className="font-semibold mb-2">🐛 Debug Bilgileri</h3>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <strong>isEditMode:</strong> {isEditMode ? 'true' : 'false'}<br/>
-                                <strong>ID:</strong> {id}<br/>
-                                <strong>isLoading:</strong> {isLoading ? 'true' : 'false'}<br/>
-                                <strong>isLoadingCreate:</strong> {isLoadingCreate ? 'true' : 'false'}<br/>
-                                <strong>isLoadingUpdate:</strong> {isLoadingUpdate ? 'true' : 'false'}
-                            </div>
-                            <div>
-                                <strong>Date:</strong> {date || 'boş'}<br/>
-                                <strong>Plate:</strong> {plateNumber || 'boş'}<br/>
-                                <strong>Entry KM:</strong> {entryKm || 'boş'}<br/>
-                                <strong>Exit KM:</strong> {exitKm || 'boş'}<br/>
-                                <strong>Fuel Level:</strong> {fuelLevel}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Yazdırma başlığı */}
                 <div className="print-only mb-4">
                     <h1 className="text-2xl font-bold print-title">
@@ -405,11 +437,11 @@ export default function VehicleAcceptanceFormPage() {
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
                     </h1>
                     <div className="flex items-center gap-3 self-end sm:self-auto">
-                        <Button variant="outline" size="sm" onClick={() => router.push("/vehicle-acceptance")}>
-                            Listeye Dön
-                        </Button>
                         <Button variant="outline" size="sm" onClick={() => window.print()}>
                             Yazdır
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push("/vehicle-acceptance")}>
+                            Listeye Dön
                         </Button>
                         <Button size="sm" onClick={handleSubmit} disabled={isLoadingCreate || isLoadingUpdate}>
                             {isLoadingCreate || isLoadingUpdate
@@ -1040,18 +1072,40 @@ export default function VehicleAcceptanceFormPage() {
                                                     viewBox="0 0 24 24"
                                                     fill="none"
                                                     stroke="currentColor"
-                                                    className="w-6 h-6 text-red-500 stroke-3 print:w-3 print:h-3"
+                                                    className="w-6 h-6 text-red-500 print:w-3 print:h-3"
                                                 >
-                                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                                    <line
+                                                        x1="6"
+                                                        y1="6"
+                                                        x2="18"
+                                                        y2="18"
+                                                        strokeWidth="3"
+                                                        strokeLinecap="round"
+                                                    />
+                                                    <line
+                                                        x1="18"
+                                                        y1="6"
+                                                        x2="6"
+                                                        y2="18"
+                                                        strokeWidth="3"
+                                                        strokeLinecap="round"
+                                                    />
                                                 </svg>
                                             ) : (
                                                 <svg
                                                     viewBox="0 0 24 24"
                                                     fill="none"
                                                     stroke="currentColor"
-                                                    className="w-6 h-6 text-blue-600 stroke-3 print:w-3 print:h-3"
+                                                    className="w-6 h-6 text-blue-600 print:w-3 print:h-3"
                                                 >
-                                                    <line x1="4" y1="12" x2="20" y2="12" />
+                                                    <line
+                                                        x1="4"
+                                                        y1="12"
+                                                        x2="20"
+                                                        y2="12"
+                                                        strokeWidth="3"
+                                                        strokeLinecap="round"
+                                                    />
                                                 </svg>
                                             )}
                                         </div>
@@ -1065,3 +1119,4 @@ export default function VehicleAcceptanceFormPage() {
         </>
     );
 }
+

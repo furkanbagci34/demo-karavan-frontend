@@ -435,11 +435,11 @@ export interface VehicleAcceptance {
     fuel_level: number;
     features: VehicleFeature;
     damage_markers: DamageMarker[];
-    status: "active" | "completed" | "cancelled";
     created_at?: string;
     updated_at?: string;
     created_by?: number;
-    created_by_name?: string;
+    created_by_name?: string; // backward compatibility
+    created_user?: string; // concatenated name + surname from backend list query
 }
 
 export interface CreateVehicleAcceptanceData {
