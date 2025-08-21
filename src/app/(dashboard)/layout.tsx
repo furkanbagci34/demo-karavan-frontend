@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <SidebarInset className="flex-1 min-h-screen">
                     <div className="flex flex-col h-full min-h-screen">
                         {/* Mobil menü butonu */}
-                        <div className="md:hidden flex items-center p-4 border-b bg-white">
+                        <div className="md:hidden flex items-center p-4 border-b bg-white no-print">
                             <SidebarTrigger className="h-9 w-9 p-0" />
                             <span className="ml-3 font-semibold text-lg">Dashboard</span>
                         </div>
