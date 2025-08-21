@@ -26,7 +26,7 @@ import { CalendarIcon, CheckCircleIcon, XCircleIcon, LoaderIcon, Clock, User } f
 const OfferDetailPage = () => {
     const params = useParams();
     const uid = params?.uid as string;
-    const { getOfferByUid, updateOfferStatus, loading, error } = useOffers();
+    const { getContractByUid, updateOfferStatus, loading, error } = useOffers();
     const [offer, setOffer] = useState<OfferPublic | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [actionResult, setActionResult] = useState<{
@@ -38,8 +38,8 @@ const OfferDetailPage = () => {
         const fetchOffer = async () => {
             if (uid) {
                 try {
-                    const offerData = await getOfferByUid(uid);
-                    setOffer(offerData);
+                    const contractData = await getContractByUid(uid);
+                    setOffer(contractData);
                 } catch (err) {
                     console.error("Teklif yüklenirken hata oluştu:", err);
                 }
@@ -47,7 +47,7 @@ const OfferDetailPage = () => {
         };
 
         fetchOffer();
-    }, [uid, getOfferByUid]);
+    }, [uid, getContractByUid]);
 
     const handleAcceptOffer = async () => {
         if (!offer) return;
@@ -138,7 +138,7 @@ const OfferDetailPage = () => {
                                     <h1 className="text-3xl font-bold text-green-700 mb-4">Teşekkür Ederiz!</h1>
                                     <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
                                         <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                                            Teklif #{offer.offer_number} Başarıyla Onaylandı
+                                            Sözleşme #{offer.offer_number} Başarıyla Onaylandı
                                         </h2>
                                         <p className="text-gray-700 mb-2">
                                             <strong>Onaylanma Tarihi:</strong> {actionResult.timestamp}
@@ -167,28 +167,30 @@ const OfferDetailPage = () => {
                             ) : (
                                 <>
                                     <XCircleIcon className="mx-auto h-20 w-20 text-red-500 mb-6" />
-                                    <h1 className="text-3xl font-bold text-red-700 mb-4">Teklif Reddedildi</h1>
+                                    <h1 className="text-3xl font-bold text-red-700 mb-4">Sözleşme Reddedildi</h1>
                                     <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
                                         <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                                            Teklif #{offer.offer_number} Reddedildi
+                                            Sözleşme #{offer.offer_number} Reddedildi
                                         </h2>
                                         <p className="text-gray-700 mb-2">
                                             <strong>Reddedilme Tarihi:</strong> {actionResult.timestamp}
                                         </p>
                                         <p className="text-gray-700 mb-4">
-                                            Teklif reddedilmiştir ve işlem sonlandırılmıştır.
+                                            Sözleşme reddedilmiştir ve işlem sonlandırılmıştır.
                                         </p>
                                         <Separator className="my-4" />
                                         <div className="space-y-3 text-left">
                                             <h3 className="font-semibold text-gray-900">Bilgilendirme:</h3>
                                             <ul className="list-disc list-inside space-y-1 text-gray-700">
-                                                <li>Gelecekte yeni teklifler için bizimle iletişime geçebilirsiniz</li>
+                                                <li>
+                                                    Gelecekte yeni sözleşmeler için bizimle iletişime geçebilirsiniz
+                                                </li>
                                             </ul>
                                         </div>
                                     </div>
                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                         <p className="text-sm text-gray-700">
-                                            <strong>İletişim:</strong> Yeni teklif talepleriniz için{" "}
+                                            <strong>İletişim:</strong> Yeni sözleşme talepleriniz için{" "}
                                             <span className="font-semibold">info@demontekaravan.com</span> adresinden
                                             bize ulaşabilirsiniz.
                                         </p>
@@ -263,41 +265,86 @@ const OfferDetailPage = () => {
                             </div>
                         )}
 
-                        {/* Fiyat Hesaplaması - Kompakt */}
-                        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3">Fiyat Hesaplaması</h3>
+                        {/* Araç Bilgileri ve Fiyat Hesaplaması */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {/* Sol Taraf - Araç Bilgileri */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3 text-center">Araç Bilgileri</h3>
 
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Ara Toplam</span>
-                                    <span className="font-medium">{formatCurrency(offer.subtotal)}</span>
-                                </div>
-
-                                {offer.discount_amount > 0 && (
-                                    <div className="flex justify-between text-sm text-red-600">
-                                        <span>
-                                            İndirim
-                                            {offer.discount_type === "percentage" && ` (%${offer.discount_value})`}
-                                        </span>
-                                        <span className="font-medium">-{formatCurrency(offer.discount_amount)}</span>
+                                <div className="space-y-3 flex-grow flex flex-col justify-center">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Marka</span>
+                                        <span className="font-medium">{offer.vehicle_brand}</span>
                                     </div>
-                                )}
 
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Net Tutar</span>
-                                    <span className="font-medium">{formatCurrency(offer.net_total)}</span>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Model</span>
+                                        <span className="font-medium">{offer.vehicle_model}</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Renk</span>
+                                        <span className="font-medium">{offer.vehicle_color}</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Motor No</span>
+                                        <span className="font-medium">{offer.vehicle_engine_no}</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Şasi No</span>
+                                        <span className="font-medium">{offer.vehicle_chassis_no}</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Plaka</span>
+                                        <span className="font-medium">{offer.vehicle_plate}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sağ Taraf - Fiyat Hesaplaması */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3 text-center">
+                                    Fiyat Hesaplaması
+                                </h3>
+
+                                <div className="space-y-2 flex-grow">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Ara Toplam</span>
+                                        <span className="font-medium">{formatCurrency(offer.subtotal)}</span>
+                                    </div>
+
+                                    {offer.discount_amount > 0 && (
+                                        <div className="flex justify-between text-sm text-red-600">
+                                            <span>
+                                                İndirim
+                                                {offer.discount_type === "percentage" && ` (%${offer.discount_value})`}
+                                            </span>
+                                            <span className="font-medium">
+                                                -{formatCurrency(offer.discount_amount)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Net Tutar</span>
+                                        <span className="font-medium">{formatCurrency(offer.net_total)}</span>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">KDV (%{offer.vat_rate})</span>
+                                        <span className="font-medium">{formatCurrency(offer.vat_amount)}</span>
+                                    </div>
                                 </div>
 
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">KDV (%{offer.vat_rate})</span>
-                                    <span className="font-medium">{formatCurrency(offer.vat_amount)}</span>
-                                </div>
-
-                                <Separator className="my-2" />
-
-                                <div className="flex justify-between text-lg font-bold">
-                                    <span className="text-gray-900">TOPLAM</span>
-                                    <span className="text-blue-600">{formatCurrency(offer.total_amount)}</span>
+                                <div className="mt-auto pt-3">
+                                    <Separator className="mb-3" />
+                                    <div className="flex justify-between text-lg font-bold">
+                                        <span className="text-gray-900">TOPLAM</span>
+                                        <span className="text-blue-600">{formatCurrency(offer.total_amount)}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

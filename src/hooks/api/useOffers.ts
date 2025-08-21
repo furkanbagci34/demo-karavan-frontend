@@ -39,15 +39,15 @@ export interface Offer {
     net_total: number;
     vat_rate: number;
     vat_amount: number;
-    total_amount: number;
+    total_amount: number | string;
     status: string;
     valid_until?: string;
     notes?: string;
-    item_count: number;
-    total_items_price: number;
+    item_count?: number;
+    total_items_price?: number;
     created_at: string;
-    updated_at: string;
-    items?: OfferItem[] | unknown[]; // Backend'den gelen items array
+    updated_at?: string;
+    items?: OfferItem[] | unknown[];
 }
 
 export interface OfferHistory {
@@ -72,6 +72,28 @@ export interface OfferPublic {
     notes: string;
     created_at: string;
     customer_name: string;
+    vehicle_brand: string;
+    vehicle_model: string;
+    vehicle_color: string;
+    vehicle_engine_no: string;
+    vehicle_chassis_no: string;
+    vehicle_plate: string;
+}
+
+export interface OfferContract {
+    id: number;
+    uid: string;
+    offer_id: number;
+    customer_tckn: string;
+    customer_address: string;
+    vehicle_brand: string;
+    vehicle_model: string;
+    vehicle_color: string;
+    vehicle_engine_no: string;
+    vehicle_chassis_no: string;
+    vehicle_plate: string;
+    created_by: number;
+    created_at: string;
 }
 
 interface CreateOfferData {
@@ -235,6 +257,38 @@ export const useOffers = () => {
         }
     }, []);
 
+    const sendContract = useCallback(
+        async (contractData: {
+            offerId: number;
+            customerTckn: string;
+            customerAddress: string;
+            vehicleBrand: string;
+            vehicleModel: string;
+            vehicleColor: string;
+            vehicleEngineNo: string;
+            vehicleChassisNo: string;
+            vehiclePlate: string;
+        }) => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await apiClient.post<{ message: string }>(
+                    API_ENDPOINTS.offers.sendContract(contractData.offerId.toString()),
+                    contractData
+                );
+                return response;
+            } catch (err: unknown) {
+                const errorMessage = getErrorMessage(err, "Sözleşme gönderilirken bir hata oluştu");
+                setError(errorMessage);
+                throw err;
+            } finally {
+                setLoading(false);
+            }
+        },
+        [setLoading, setError]
+    );
+
     const getOfferHistory = useCallback(async (offerId: number): Promise<OfferHistory[]> => {
         try {
             setLoading(true);
@@ -251,15 +305,15 @@ export const useOffers = () => {
         }
     }, []);
 
-    const getOfferByUid = useCallback(async (uid: string): Promise<OfferPublic | null> => {
+    const getContractByUid = useCallback(async (uid: string): Promise<OfferPublic | null> => {
         try {
             setLoading(true);
             setError(null);
 
-            const response = await apiClient.get<OfferPublic>(API_ENDPOINTS.offers.getByUid(uid));
+            const response = await apiClient.get<OfferPublic>(API_ENDPOINTS.offers.getContractByUid(uid));
             return response;
         } catch (err: unknown) {
-            const errorMessage = getErrorMessage(err, "Teklif yüklenirken bir hata oluştu");
+            const errorMessage = getErrorMessage(err, "Sözleşme yüklenirken bir hata oluştu");
             setError(errorMessage);
             throw err;
         } finally {
@@ -285,6 +339,43 @@ export const useOffers = () => {
         }
     }, []);
 
+    const getContractByOfferId = useCallback(
+        async (offerId: number): Promise<OfferContract | null> => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await apiClient.get<OfferContract>(
+                    API_ENDPOINTS.offers.getContractByOfferId(offerId.toString())
+                );
+                return response;
+            } catch (err: unknown) {
+                const errorMessage = getErrorMessage(err, "Sözleşme yüklenirken bir hata oluştu");
+                setError(errorMessage);
+                return null; // Hata durumunda null döndür
+            } finally {
+                setLoading(false);
+            }
+        },
+        [setLoading, setError]
+    );
+
+    const getOffersByCustomerId = useCallback(async (customerId: number): Promise<Offer[]> => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.get<Offer[]>(API_ENDPOINTS.offers.getByCustomerId(customerId.toString()));
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, "Müşteri teklifleri yüklenirken bir hata oluştu");
+            setError(errorMessage);
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         products,
         loading,
@@ -294,11 +385,14 @@ export const useOffers = () => {
         createOffer,
         updateOffer,
         getOfferById,
-        getOfferByUid,
+        getContractByUid,
+        getContractByOfferId,
+        getOffersByCustomerId,
         updateOfferStatus,
         getAllOffers,
         deleteOffer,
         sendOffer,
         getOfferHistory,
+        sendContract,
     };
 };

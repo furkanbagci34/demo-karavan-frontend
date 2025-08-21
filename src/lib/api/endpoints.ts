@@ -31,13 +31,16 @@ export const API_ENDPOINTS = {
         create: "/api/offers",
         getAll: "/api/offers",
         getById: (id: string) => `/api/offers/${id}`,
-        getByUid: (uid: string) => `/api/offers/uid/${uid}`,
+        getContractByUid: (uid: string) => `/api/offers/contract/${uid}`,
         updateStatus: (uid: string) => `/api/offers/uid/${uid}/status`,
         update: (id: string) => `/api/offers/${id}`,
         delete: (id: string) => `/api/offers/${id}`,
         getLastId: "/api/offers/last-id",
         sendOffer: (id: string) => `/api/offers/send-offer/${id}`,
         getHistory: (id: string) => `/api/offers/${id}/history`,
+        sendContract: (id: string) => `/api/offers/send-contract/${id}`,
+        getContractByOfferId: (offerId: string) => `/api/offers/contract-by-offer-id/${offerId}`,
+        getByCustomerId: (customerId: string) => `/api/offers/customer/${customerId}`,
     },
     vehicles: {
         create: "/api/vehicles",
@@ -88,5 +91,10 @@ export const API_ENDPOINTS = {
         recentOffers: "/api/dashboard/recent-offers",
         customerActivity: "/api/dashboard/customer-activity",
         offerStatusDistribution: "/api/dashboard/offer-status-distribution",
+    },
+    payment: {
+        create: "/api/payment",
+        getByCustomerId: (customerId: string) => `/api/payment?customerId=${customerId}`,
+        delete: (paymentId: string) => `/api/payment/${paymentId}`,
     },
 } as const;

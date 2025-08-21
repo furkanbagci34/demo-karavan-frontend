@@ -121,72 +121,97 @@ export async function generateOfferPdf({
     // Tablo başlıklarını ve içeriğini hidePricing parametresine göre ayarla
     const tableWidths = hidePricing ? [20, 60, "*", 50] : [20, 60, "*", 50, 70, 80];
 
-    const tableBody = [
-        // Header row
-        hidePricing
-            ? [
-                  { text: "", alignment: "center" },
-                  { text: "", alignment: "center" },
-                  { text: "Ürün İsmi", alignment: "left" },
-                  { text: "Miktar", alignment: "center" },
-              ]
-            : [
-                  { text: "", alignment: "center" },
-                  { text: "", alignment: "center" },
-                  { text: "Ürün İsmi", alignment: "left" },
-                  { text: "Miktar", alignment: "center" },
-                  { text: "Fiyat", alignment: "center" },
-                  { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
-              ],
-        // Data rows
-        ...products.map((p, i) => {
-            const baseRow = [
+    // Data rows
+    const productTables = products.map((p, i) => {
+        const rowData = [
+            [
                 { text: (i + 1).toString(), fontSize: 9, alignment: "center", margin: [0, 12, 0, 0] },
                 productImages[i]
                     ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
                     : { text: "", width: 50, height: 50 },
                 { text: p.name, fontSize: 12, bold: true, alignment: "left", margin: [0, 8, 0, 0] },
-                { text: `${p.quantity} ${p.unit || "adet"}`, alignment: "center", fontSize: 10 },
-            ];
+                {
+                    text: `${p.quantity} ${p.unit || "adet"}`,
+                    alignment: "center",
+                    fontSize: 10,
+                },
+            ],
+        ];
 
-            if (!hidePricing) {
-                baseRow.push(
-                    {
-                        stack: [
-                            p.oldPrice
-                                ? {
-                                      text: `€ ${p.oldPrice.toFixed(2)}`,
-                                      decoration: "lineThrough",
-                                      fontSize: 9,
-                                      color: "#444",
-                                      alignment: "center",
-                                      margin: [0, 0, 0, 0],
-                                  }
-                                : "",
-                            {
-                                text: `€ ${p.price.toFixed(2)}`,
-                                fontSize: 10,
-                                alignment: "center",
-                                bold: !!p.oldPrice,
-                                margin: [0, 0, 0, 0],
-                            },
-                        ].filter(Boolean),
-                        alignment: "center",
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    } as any,
-                    {
-                        text: `€ ${p.total.toFixed(2)}`,
-                        alignment: "center",
-                        fontSize: 10,
-                        bold: true,
-                        margin: [0, 0, 0, 0],
-                    }
-                );
-            }
+        if (!hidePricing) {
+            rowData[0].push(
+                {
+                    stack: [
+                        p.oldPrice
+                            ? {
+                                  text: `€ ${p.oldPrice.toFixed(2)}`,
+                                  decoration: "lineThrough",
+                                  fontSize: 9,
+                                  color: "#444",
+                                  alignment: "center",
+                                  margin: [0, 0, 0, 0],
+                              }
+                            : "",
+                        {
+                            text: `€ ${p.price.toFixed(2)}`,
+                            fontSize: 10,
+                            alignment: "center",
+                            bold: !!p.oldPrice,
+                            margin: [0, 0, 0, 0],
+                        },
+                    ].filter(Boolean),
+                    alignment: "center",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } as any,
+                {
+                    text: `€ ${p.total.toFixed(2)}`,
+                    alignment: "center",
+                    fontSize: 10,
+                    bold: true,
+                    margin: [0, 0, 0, 0],
+                }
+            );
+        }
 
-            return baseRow;
-        }),
-    ];
+        return {
+            table: {
+                headerRows: 0,
+                widths: tableWidths,
+                body: rowData,
+            },
+            layout: {
+                defaultBorder: true,
+                paddingTop: function () {
+                    return 4;
+                },
+                paddingBottom: function () {
+                    return 4;
+                },
+                paddingLeft: function () {
+                    return 4;
+                },
+                paddingRight: function () {
+                    return 4;
+                },
+                hLineWidth: function () {
+                    return 0.1;
+                },
+                vLineWidth: function () {
+                    return 0;
+                },
+                hLineColor: function () {
+                    return "#bbb";
+                },
+                fillColor: function () {
+                    return "#f9f9f9";
+                },
+            },
+            margin: [0, 0, 0, 0],
+            unbreakable: true, // Her ürün satırı bölünmez
+            pageBreak: "avoid", // Sayfa sonundan kaçın
+            keepWithNext: true, // Sonraki içerikle birlikte tut
+        };
+    });
 
     // Özet tablosunu hidePricing parametresine göre ayarla
     const summaryTableBody: (string | { text: string; bold: boolean })[][] = [["Brüt", `€ ${gross.toFixed(2)}`]];
@@ -207,6 +232,8 @@ export async function generateOfferPdf({
     };
 
     const docDefinition = {
+        pageSize: "A4",
+        pageMargins: [40, 60, 40, 60],
         content: [
             {
                 columns: [
@@ -228,8 +255,13 @@ export async function generateOfferPdf({
                 ],
                 margin: [0, 0, 0, 10],
             },
-            { text: "PROJE TEKLİF FORMU", style: "title", margin: [0, 10, 0, 4], alignment: "center" },
-            // Başlığın hemen altında sağa hizalı tarih/geçerlilik/no
+            {
+                text: "PROJE TEKLİF FORMU",
+                style: "title",
+                margin: [0, 10, 0, 4],
+                alignment: "center",
+                unbreakable: true,
+            },
             {
                 columns: [
                     { width: "*", text: "" },
@@ -253,15 +285,18 @@ export async function generateOfferPdf({
                         },
                         layout: "noBorders",
                         margin: [0, 0, 0, 10],
+                        unbreakable: true,
                     },
                 ],
                 alignment: "right",
+                unbreakable: true,
             },
-            { text: notes || "", bold: true, fontSize: 11, margin: [0, 0, 0, 6] },
+            { text: notes || "", bold: true, fontSize: 11, margin: [0, 0, 0, 6], unbreakable: true },
             {
                 text: "Demonte Karavan olarak, TSE ve TÜV testlerinden geçmiş, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
                 fontSize: 9,
                 margin: [0, 0, 0, 4],
+                unbreakable: true,
             },
             {
                 text: "Size özel hazırlanan bu teklifin, güvenli ve konforlu yolculuklarınız için mükemmel bir başlangıç olmasını diliyoruz. Birlikte çalışmak ve hayallerinizdeki karavanı hayata geçirmek için sabırsızlanıyoruz!",
@@ -273,15 +308,31 @@ export async function generateOfferPdf({
                 table: {
                     headerRows: 1,
                     widths: tableWidths,
-                    body: tableBody,
+                    body: [
+                        hidePricing
+                            ? [
+                                  { text: "", alignment: "center" },
+                                  { text: "", alignment: "center" },
+                                  { text: "Ürün İsmi", alignment: "left" },
+                                  { text: "Miktar", alignment: "center" },
+                              ]
+                            : [
+                                  { text: "", alignment: "center" },
+                                  { text: "", alignment: "center" },
+                                  { text: "Ürün İsmi", alignment: "left" },
+                                  { text: "Miktar", alignment: "center" },
+                                  { text: "Fiyat", alignment: "center" },
+                                  { text: "Tutar (KDV Hariç)", alignment: "center", noWrap: true },
+                              ],
+                    ],
                 },
                 layout: {
                     defaultBorder: true,
                     paddingTop: function () {
-                        return 8;
+                        return 4;
                     },
                     paddingBottom: function () {
-                        return 8;
+                        return 4;
                     },
                     paddingLeft: function () {
                         return 4;
@@ -298,9 +349,14 @@ export async function generateOfferPdf({
                     hLineColor: function () {
                         return "#bbb";
                     },
+                    fillColor: function () {
+                        return "#e8f4f8";
+                    },
                 },
-                margin: [0, 10, 0, 10],
+                margin: [0, 10, 0, 5],
+                unbreakable: true,
             },
+            ...productTables,
             {
                 columns: [
                     {},
@@ -308,8 +364,10 @@ export async function generateOfferPdf({
                         width: "auto",
                         table: summaryTable,
                         layout: "noBorders",
+                        unbreakable: true,
                     },
                 ],
+                unbreakable: true,
             },
             {
                 ul: [
@@ -350,12 +408,17 @@ export async function generateOfferPdf({
                 ],
                 fontSize: 9,
                 margin: [0, 20, 0, 0],
+                unbreakable: false,
             },
         ],
         styles: {
             header: { fontSize: 16, bold: true },
             title: { fontSize: 14, bold: true, alignment: "center" },
             companyTitle: { fontSize: 12, bold: true },
+        },
+        defaultStyle: {
+            fontSize: 10,
+            lineHeight: 1.2,
         },
     };
     const fileName = (notes && notes.trim() ? notes.trim() : "PROJE TEKLİF FORMU") + ".pdf";

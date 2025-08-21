@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Pencil, Trash2, Loader2, AlertTriangle, Mail, Phone, Search, X, Settings } from "lucide-react";
+import { Plus, Users, Trash2, Loader2, AlertTriangle, Mail, Phone, Search, X } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState, useMemo } from "react";
 import { Pagination } from "@/components/ui/pagination";
@@ -31,12 +31,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const PAGE_SIZE = 10;
 
@@ -202,7 +196,7 @@ export default function CustomerListPage() {
                                         <TableHead>Telefon</TableHead>
                                         <TableHead>Açıklama</TableHead>
                                         <TableHead className="text-center">Durum</TableHead>
-                                        <TableHead className="text-center w-20">İşlemler</TableHead>
+                                        <TableHead className="text-center w-20">Sil</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -217,7 +211,13 @@ export default function CustomerListPage() {
                                         </TableRow>
                                     ) : (
                                         paginatedCustomers.map((customer) => (
-                                            <TableRow key={customer.id}>
+                                            <TableRow
+                                                key={customer.id}
+                                                className="cursor-pointer hover:bg-muted/50"
+                                                onClick={() =>
+                                                    (window.location.href = `/customer/detail/${customer.id}`)
+                                                }
+                                            >
                                                 <TableCell className="font-medium">{customer.name}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
@@ -252,33 +252,19 @@ export default function CustomerListPage() {
                                                         {customer.is_active ? "Aktif" : "Pasif"}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="flex items-center justify-center">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">İşlemler</span>
-                                                                <Settings className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
-                                                                <Link
-                                                                    href={`/customer/edit/${customer.id}`}
-                                                                    className="flex items-center"
-                                                                >
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    <span>Düzenle</span>
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(customer)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Sil</span>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                <TableCell
+                                                    className="flex items-center justify-center"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => openDeleteDialog(customer)}
+                                                    >
+                                                        <span className="sr-only">Sil</span>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -299,7 +285,11 @@ export default function CustomerListPage() {
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                                     {paginatedCustomers.map((customer) => (
-                                        <Card key={customer.id} className="overflow-hidden">
+                                        <Card
+                                            key={customer.id}
+                                            className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                                            onClick={() => (window.location.href = `/customer/detail/${customer.id}`)}
+                                        >
                                             <div className="p-4">
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="flex-1 min-w-0">
@@ -332,33 +322,19 @@ export default function CustomerListPage() {
                                                         {customer.description}
                                                     </p>
                                                 )}
-                                                <div className="flex items-center justify-end">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">İşlemler</span>
-                                                                <Settings className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
-                                                                <Link
-                                                                    href={`/customer/edit/${customer.id}`}
-                                                                    className="flex items-center"
-                                                                >
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    <span>Düzenle</span>
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(customer)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Sil</span>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                <div
+                                                    className="flex items-center justify-end"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => openDeleteDialog(customer)}
+                                                    >
+                                                        <span className="sr-only">Sil</span>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
                                         </Card>
@@ -413,3 +389,4 @@ export default function CustomerListPage() {
         </>
     );
 }
+

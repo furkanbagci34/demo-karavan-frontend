@@ -131,7 +131,7 @@ export default function OfferListPage() {
         const loadOffers = async () => {
             try {
                 const offersData = await getAllOffers();
-                setOffers(offersData);
+                setOffers(offersData as Offer[]);
             } catch (error) {
                 console.error("Teklifler yüklenirken hata:", error);
                 toast.error("Teklifler yüklenemedi", {
@@ -165,7 +165,7 @@ export default function OfferListPage() {
 
             // Listeyi yenile
             const offersData = await getAllOffers();
-            setOffers(offersData);
+            setOffers(offersData as Offer[]);
         } catch (error: unknown) {
             console.error("Teklif silme hatası:", error);
             const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";

@@ -33,6 +33,9 @@ import {
     FileText,
     Loader2,
     History,
+    Save,
+    Send,
+    UserRoundPen,
 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { useOffers, type Offer, type OfferHistory } from "@/hooks/api/useOffers";
@@ -41,6 +44,7 @@ import { useProducts } from "@/hooks/api/useProducts";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useVehicleParts } from "@/hooks/api/useVehicleParts";
 import { VehiclePart, Product } from "@/lib/api/types";
+import { OfferStatus } from "@/lib/enums";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
@@ -62,7 +66,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { OfferStatus } from "@/lib/enums";
 
 // Türkçe karakterleri normalize eden fonksiyon
 const normalizeTurkishText = (text: string): string => {
@@ -75,6 +78,72 @@ const normalizeTurkishText = (text: string): string => {
         .replace(/Ö/g, "ö")
         .replace(/Ç/g, "ç")
         .toLowerCase();
+};
+
+// Status renklerini belirleyen fonksiyon
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case OfferStatus.TASLAK:
+            return "bg-yellow-100 text-yellow-800 border-yellow-300";
+        case OfferStatus.GONDERILDI:
+            return "bg-blue-100 text-blue-800 border-blue-300";
+        case OfferStatus.ONAYLANDI:
+            return "bg-green-100 text-green-800 border-green-300";
+        case OfferStatus.IPTAL_EDILDI:
+            return "bg-blue-100 text-blue-800 border-blue-300";
+        case OfferStatus.TAMAMLANDI:
+            return "bg-green-100 text-green-800 border-green-300";
+        case OfferStatus.ÜRETIMDE:
+            return "bg-purple-100 text-purple-800 border-purple-300";
+        case OfferStatus.REDDEDILDI:
+            return "bg-red-100 text-red-800 border-red-300";
+        default:
+            return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+};
+
+// Card arka plan rengini belirleyen fonksiyon
+const getCardBackgroundColor = (status: string) => {
+    switch (status) {
+        case OfferStatus.TASLAK:
+            return "bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200";
+        case OfferStatus.GONDERILDI:
+            return "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200";
+        case OfferStatus.ONAYLANDI:
+            return "bg-gradient-to-br from-green-50 to-green-100 border-green-200";
+        case OfferStatus.TAMAMLANDI:
+            return "bg-gradient-to-br from-green-50 to-green-100 border-green-200";
+        case OfferStatus.ÜRETIMDE:
+            return "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200";
+        case OfferStatus.IPTAL_EDILDI:
+            return "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200";
+        case OfferStatus.REDDEDILDI:
+            return "bg-gradient-to-br from-red-50 to-red-100 border-red-200";
+        default:
+            return "bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200";
+    }
+};
+
+// İkon rengini belirleyen fonksiyon
+const getIconColor = (status: string) => {
+    switch (status) {
+        case OfferStatus.TASLAK:
+            return "bg-yellow-100 text-yellow-600";
+        case OfferStatus.GONDERILDI:
+            return "bg-blue-100 text-blue-600";
+        case OfferStatus.ONAYLANDI:
+            return "bg-green-100 text-green-600";
+        case OfferStatus.TAMAMLANDI:
+            return "bg-green-100 text-green-600";
+        case OfferStatus.ÜRETIMDE:
+            return "bg-purple-100 text-purple-600";
+        case OfferStatus.IPTAL_EDILDI:
+            return "bg-blue-100 text-blue-600";
+        case OfferStatus.REDDEDILDI:
+            return "bg-red-100 text-red-600";
+        default:
+            return "bg-yellow-100 text-yellow-600";
+    }
 };
 
 interface OfferItem {
@@ -129,6 +198,20 @@ export default function EditOfferPage() {
     // Confirmation dialog states
     const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
     const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
+
+    // Contract modal states
+    const [showContractModal, setShowContractModal] = useState(false);
+    const [showContractConfirmModal, setShowContractConfirmModal] = useState(false);
+    const [contractForm, setContractForm] = useState({
+        customerTckn: "",
+        customerAddress: "",
+        vehicleBrand: "",
+        vehicleModel: "",
+        vehicleColor: "",
+        vehicleEngineNo: "",
+        vehicleChassisNo: "",
+        vehiclePlate: "",
+    });
     const [isSending, setIsSending] = useState(false);
 
     // History modal states
@@ -158,7 +241,7 @@ export default function EditOfferPage() {
         setShowEmailUpdateDialog(true);
     };
 
-    const { getOfferById, updateOffer, sendOffer, getOfferHistory } = useOffers();
+    const { getOfferById, updateOffer, sendOffer, getOfferHistory, sendContract, getContractByOfferId } = useOffers();
     const { products, isLoading: productsLoading } = useProducts();
     const { customers, isLoading: customersLoading, updateCustomer } = useCustomers();
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
@@ -1003,6 +1086,113 @@ export default function EditOfferPage() {
         }
     };
 
+    const handleSendContract = async () => {
+        try {
+            setShowContractModal(true);
+
+            // Contract verilerini al
+            const contractData = await getContractByOfferId(offerId);
+
+            if (contractData) {
+                // Eğer data varsa form'u doldur
+                setContractForm({
+                    customerTckn: contractData.customer_tckn || "",
+                    customerAddress: contractData.customer_address || "",
+                    vehicleBrand: contractData.vehicle_brand || "",
+                    vehicleModel: contractData.vehicle_model || "",
+                    vehicleColor: contractData.vehicle_color || "",
+                    vehicleEngineNo: contractData.vehicle_engine_no || "",
+                    vehicleChassisNo: contractData.vehicle_chassis_no || "",
+                    vehiclePlate: contractData.vehicle_plate || "",
+                });
+            }
+        } catch (error) {
+            console.error("Sözleşme verileri yüklenirken hata:", error);
+            // Hata durumunda da modal'ı aç, form'u boş bırak
+            // Kullanıcı manuel olarak doldurabilir
+        }
+    };
+
+    const handleContractFormChange = (field: string, value: string) => {
+        try {
+            setContractForm((prev) => ({
+                ...prev,
+                [field]: value,
+            }));
+        } catch (error) {
+            console.warn("Form güncelleme hatası:", error);
+            // Hatayı sessizce yoksay, extension hatalarından etkilenmeyelim
+        }
+    };
+
+    const handleContractFormSubmit = () => {
+        // İlk modalı kapat, onay modalını aç
+        setShowContractModal(false);
+        setShowContractConfirmModal(true);
+    };
+
+    const handleContractConfirm = async () => {
+        try {
+            setIsSending(true);
+
+            const contractData = {
+                offerId: offerId,
+                customerTckn: contractForm.customerTckn,
+                customerAddress: contractForm.customerAddress,
+                vehicleBrand: contractForm.vehicleBrand,
+                vehicleModel: contractForm.vehicleModel,
+                vehicleColor: contractForm.vehicleColor,
+                vehicleEngineNo: contractForm.vehicleEngineNo,
+                vehicleChassisNo: contractForm.vehicleChassisNo,
+                vehiclePlate: contractForm.vehiclePlate,
+            };
+
+            await sendContract(contractData);
+            toast.success("✅ Sözleşme Başarıyla Gönderildi");
+            setShowContractConfirmModal(false);
+            // Form'u temizle
+            setContractForm({
+                customerTckn: "",
+                customerAddress: "",
+                vehicleBrand: "",
+                vehicleModel: "",
+                vehicleColor: "",
+                vehicleEngineNo: "",
+                vehicleChassisNo: "",
+                vehiclePlate: "",
+            });
+        } catch (error) {
+            console.error("Sözleşme gönderilirken hata:", error);
+            toast.error("❌ Sözleşme Gönderilemedi", {
+                description: "Sözleşme gönderilirken bir hata oluştu. Lütfen tekrar deneyin.",
+            });
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    const handleContractEdit = () => {
+        // Onay modalını kapat, form modalını aç
+        setShowContractConfirmModal(false);
+        setShowContractModal(true);
+    };
+
+    const handleContractCancel = () => {
+        // Her iki modalı da kapat ve form'u temizle
+        setShowContractModal(false);
+        setShowContractConfirmModal(false);
+        setContractForm({
+            customerTckn: "",
+            customerAddress: "",
+            vehicleBrand: "",
+            vehicleModel: "",
+            vehicleColor: "",
+            vehicleEngineNo: "",
+            vehicleChassisNo: "",
+            vehiclePlate: "",
+        });
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -1719,24 +1909,41 @@ export default function EditOfferPage() {
                         <div className="xl:col-span-1">
                             <div className="sticky top-6 space-y-3">
                                 {/* Action Buttons */}
-                                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                            <FileText className="h-4 w-4 text-yellow-600" />
+                                <div
+                                    className={`${getCardBackgroundColor(
+                                        originalOffer?.status || OfferStatus.TASLAK
+                                    )} border rounded-lg p-4`}
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className={`w-8 h-8 ${getIconColor(
+                                                    originalOffer?.status || OfferStatus.TASLAK
+                                                )} rounded-lg flex items-center justify-center`}
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-slate-900 text-sm">
+                                                    Teklif İşlemleri
+                                                </h3>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="font-semibold text-slate-900 text-sm">Teklif İşlemleri</h3>
-                                            <p className="text-xs text-slate-600">
-                                                Teklifinizi güncelleyin veya görüntüleyin
-                                            </p>
-                                        </div>
+                                        <Badge
+                                            className={`${getStatusColor(
+                                                originalOffer?.status || OfferStatus.TASLAK
+                                            )} border-1 font-medium text-xs px-2 py-1 `}
+                                        >
+                                            {originalOffer?.status || OfferStatus.TASLAK}
+                                        </Badge>
                                     </div>
 
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
+                                        {/* Primary Action - Save Changes */}
                                         <Button
                                             variant="default"
                                             size="sm"
-                                            className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-md border-0 h-10 font-medium"
+                                            className="w-full text-white shadow-md border-0 h-10 font-medium"
                                             onClick={handleUpdateOffer}
                                             disabled={saving}
                                         >
@@ -1747,59 +1954,43 @@ export default function EditOfferPage() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <div className="w-4 h-4 mr-2">
-                                                        <svg
-                                                            className="w-4 h-4"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                                                            />
-                                                        </svg>
-                                                    </div>
+                                                    <Save className="w-4 h-4" />
                                                     Değişiklikleri Kaydet
                                                 </>
                                             )}
                                         </Button>
-                                        <Button
-                                            variant="default"
-                                            size="sm"
-                                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md border-0 h-10 font-medium"
-                                            onClick={handleSendOffer}
-                                            disabled={saving}
-                                        >
-                                            <>
-                                                <div className="w-4 h-4 mb-1">
-                                                    <svg
-                                                        className="w-4 h-4"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                        style={{ transform: "rotate(60deg)", alignSelf: "center" }}
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                                        />
-                                                    </svg>
-                                                </div>
+
+                                        {/* Communication Actions - Complementary Pair */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                className="h-10 font-medium bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-sm transition-all duration-200 hover:shadow-md border-0"
+                                                onClick={handleSendOffer}
+                                                disabled={saving}
+                                            >
+                                                <Send className="w-4 h-4" />
                                                 Teklifi Gönder
-                                            </>
-                                        </Button>
+                                            </Button>
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                className="h-10 font-medium bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-sm transition-all duration-200 hover:shadow-md border-0"
+                                                onClick={handleSendContract}
+                                            >
+                                                <UserRoundPen className="w-4 h-4" />
+                                                Sözleşme Gönder
+                                            </Button>
+                                        </div>
+
+                                        {/* Secondary Actions */}
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="w-full border-slate-300 hover:bg-slate-50 text-slate-700 hover:text-slate-900 shadow-sm h-10 font-medium"
+                                            className="w-full h-10 font-medium border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm transition-all duration-200"
                                             onClick={handleShowHistory}
                                         >
-                                            <History className="w-4 h-4 mr-2" />
+                                            <History className="w-4 h-4" />
                                             İşlem Geçmişi
                                         </Button>
                                         <div className="space-y-3">
@@ -1843,21 +2034,7 @@ export default function EditOfferPage() {
                                                 className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 h-10 font-medium"
                                                 onClick={handleViewPdf}
                                             >
-                                                <div className="w-4 h-4 mr-2">
-                                                    <svg
-                                                        className="w-4 h-4"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                                        />
-                                                    </svg>
-                                                </div>
+                                                <FileText className="w-4 h-4" />
                                                 PDF Görüntüle
                                             </Button>
                                         </div>
@@ -1977,37 +2154,11 @@ export default function EditOfferPage() {
                                             )}
                                         </div>
                                     </div>
-
-                                    <div className="mt-3 pt-3 border-t border-blue-200">
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-slate-600">Durum:</span>
-                                            <div className="flex items-center gap-1">
-                                                <div
-                                                    className={`w-2 h-2 rounded-full animate-pulse ${
-                                                        originalOffer?.status === OfferStatus.TASLAK
-                                                            ? "bg-yellow-500"
-                                                            : "bg-green-500"
-                                                    }`}
-                                                ></div>
-                                                <span
-                                                    className={`font-medium ${
-                                                        originalOffer?.status === OfferStatus.TASLAK
-                                                            ? "text-yellow-700"
-                                                            : "text-green-700"
-                                                    }`}
-                                                >
-                                                    {originalOffer?.status === OfferStatus.TASLAK
-                                                        ? OfferStatus.TASLAK
-                                                        : originalOffer?.status || OfferStatus.TASLAK}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Summary Card */}
                                 <Card className="border-slate-200 shadow-sm">
-                                    <CardHeader className="pb-4">
+                                    <CardHeader>
                                         <CardTitle className="flex items-center gap-3 text-lg font-semibold text-slate-900">
                                             <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
                                                 <FileText className="h-4 w-4 text-orange-600" />
@@ -2468,7 +2619,256 @@ export default function EditOfferPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Contract Modal */}
+            <Dialog open={showContractModal} onOpenChange={setShowContractModal}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold text-gray-900">Sözleşme Bilgileri</DialogTitle>
+                        <DialogDescription className="text-gray-600">
+                            Sözleşme göndermek için aşağıdaki bilgileri doldurun.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                        {/* Müşteri TCKN */}
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-sm font-medium text-gray-700">Müşteri TCKN *</label>
+                            <Input
+                                value={contractForm.customerTckn}
+                                onChange={(e) => handleContractFormChange("customerTckn", e.target.value)}
+                                maxLength={11}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Müşteri Adresi */}
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-sm font-medium text-gray-700">Müşteri Adresi *</label>
+                            <textarea
+                                value={contractForm.customerAddress}
+                                onChange={(e) => handleContractFormChange("customerAddress", e.target.value)}
+                                className="w-full min-h-[80px] px-3 py-2 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                                rows={2}
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Araç Markası */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Araç Markası *</label>
+                            <Input
+                                value={contractForm.vehicleBrand}
+                                onChange={(e) => handleContractFormChange("vehicleBrand", e.target.value)}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Araç Modeli */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Araç Modeli *</label>
+                            <Input
+                                value={contractForm.vehicleModel}
+                                onChange={(e) => handleContractFormChange("vehicleModel", e.target.value)}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Araç Rengi */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Araç Rengi *</label>
+                            <Input
+                                value={contractForm.vehicleColor}
+                                onChange={(e) => handleContractFormChange("vehicleColor", e.target.value)}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Motor Numarası */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Motor Numarası *</label>
+                            <Input
+                                value={contractForm.vehicleEngineNo}
+                                onChange={(e) => handleContractFormChange("vehicleEngineNo", e.target.value)}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Şasi Numarası */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Şasi Numarası *</label>
+                            <Input
+                                value={contractForm.vehicleChassisNo}
+                                onChange={(e) => handleContractFormChange("vehicleChassisNo", e.target.value)}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+
+                        {/* Plaka */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Plaka *</label>
+                            <Input
+                                value={contractForm.vehiclePlate}
+                                onChange={(e) => handleContractFormChange("vehiclePlate", e.target.value)}
+                                className="w-full"
+                                autoComplete="off"
+                                spellCheck={false}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowContractModal(false);
+                                setContractForm({
+                                    customerTckn: "",
+                                    customerAddress: "",
+                                    vehicleBrand: "",
+                                    vehicleModel: "",
+                                    vehicleColor: "",
+                                    vehicleEngineNo: "",
+                                    vehicleChassisNo: "",
+                                    vehiclePlate: "",
+                                });
+                            }}
+                        >
+                            İptal
+                        </Button>
+                        <Button
+                            onClick={handleContractFormSubmit}
+                            disabled={
+                                !contractForm.customerTckn ||
+                                !contractForm.customerAddress ||
+                                !contractForm.vehicleBrand ||
+                                !contractForm.vehicleModel ||
+                                !contractForm.vehicleColor ||
+                                !contractForm.vehicleEngineNo ||
+                                !contractForm.vehicleChassisNo ||
+                                !contractForm.vehiclePlate
+                            }
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                        >
+                            Devam Et
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Contract Confirmation Modal */}
+            <Dialog open={showContractConfirmModal} onOpenChange={setShowContractConfirmModal}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold text-gray-900">
+                            Sözleşme Bilgileri Onayı
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-600">
+                            Lütfen girilen bilgileri kontrol edin ve onaylayın.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Müşteri TCKN */}
+                            <div className="md:col-span-2">
+                                <label className="text-sm font-medium text-gray-700">Müşteri TCKN</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.customerTckn}</span>
+                                </div>
+                            </div>
+
+                            {/* Müşteri Adresi */}
+                            <div className="md:col-span-2">
+                                <label className="text-sm font-medium text-gray-700">Müşteri Adresi</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md min-h-[80px]">
+                                    <span className="text-gray-900 whitespace-pre-wrap">
+                                        {contractForm.customerAddress}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Araç Markası */}
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Araç Markası</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.vehicleBrand}</span>
+                                </div>
+                            </div>
+
+                            {/* Araç Modeli */}
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Araç Modeli</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.vehicleModel}</span>
+                                </div>
+                            </div>
+
+                            {/* Araç Rengi */}
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Araç Rengi</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.vehicleColor}</span>
+                                </div>
+                            </div>
+
+                            {/* Motor Numarası */}
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Motor Numarası</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.vehicleEngineNo}</span>
+                                </div>
+                            </div>
+
+                            {/* Şasi Numarası */}
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Şasi Numarası</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.vehicleChassisNo}</span>
+                                </div>
+                            </div>
+
+                            {/* Plaka */}
+                            <div>
+                                <label className="text-sm font-medium text-gray-700">Plaka</label>
+                                <div className="mt-1 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <span className="text-gray-900">{contractForm.vehiclePlate}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={handleContractCancel} disabled={isSending}>
+                            İptal
+                        </Button>
+                        <Button variant="outline" onClick={handleContractEdit} disabled={isSending}>
+                            Bilgileri Düzenle
+                        </Button>
+                        <Button
+                            onClick={handleContractConfirm}
+                            disabled={isSending}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {isSending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            {isSending ? "Gönderiliyor..." : "Onayla ve Gönder"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
-
