@@ -14,7 +14,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Pencil, Trash2, Loader2, AlertTriangle, Settings, ChevronsUpDown, User } from "lucide-react";
+import {
+    Plus,
+    FileText,
+    Pencil,
+    Trash2,
+    Loader2,
+    AlertTriangle,
+    Settings,
+    ChevronsUpDown,
+    User,
+    CreditCard,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -100,6 +111,7 @@ interface Offer {
     vat_rate: number;
     vat_amount: number;
     total_amount: number;
+    total_payments: number;
     status: string;
     valid_until?: string;
     notes?: string;
@@ -308,17 +320,37 @@ export default function OfferListPage() {
                         <div className="hidden lg:block overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Teklif No</TableHead>
-                                        <TableHead>Müşteri</TableHead>
-                                        <TableHead>Durum</TableHead>
-                                        <TableHead className="text-right">Brüt Toplam (€)</TableHead>
-                                        <TableHead className="text-right">İndirim (€)</TableHead>
-                                        <TableHead className="text-right">Net Toplam (€)</TableHead>
-                                        <TableCell className="text-right">KDV (€)</TableCell>
-                                        <TableHead className="text-right">Genel Toplam (€)</TableHead>
-                                        <TableHead>Geçerlilik</TableHead>
-                                        <TableHead className="text-center w-20">Sil</TableHead>
+                                    <TableRow className="bg-gray-50 hover:bg-gray-50 border-b-2 border-gray-200">
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Teklif No
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Müşteri
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Durum
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            İndirim (€)
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Genel Toplam (€)
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Toplam Tahsilat (€)
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Kalan Tahsilat (€)
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Geçerlilik
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Tahsilat Ekle
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3 w-20">
+                                            Sil
+                                        </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -344,40 +376,60 @@ export default function OfferListPage() {
                                         paginatedOffers.map((offer) => (
                                             <TableRow
                                                 key={offer.id}
-                                                className={`${getRowBackgroundColor(offer.status)} cursor-pointer`}
+                                                className={`${getRowBackgroundColor(
+                                                    offer.status
+                                                )} cursor-pointer text-center`}
                                                 onClick={() => handleRowClick(offer.id)}
                                             >
-                                                <TableCell className="font-medium">{offer.offer_number}</TableCell>
-                                                <TableCell>{offer.customer_name || "-"}</TableCell>
+                                                <TableCell className="font-medium  font-mono">
+                                                    <span className="border border-slate-200 rounded-md px-2 py-1 bg-slate-50">
+                                                        {offer.offer_number}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-center font-medium">
+                                                    {offer.customer_name || "-"}
+                                                </TableCell>
                                                 <TableCell>
                                                     <Badge className={getStatusColor(offer.status)}>
                                                         {offer.status}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right">
-                                                    {formatNumber(offer.subtotal)}
-                                                </TableCell>
-                                                <TableCell className="text-right text-red-600">
+                                                <TableCell className="text-center text-red-600">
                                                     -{formatNumber(offer.discount_amount)}
                                                 </TableCell>
-                                                <TableCell className="text-right">
-                                                    {formatNumber(offer.net_total)}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {formatNumber(offer.vat_amount)}
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium">
+                                                <TableCell className="text-center font-medium">
                                                     {formatNumber(offer.total_amount)}
+                                                </TableCell>
+                                                <TableCell className="text-center font-medium">
+                                                    {formatNumber(offer.total_payments)}
+                                                </TableCell>
+                                                <TableCell className="text-center font-medium">
+                                                    {formatNumber(offer.total_amount - offer.total_payments)}
                                                 </TableCell>
                                                 <TableCell>
                                                     {offer.valid_until
                                                         ? new Date(offer.valid_until).toLocaleDateString("tr-TR")
                                                         : "-"}
                                                 </TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="green"
+                                                        className="h-8 w-8 p-0 cursor-pointer"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(
+                                                                `/customer/detail/${offer.customer_id}?tab=payments`
+                                                            );
+                                                        }}
+                                                    >
+                                                        <span className="sr-only">Tahsilat Ekle</span>
+                                                        <CreditCard className="h-4 w-4" />
+                                                    </Button>
+                                                </TableCell>
                                                 <TableCell className="flex items-center justify-center">
                                                     <Button
-                                                        variant="ghost"
-                                                        className="h-8 w-8 p-0"
+                                                        variant="red"
+                                                        className="h-8 w-8 p-0 cursor-pointer"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             openDeleteDialog(offer);

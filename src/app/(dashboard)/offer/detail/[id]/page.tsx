@@ -1148,7 +1148,7 @@ export default function EditOfferPage() {
             };
 
             await sendContract(contractData);
-            toast.success("✅ Sözleşme Başarıyla Gönderildi");
+            toast.success("Sözleşme Başarıyla Gönderildi");
             setShowContractConfirmModal(false);
             // Form'u temizle
             setContractForm({

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { usePayments, type Payment, type CreatePaymentData } from "@/hooks/api/usePayments";
 import { useOffers, type Offer } from "@/hooks/api/useOffers";
@@ -75,13 +75,19 @@ interface CustomerDetailPageProps {
 export default function CustomerDetailPage({ params }: CustomerDetailPageProps) {
     const resolvedParams = use(params);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { updateCustomer, getCustomerById, isLoading } = useCustomers();
     const { createPayment, getPaymentsByCustomerId, deletePayment } = usePayments();
     const { getOffersByCustomerId } = useOffers();
     const [customer, setCustomer] = useState<Customer | null>(null);
     const [isLoadingCustomer, setIsLoadingCustomer] = useState(true);
     const [isFormInitialized, setIsFormInitialized] = useState(false);
-    const [activeTab, setActiveTab] = useState<"info" | "payments">("info");
+
+    // URL'den tab parametresini al, varsayılan olarak "info"
+    const [activeTab, setActiveTab] = useState<"info" | "payments">(() => {
+        const tabParam = searchParams.get("tab");
+        return tabParam === "payments" || tabParam === "info" ? tabParam : "info";
+    });
 
     // Payment states
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -188,6 +194,15 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
         }
         // 'info' tab'ı için müşteri bilgileri zaten yüklenmiş durumda
     }, [activeTab, customer, loadPayments, loadCustomerOffers]);
+
+    // Tab değiştiğinde URL'i güncelle
+    const handleTabChange = (tab: "info" | "payments") => {
+        setActiveTab(tab);
+
+        // URL'i güncelle
+        const newUrl = `/customer/detail/${resolvedParams.id}?tab=${tab}`;
+        router.push(newUrl, { scroll: false });
+    };
 
     const handlePaymentFormChange = (field: string, value: string | number | Date | undefined) => {
         // Ödeme tutarı için özel işlem
@@ -368,7 +383,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                     <nav className="-mb-px flex space-x-8">
                         <button
                             type="button"
-                            onClick={() => setActiveTab("info")}
+                            onClick={() => handleTabChange("info")}
                             className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
                                 activeTab === "info"
                                     ? "border-blue-500 text-blue-600"
@@ -380,7 +395,7 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                         </button>
                         <button
                             type="button"
-                            onClick={() => setActiveTab("payments")}
+                            onClick={() => handleTabChange("payments")}
                             className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
                                 activeTab === "payments"
                                     ? "border-blue-500 text-blue-600"
