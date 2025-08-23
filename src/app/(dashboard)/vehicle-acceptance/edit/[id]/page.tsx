@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
 import { CreateVehicleAcceptanceData, UpdateVehicleAcceptanceData, VehicleFeature } from "@/lib/api/types";
 import { toast } from "sonner";
+import { InfoIcon } from "lucide-react";
 
 type DamageMarker = {
     id: string;
@@ -399,8 +400,9 @@ export default function VehicleAcceptanceFormPage() {
                     <h1 className="text-2xl font-bold print-title">
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
                     </h1>
-                    <img
+                    <Image
                         src="/images/demonte-icon.png"
+                        priority
                         alt="Logo"
                         width={60}
                         height={60}
@@ -973,42 +975,135 @@ export default function VehicleAcceptanceFormPage() {
                         <CardTitle className="flex items-center gap-3">
                             Araç Hasar İşaretleme
                             {(damageMarkers || []).length > 0 && (
-                                <span className="bg-red-100 text-red-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                                    {(damageMarkers || []).length}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {/* Göçük sayısı */}
+                                    {(damageMarkers || []).filter((marker) => marker.type === "cross").length > 0 && (
+                                        <span className="bg-red-100 text-red-800 text-sm font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                            {(damageMarkers || []).filter((marker) => marker.type === "cross").length}
+                                        </span>
+                                    )}
+                                    {/* Çizik sayısı */}
+                                    {(damageMarkers || []).filter((marker) => marker.type === "line").length > 0 && (
+                                        <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                            {(damageMarkers || []).filter((marker) => marker.type === "line").length}
+                                        </span>
+                                    )}
+                                    <span className="bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                                        Toplam: {(damageMarkers || []).length}
+                                    </span>{" "}
+                                </div>
                             )}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6 print:space-y-1 print:p-1">
-                        {/* İşaret tipi seçimi */}
-                        <div className="flex items-center gap-3 no-print">
-                            <span className="text-sm text-muted-foreground">İşaret tipi:</span>
-                            <div className="flex items-center gap-2">
+                        {/* Minimal İşaret Tipi Seçimi ve Açıklama */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 no-print">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <svg
+                                            className="w-3 h-3 text-blue-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <h4 className="text-sm font-medium text-slate-700">Hasar İşaret Tipi</h4>
+                                </div>
+                                <div className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full border">
+                                    {markerType === "cross" ? "Göçük" : "Çizik"}
+                                </div>
+                            </div>
+
+                            {/* İşaret Tipi Seçimi */}
+                            <div className="flex gap-2 mb-3">
                                 <button
                                     type="button"
-                                    className={`px-2 py-1 rounded border text-sm ${
-                                        markerType === "cross" ? "bg-gray-900 text-white" : "bg-white"
-                                    }`}
                                     onClick={() => setMarkerType("cross")}
                                     disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-md border transition-all duration-200 ${
+                                        markerType === "cross"
+                                            ? "border-red-300 bg-red-50 text-red-700"
+                                            : "border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-25"
+                                    }`}
                                 >
-                                    X
+                                    <div
+                                        className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${
+                                            markerType === "cross"
+                                                ? "bg-red-500 text-white"
+                                                : "bg-slate-200 text-slate-500"
+                                        }`}
+                                    >
+                                        X
+                                    </div>
+                                    <span className="text-sm">Göçük</span>
+                                    {markerType === "cross" && (
+                                        <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path
+                                                fillRule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clipRule="evenodd"
+                                            />
+                                        </svg>
+                                    )}
                                 </button>
+
                                 <button
                                     type="button"
-                                    className={`px-2 py-1 rounded border text-sm ${
-                                        markerType === "line" ? "bg-gray-900 text-white" : "bg-white"
-                                    }`}
                                     onClick={() => setMarkerType("line")}
                                     disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-md border transition-all duration-200 ${
+                                        markerType === "line"
+                                            ? "border-blue-300 bg-blue-50 text-blue-700"
+                                            : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-25"
+                                    }`}
                                 >
-                                    ─
+                                    <div
+                                        className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${
+                                            markerType === "line"
+                                                ? "bg-blue-500 text-white"
+                                                : "bg-slate-200 text-slate-500"
+                                        }`}
+                                    >
+                                        ─
+                                    </div>
+                                    <span className="text-sm">Çizik</span>
+                                    {markerType === "line" && (
+                                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path
+                                                fillRule="evenodd"
+                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                clipRule="evenodd"
+                                            />
+                                        </svg>
+                                    )}
                                 </button>
                             </div>
-                        </div>
-                        {/* Açıklama */}
-                        <div className="text-sm text-muted-foreground no-print">
-                            Araç üzerine tıklayarak hasar işareti koyun, mevcut işarete tekrar tıklayarak kaldırın
+
+                            {/* Minimal Açıklama */}
+                            <div className="bg-white rounded-md p-2 border border-slate-200">
+                                <div className="flex items-start gap-2">
+                                    <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <InfoIcon className="w-2 h-2 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-slate-600">
+                                            Araç üzerine tıklayarak hasar işareti koyun, mevcut işarete tekrar
+                                            tıklayarak kaldırın.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="flex flex-col items-center print-first print:mt-0">
@@ -1095,4 +1190,3 @@ export default function VehicleAcceptanceFormPage() {
         </>
     );
 }
-
