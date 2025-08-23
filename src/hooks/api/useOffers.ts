@@ -376,6 +376,27 @@ export const useOffers = () => {
         }
     }, []);
 
+    const updateOfferStatusById = useCallback(async (id: number, status: OfferStatus) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await apiClient.put<{ message: string }>(
+                API_ENDPOINTS.offers.updateStatusById(id.toString()),
+                {
+                    status,
+                }
+            );
+            return response;
+        } catch (err: unknown) {
+            const errorMessage = getErrorMessage(err, "Teklif durumu güncellenirken bir hata oluştu");
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     return {
         products,
         loading,
@@ -394,5 +415,6 @@ export const useOffers = () => {
         sendOffer,
         getOfferHistory,
         sendContract,
+        updateOfferStatusById,
     };
 };

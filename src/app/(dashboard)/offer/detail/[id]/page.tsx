@@ -36,6 +36,7 @@ import {
     Save,
     Send,
     UserRoundPen,
+    Pencil,
 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { useOffers, type Offer, type OfferHistory } from "@/hooks/api/useOffers";
@@ -66,6 +67,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Türkçe karakterleri normalize eden fonksiyon
 const normalizeTurkishText = (text: string): string => {
@@ -99,6 +101,27 @@ const getStatusColor = (status: string) => {
             return "bg-red-100 text-red-800 border-red-300";
         default:
             return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+};
+
+const getStatusDotColor = (status: string) => {
+    switch (status) {
+        case OfferStatus.TASLAK:
+            return "bg-yellow-500";
+        case OfferStatus.GONDERILDI:
+            return "bg-blue-500";
+        case OfferStatus.ONAYLANDI:
+            return "bg-green-500";
+        case OfferStatus.IPTAL_EDILDI:
+            return "bg-blue-500";
+        case OfferStatus.TAMAMLANDI:
+            return "bg-green-500";
+        case OfferStatus.ÜRETIMDE:
+            return "bg-purple-500";
+        case OfferStatus.REDDEDILDI:
+            return "bg-red-500";
+        default:
+            return "bg-gray-500";
     }
 };
 
@@ -241,7 +264,15 @@ export default function EditOfferPage() {
         setShowEmailUpdateDialog(true);
     };
 
-    const { getOfferById, updateOffer, sendOffer, getOfferHistory, sendContract, getContractByOfferId } = useOffers();
+    const {
+        getOfferById,
+        updateOffer,
+        sendOffer,
+        getOfferHistory,
+        sendContract,
+        getContractByOfferId,
+        updateOfferStatusById,
+    } = useOffers();
     const { products, isLoading: productsLoading } = useProducts();
     const { customers, isLoading: customersLoading, updateCustomer } = useCustomers();
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
@@ -809,6 +840,42 @@ export default function EditOfferPage() {
             console.error("Teklif güncellenirken hata:", error);
             const errorMessage = error instanceof Error ? error.message : "Teklif güncellenirken bir hata oluştu";
             toast.error("Teklif güncellenemedi", {
+                description: errorMessage,
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleStatusUpdate = async (newStatus: OfferStatus) => {
+        if (!originalOffer?.id) {
+            toast.error("Teklif bulunamadı", {
+                description: "Teklif bilgileri yüklenemedi",
+            });
+            return;
+        }
+
+        if (newStatus === originalOffer.status) {
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            await updateOfferStatusById(originalOffer.id, newStatus);
+
+            // Local state'i güncelle
+            if (originalOffer) {
+                originalOffer.status = newStatus;
+            }
+
+            toast.success("Durum başarıyla güncellendi!", {
+                description: `Teklif durumu "${newStatus}" olarak güncellendi.`,
+            });
+        } catch (error) {
+            console.error("Durum güncellenirken hata:", error);
+            const errorMessage = error instanceof Error ? error.message : "Durum güncellenirken bir hata oluştu";
+            toast.error("Durum güncellenemedi", {
                 description: errorMessage,
             });
         } finally {
@@ -1929,13 +1996,86 @@ export default function EditOfferPage() {
                                                 </h3>
                                             </div>
                                         </div>
-                                        <Badge
-                                            className={`${getStatusColor(
-                                                originalOffer?.status || OfferStatus.TASLAK
-                                            )} border-1 font-medium text-xs px-2 py-1 `}
-                                        >
-                                            {originalOffer?.status || OfferStatus.TASLAK}
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                className={`${getStatusColor(
+                                                    originalOffer?.status || OfferStatus.TASLAK
+                                                )} border-1 font-medium text-xs px-2 py-1`}
+                                            >
+                                                {originalOffer?.status || OfferStatus.TASLAK}
+                                            </Badge>
+
+                                            <TooltipProvider>
+                                                <Popover>
+                                                    <Tooltip delayDuration={0}>
+                                                        <PopoverTrigger asChild>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 w-6 p-0 hover:bg-slate-100"
+                                                                >
+                                                                    <Pencil className="h-3 w-3 text-slate-600" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                        </PopoverTrigger>
+                                                        <TooltipContent>
+                                                            <p>Durum güncelle</p>
+                                                        </TooltipContent>
+                                                        <PopoverContent className="w-52 p-0" align="start">
+                                                            <div className="p-3">
+                                                                <h4 className="text-sm font-medium text-slate-900 mb-3">
+                                                                    Durum Güncelle
+                                                                </h4>
+                                                                <div className="space-y-1">
+                                                                    {Object.values(OfferStatus).map((status) => (
+                                                                        <Button
+                                                                            key={status}
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className={`w-full justify-start text-xs h-9 px-3 ${
+                                                                                originalOffer?.status === status
+                                                                                    ? "bg-blue-50 text-blue-900 border border-blue-200"
+                                                                                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                                                                            }`}
+                                                                            onClick={() => handleStatusUpdate(status)}
+                                                                        >
+                                                                            <div className="flex items-center justify-between w-full">
+                                                                                <div className="flex items-center">
+                                                                                    <div
+                                                                                        className={`w-3 h-3 rounded-full mr-3 shadow-sm ${getStatusDotColor(
+                                                                                            status
+                                                                                        )}`}
+                                                                                    />
+                                                                                    <span className="font-medium">
+                                                                                        {status}
+                                                                                    </span>
+                                                                                </div>
+                                                                                {originalOffer?.status === status && (
+                                                                                    <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                                                                        <svg
+                                                                                            className="w-2.5 h-2.5 text-white"
+                                                                                            fill="currentColor"
+                                                                                            viewBox="0 0 20 20"
+                                                                                        >
+                                                                                            <path
+                                                                                                fillRule="evenodd"
+                                                                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                                                clipRule="evenodd"
+                                                                                            />
+                                                                                        </svg>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </Button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Tooltip>
+                                                </Popover>
+                                            </TooltipProvider>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-4">

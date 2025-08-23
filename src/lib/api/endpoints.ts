@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
         getById: (id: string) => `/api/offers/${id}`,
         getContractByUid: (uid: string) => `/api/offers/contract/${uid}`,
         updateStatus: (uid: string) => `/api/offers/uid/${uid}/status`,
+        updateStatusById: (id: string) => `/api/offers/status/${id}`,
         update: (id: string) => `/api/offers/${id}`,
         delete: (id: string) => `/api/offers/${id}`,
         getLastId: "/api/offers/last-id",
