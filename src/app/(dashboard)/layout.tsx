@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 interface DashboardLayoutProps {
     children: ReactNode;
@@ -47,14 +47,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex w-full min-h-screen h-full">
                 <AppSidebar />
                 <SidebarInset className="flex-1 min-h-screen">
-                    <div className="flex flex-col h-full min-h-screen">
-                        {/* Mobil menü butonu */}
-                        <div className="md:hidden flex items-center p-4 border-b bg-white no-print">
-                            <SidebarTrigger className="h-9 w-9 p-0" />
-                            <span className="ml-3 font-semibold text-lg">Dashboard</span>
-                        </div>
-                        {children}
-                    </div>
+                    <div className="flex flex-col h-full min-h-screen">{children}</div>
                 </SidebarInset>
             </div>
         </SidebarProvider>
