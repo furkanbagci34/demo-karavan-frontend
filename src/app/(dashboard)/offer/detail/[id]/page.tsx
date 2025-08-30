@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Switch } from "@/components/ui/switch";
+
 import { Pagination } from "@/components/ui/pagination";
 import {
     Trash2,
@@ -207,7 +207,7 @@ export default function EditOfferPage() {
     const [discountType, setDiscountType] = useState<"percentage" | "amount" | null>(null);
     const [discountValue, setDiscountValue] = useState<number>(0);
     const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>("total");
-    const [showPricingInPdf, setShowPricingInPdf] = useState(true); // PDF'de fiyat gösterimi için switch
+    const [pdfMode, setPdfMode] = useState<"detailed" | "summary" | "nameOnly">("detailed");
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -961,7 +961,7 @@ export default function EditOfferPage() {
             await updateOffer(offerId, offerData);
 
             // Sonra gönder
-            await sendOffer(offerId, !showPricingInPdf);
+            await sendOffer(offerId, pdfMode !== "detailed");
 
             toast.success("✅ Teklif Başarıyla Gönderildi", {
                 description: `${selectedCustomer.name} adlı müşteriye teklif e-posta ile gönderildi`,
@@ -1052,7 +1052,7 @@ export default function EditOfferPage() {
                 };
 
                 await updateOffer(offerId, offerData);
-                await sendOffer(offerId);
+                await sendOffer(offerId, pdfMode !== "detailed");
 
                 const updatedCustomer = customers.find((c) => c.id === selectedCustomerId);
                 toast.success("✅ Teklif Başarıyla Gönderildi", {
@@ -1129,7 +1129,8 @@ export default function EditOfferPage() {
             vat: calculateVAT(),
             total: calculateFinalTotal(),
             notes: notes,
-            hidePricing: !showPricingInPdf, // Switch durumuna göre fiyat gösterimi
+            hidePricing: pdfMode !== "detailed",
+            mode: pdfMode,
         };
 
         generateOfferPdf(offerData);
@@ -2153,19 +2154,43 @@ export default function EditOfferPage() {
                                                     </div>
                                                     <div>
                                                         <span className="text-sm font-medium text-slate-700">
-                                                            {showPricingInPdf ? "Detaylı PDF" : "Toplam PDF"}
+                                                            PDF Tipi
                                                         </span>
                                                         <p className="text-xs text-slate-500">
-                                                            {showPricingInPdf
-                                                                ? "Fiyat ve miktar detayları gösterilir"
-                                                                : "Sadece ürün adı ve miktar gösterilir"}
+                                                            Detaylı, toplam veya yalnızca ürün adı
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <Switch
-                                                    checked={showPricingInPdf}
-                                                    onCheckedChange={setShowPricingInPdf}
-                                                />
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant={pdfMode === "detailed" ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-9"
+                                                    onClick={() => setPdfMode("detailed")}
+                                                >
+                                                    Detaylı
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant={pdfMode === "summary" ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-9"
+                                                    onClick={() => setPdfMode("summary")}
+                                                >
+                                                    Miktar
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant={pdfMode === "nameOnly" ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-9"
+                                                    onClick={() => setPdfMode("nameOnly")}
+                                                >
+                                                    Üretim
+                                                </Button>
                                             </div>
 
                                             <Button

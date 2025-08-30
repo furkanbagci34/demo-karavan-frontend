@@ -25,6 +25,7 @@ export interface OfferPdfPreviewProps {
     total: number;
     notes?: string;
     hidePricing?: boolean; // Yeni parametre: fiyat bilgilerini gizle
+    mode?: "detailed" | "summary" | "nameOnly"; // detailed: fiyatlı, summary: miktarlı ama fiyatsız, nameOnly: sadece isim
 }
 
 async function getBase64FromUrl(url: string): Promise<string | null> {
@@ -90,6 +91,7 @@ export async function generateOfferPdf({
     total,
     notes,
     hidePricing = false, // Varsayılan olarak false
+    mode,
 }: OfferPdfPreviewProps): Promise<void> {
     const pdfMake = (await import("pdfmake/build/pdfmake")).default;
     const pdfFonts = await import("pdfmake/build/vfs_fonts");
@@ -118,28 +120,36 @@ export async function generateOfferPdf({
         console.warn("Failed to load logo:", error);
     }
 
-    // Tablo başlıklarını ve içeriğini hidePricing parametresine göre ayarla
-    const tableWidths = hidePricing ? [20, 60, "*", 50] : [20, 60, "*", 50, 70, 80];
+    // Mod/geri uyumluluk
+    const isNameOnly = mode === "nameOnly";
+    const effectiveHidePricing = mode ? mode !== "detailed" : hidePricing;
+    const hideQuantity = mode === "nameOnly";
+    const hideSummary = mode === "nameOnly"; // 3. tipte özet gizlenir
+    const hideDisclaimers = mode === "nameOnly"; // 3. tipte bilgilendirmeler gizlenir
+
+    // Tablo başlıklarını ve içeriğini moda göre ayarla
+    const tableWidths = isNameOnly
+        ? [20, 60, "*"]
+        : effectiveHidePricing
+        ? [20, 60, "*", 50]
+        : [20, 60, "*", 50, 70, 80];
 
     // Data rows
     const productTables = products.map((p, i) => {
-        const rowData = [
-            [
-                { text: (i + 1).toString(), fontSize: 9, alignment: "center", margin: [0, 12, 0, 0] },
-                productImages[i]
-                    ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
-                    : { text: "", width: 50, height: 50 },
-                { text: p.name, fontSize: 12, bold: true, alignment: "left", margin: [0, 8, 0, 0] },
-                {
-                    text: `${p.quantity} ${p.unit || "adet"}`,
-                    alignment: "center",
-                    fontSize: 10,
-                },
-            ],
+        const row: unknown[] = [
+            { text: (i + 1).toString(), fontSize: 9, alignment: "center", margin: [0, 12, 0, 0] },
+            productImages[i]
+                ? { image: productImages[i], width: 50, height: 50, alignment: "center" }
+                : { text: "", width: 50, height: 50 },
+            { text: p.name, fontSize: 12, bold: true, alignment: "left", margin: [0, 8, 0, 0] },
         ];
 
-        if (!hidePricing) {
-            rowData[0].push(
+        if (!hideQuantity) {
+            row.push({ text: `${p.quantity} ${p.unit || "adet"}`, alignment: "center", fontSize: 10 });
+        }
+
+        if (!effectiveHidePricing) {
+            row.push(
                 {
                     stack: [
                         p.oldPrice
@@ -177,7 +187,7 @@ export async function generateOfferPdf({
             table: {
                 headerRows: 0,
                 widths: tableWidths,
-                body: rowData,
+                body: [row],
             },
             layout: {
                 defaultBorder: true,
@@ -213,7 +223,7 @@ export async function generateOfferPdf({
         };
     });
 
-    // Özet tablosunu hidePricing parametresine göre ayarla
+    // Özet tablosunu moda göre ayarla
     const summaryTableBody: (string | { text: string; bold: boolean })[][] = [["Brüt", `€ ${gross.toFixed(2)}`]];
 
     // İndirim varsa ekle
@@ -309,7 +319,13 @@ export async function generateOfferPdf({
                     headerRows: 1,
                     widths: tableWidths,
                     body: [
-                        hidePricing
+                        isNameOnly
+                            ? [
+                                  { text: "", alignment: "center" },
+                                  { text: "", alignment: "center" },
+                                  { text: "Ürün İsmi", alignment: "left" },
+                              ]
+                            : effectiveHidePricing
                             ? [
                                   { text: "", alignment: "center" },
                                   { text: "", alignment: "center" },
@@ -357,59 +373,63 @@ export async function generateOfferPdf({
                 unbreakable: true,
             },
             ...productTables,
-            {
-                columns: [
-                    {},
-                    {
-                        width: "auto",
-                        table: summaryTable,
-                        layout: "noBorders",
-                        unbreakable: true,
-                    },
-                ],
-                unbreakable: true,
-            },
-            {
-                ul: [
-                    { text: "Geçerlilik Süresi: Teklifimiz 15 gün boyunca geçerlidir.", bold: true },
-                    {
-                        text: "Yeni Transporter modellerinde DIŞ TENTE stoklara girmediğinden fiyatı ekstra hesaplanacaktır.",
-                        decoration: "underline",
-                        bold: true,
-                    },
-                    {
-                        text: "Gizlilik: Bu teklif yalnızca size özeldir ve üçüncü şahıs veya firmalarla paylaşılmamalıdır.",
-                        bold: true,
-                    },
-                    {
-                        text: "Proje Başlangıcı: Teklifimiz, toplam bedelin %50'sinin banka hesabımıza peşinat olarak yatırılması ile başlar. Teklifin kabul edilmesini takiben satış sözleşmesi hazırlanır ve imzalanmasıyla birlikte üretim süreci başlar. Ürününüz, sözleşmede belirtilen tarihte teslim edilir.",
-                        bold: true,
-                    },
-                    {
-                        text: "Garanti: Ürünlerimiz 3 yıl montaj ve imalat hatalarına karşı üretici garantisi ve 2 yıl ithalatçı garantisi kapsamındadır. Garanti şartları, kullanım kılavuzunda detaylandırılmıştır.",
-                        bold: true,
-                    },
-                    {
-                        text: "Revizyon: Teklif içeriğinde yapılacak herhangi bir değişiklik, yeni bir teklif oluşturulmasını gerektirebilir.",
-                        bold: true,
-                    },
-                    {
-                        text: "Ödeme Koşulları: Ödeme planı siparişe özel olarak belirlenir ve karşılıklı mutabakat sağlanarak yazılı hale getirilir.",
-                        bold: true,
-                    },
-                    {
-                        text: "TSE ve TÜV Giderleri: Karavan projeleri için TSE ve TÜV giderleri teklif bedeline dahil olmayıp, ayrı olarak hesaplanır.",
-                        bold: true,
-                    },
-                    {
-                        text: "İptal ve İade: Özel üretim ürünlerde, sipariş onaylandıktan sonra iptal ve iade kabul edilmemektedir.",
-                        bold: true,
-                    },
-                ],
-                fontSize: 9,
-                margin: [0, 20, 0, 0],
-                unbreakable: false,
-            },
+            !hideSummary
+                ? {
+                      columns: [
+                          {},
+                          {
+                              width: "auto",
+                              table: summaryTable,
+                              layout: "noBorders",
+                              unbreakable: true,
+                          },
+                      ],
+                      unbreakable: true,
+                  }
+                : {},
+            !hideDisclaimers
+                ? {
+                      ul: [
+                          { text: "Geçerlilik Süresi: Teklifimiz 15 gün boyunca geçerlidir.", bold: true },
+                          {
+                              text: "Yeni Transporter modellerinde DIŞ TENTE stoklara girmediğinden fiyatı ekstra hesaplanacaktır.",
+                              decoration: "underline",
+                              bold: true,
+                          },
+                          {
+                              text: "Gizlilik: Bu teklif yalnızca size özeldir ve üçüncü şahıs veya firmalarla paylaşılmamalıdır.",
+                              bold: true,
+                          },
+                          {
+                              text: "Proje Başlangıcı: Teklifimiz, toplam bedelin %50'sinin banka hesabımıza peşinat olarak yatırılması ile başlar. Teklifin kabul edilmesini takiben satış sözleşmesi hazırlanır ve imzalanmasıyla birlikte üretim süreci başlar. Ürününüz, sözleşmede belirtilen tarihte teslim edilir.",
+                              bold: true,
+                          },
+                          {
+                              text: "Garanti: Ürünlerimiz 3 yıl montaj ve imalat hatalarına karşı üretici garantisi ve 2 yıl ithalatçı garantisi kapsamındadır. Garanti şartları, kullanım kılavuzunda detaylandırılmıştır.",
+                              bold: true,
+                          },
+                          {
+                              text: "Revizyon: Teklif içeriğinde yapılacak herhangi bir değişiklik, yeni bir teklif oluşturulmasını gerektirebilir.",
+                              bold: true,
+                          },
+                          {
+                              text: "Ödeme Koşulları: Ödeme planı siparişe özel olarak belirlenir ve karşılıklı mutabakat sağlanarak yazılı hale getirilir.",
+                              bold: true,
+                          },
+                          {
+                              text: "TSE ve TÜV Giderleri: Karavan projeleri için TSE ve TÜV giderleri teklif bedeline dahil olmayıp, ayrı olarak hesaplanır.",
+                              bold: true,
+                          },
+                          {
+                              text: "İptal ve İade: Özel üretim ürünlerde, sipariş onaylandıktan sonra iptal ve iade kabul edilmemektedir.",
+                              bold: true,
+                          },
+                      ],
+                      fontSize: 9,
+                      margin: [0, 20, 0, 0],
+                      unbreakable: false,
+                  }
+                : {},
         ],
         styles: {
             header: { fontSize: 16, bold: true },
