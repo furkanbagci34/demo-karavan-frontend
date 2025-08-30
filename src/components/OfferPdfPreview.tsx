@@ -126,6 +126,7 @@ export async function generateOfferPdf({
     const hideQuantity = mode === "nameOnly";
     const hideSummary = mode === "nameOnly"; // 3. tipte özet gizlenir
     const hideDisclaimers = mode === "nameOnly"; // 3. tipte bilgilendirmeler gizlenir
+    const hideIntroTexts = mode === "nameOnly"; // 3. tipte üstteki bilgilendirme yazıları gizlenir
 
     // Tablo başlıklarını ve içeriğini moda göre ayarla
     const tableWidths = isNameOnly
@@ -302,18 +303,22 @@ export async function generateOfferPdf({
                 unbreakable: true,
             },
             { text: notes || "", bold: true, fontSize: 11, margin: [0, 0, 0, 6], unbreakable: true },
-            {
-                text: "Demonte Karavan olarak, TSE ve TÜV testlerinden geçmiş, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
-                fontSize: 9,
-                margin: [0, 0, 0, 4],
-                unbreakable: true,
-            },
-            {
-                text: "Size özel hazırlanan bu teklifin, güvenli ve konforlu yolculuklarınız için mükemmel bir başlangıç olmasını diliyoruz. Birlikte çalışmak ve hayallerinizdeki karavanı hayata geçirmek için sabırsızlanıyoruz!",
-                fontSize: 9,
-                bold: true,
-                margin: [0, 0, 0, 10],
-            },
+            !hideIntroTexts
+                ? {
+                      text: "Demonte Karavan olarak, TSE ve TÜV testlerinden geçmiş, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
+                      fontSize: 9,
+                      margin: [0, 0, 0, 4],
+                      unbreakable: true,
+                  }
+                : {},
+            !hideIntroTexts
+                ? {
+                      text: "Size özel hazırlanan bu teklifin, güvenli ve konforlu yolculuklarınız için mükemmel bir başlangıç olmasını diliyoruz. Birlikte çalışmak ve hayallerinizdeki karavanı hayata geçirmek için sabırsızlanıyoruz!",
+                      fontSize: 9,
+                      bold: true,
+                      margin: [0, 0, 0, 10],
+                  }
+                : {},
             {
                 table: {
                     headerRows: 1,
