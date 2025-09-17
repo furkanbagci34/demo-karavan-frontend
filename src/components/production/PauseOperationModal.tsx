@@ -29,7 +29,6 @@ export const PauseOperationModal: React.FC<PauseOperationModalProps> = ({
     onClose,
     onPauseOperation,
     operationName,
-    operationId,
 }) => {
     const [selectedReason, setSelectedReason] = useState<string>("");
     const [description, setDescription] = useState("");

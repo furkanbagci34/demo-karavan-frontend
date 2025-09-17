@@ -10,10 +10,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
     Factory,
     Play,
@@ -21,13 +19,12 @@ import {
     CheckCircle,
     Clock,
     AlertTriangle,
-    Car,
     MapPin,
     Timer,
     Loader2,
     Settings,
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ProductionOperation, ProductionStatus } from "@/lib/api/types";
 import { useProduction } from "@/hooks/api/useProduction";
 import { PauseOperationModal } from "@/components/production/PauseOperationModal";
@@ -259,7 +256,7 @@ export default function ProductionPage() {
         }
     };
 
-    const handlePauseWithReason = async (reason: string, description: string) => {
+    const handlePauseWithReason = async (reason: string) => {
         if (!selectedOperation) return;
 
         try {

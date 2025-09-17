@@ -3,11 +3,7 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
-import { Play, Loader2, User, Search, CheckCircle2, Mail, Phone } from "lucide-react";
+import { Play, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
 
 interface StartOperationModalProps {
@@ -93,13 +89,7 @@ const mockWorkers: Worker[] = [
     },
 ];
 
-export const StartOperationModal: React.FC<StartOperationModalProps> = ({
-    isOpen,
-    onClose,
-    onStartOperation,
-    operationName,
-    operationId,
-}) => {
+export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen, onClose, onStartOperation }) => {
     const [selectedWorkerIds, setSelectedWorkerIds] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [starting, setStarting] = useState(false);
