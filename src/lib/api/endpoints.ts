@@ -93,6 +93,14 @@ export const API_ENDPOINTS = {
         delete: (id: string) => `/api/production-plans/${id}`,
         getByVehicle: (vehicleId: string) => `/api/production-plans/vehicle/${vehicleId}`,
     },
+    production: {
+        getActiveOperations: "/api/production/active-operations",
+        startOperation: (id: string) => `/api/production/operations/${id}/start`,
+        pauseOperation: (id: string) => `/api/production/operations/${id}/pause`,
+        completeOperation: (id: string) => `/api/production/operations/${id}/complete`,
+        updateProgress: (id: string) => `/api/production/operations/${id}/progress`,
+        getOperationsByUser: (userId?: string) => `/api/production/operations/user${userId ? `/${userId}` : ""}`,
+    },
     dashboard: {
         summary: "/api/dashboard/summary",
         monthlyRevenue: "/api/dashboard/monthly-revenue",

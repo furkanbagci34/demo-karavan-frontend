@@ -49,6 +49,7 @@ import { OfferStatus } from "@/lib/enums";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { generateOfferPdf } from "@/components/OfferPdfPreview";
+import { ProductionSendModal } from "@/components/ProductionSendModal";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -225,6 +226,9 @@ export default function EditOfferPage() {
     // Contract modal states
     const [showContractModal, setShowContractModal] = useState(false);
     const [showContractConfirmModal, setShowContractConfirmModal] = useState(false);
+
+    // Production modal state
+    const [showProductionModal, setShowProductionModal] = useState(false);
     const [contractForm, setContractForm] = useState({
         customerTckn: "",
         customerAddress: "",
@@ -859,6 +863,12 @@ export default function EditOfferPage() {
             return;
         }
 
+        // Eğer ÜRETIMDE durumu seçilirse modal'ı aç
+        if (newStatus === OfferStatus.ÜRETIMDE) {
+            setShowProductionModal(true);
+            return;
+        }
+
         try {
             setSaving(true);
 
@@ -878,6 +888,38 @@ export default function EditOfferPage() {
             toast.error("Durum güncellenemedi", {
                 description: errorMessage,
             });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSendToProduction = async (vehicleAcceptanceId: number) => {
+        if (!originalOffer?.id) {
+            toast.error("Teklif bulunamadı");
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            // Teklif durumunu ÜRETIMDE olarak güncelle
+            await updateOfferStatusById(originalOffer.id, OfferStatus.ÜRETIMDE);
+
+            // Local state'i güncelle
+            if (originalOffer) {
+                originalOffer.status = OfferStatus.ÜRETIMDE;
+            }
+
+            toast.success("Teklif üretime gönderildi!", {
+                description: `Teklif seçilen araç (ID: ${vehicleAcceptanceId}) ile üretime gönderildi.`,
+            });
+        } catch (error) {
+            console.error("Üretime gönderme hatası:", error);
+            const errorMessage = error instanceof Error ? error.message : "Üretime gönderilirken bir hata oluştu";
+            toast.error("Üretime gönderilemedi", {
+                description: errorMessage,
+            });
+            throw error; // Modal'da error handling için
         } finally {
             setSaving(false);
         }
@@ -3034,6 +3076,14 @@ export default function EditOfferPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Production Send Modal */}
+            <ProductionSendModal
+                isOpen={showProductionModal}
+                onClose={() => setShowProductionModal(false)}
+                onSendToProduction={handleSendToProduction}
+                offerId={originalOffer?.id}
+            />
         </div>
     );
 }

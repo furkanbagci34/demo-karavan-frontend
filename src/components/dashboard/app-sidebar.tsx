@@ -118,9 +118,13 @@ const adminMenus: MenuGroup[] = [
             },
             {
                 title: "Üretim",
-                url: "/production-plan", // This URL is for the main Production page, but it's a parent for sub-items
+                url: "/production",
                 icon: Factory,
                 items: [
+                    {
+                        title: "Üretim Ekranı",
+                        url: "/production",
+                    },
                     {
                         title: "Üretim Planları",
                         url: "/production-plans",
@@ -223,9 +227,13 @@ const userMenus: MenuGroup[] = [
             },
             {
                 title: "Üretim",
-                url: "/manufacture",
+                url: "/production",
                 icon: Factory,
                 items: [
+                    {
+                        title: "Üretim Ekranı",
+                        url: "/production",
+                    },
                     {
                         title: "Üretim Planları",
                         url: "/production-plans",

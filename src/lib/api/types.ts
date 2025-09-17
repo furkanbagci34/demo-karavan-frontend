@@ -470,3 +470,31 @@ export interface UpdateVehicleAcceptanceData {
     damage_markers?: DamageMarker[];
     status?: "active" | "completed" | "cancelled";
 }
+
+// Production Operation tipleri
+export type ProductionStatus = "pending" | "in_progress" | "completed" | "paused" | "error";
+
+export interface ProductionOperation {
+    id: number;
+    name: string;
+    plan_name: string;
+    vehicle_name: string;
+    station_name: string;
+    status: ProductionStatus;
+    progress: number;
+    elapsed_time: number; // dakika cinsinden
+    target_time: number; // dakika cinsinden
+    start_time?: string;
+    end_time?: string;
+    assigned_user_id?: number;
+    assigned_user_name?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface UpdateProductionOperationData {
+    status?: ProductionStatus;
+    progress?: number;
+    elapsed_time?: number;
+    end_time?: string;
+}
