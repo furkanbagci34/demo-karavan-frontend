@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Car, Calendar, MapPin, Fuel, Clock, CheckCircle2, Factory, Loader2, Search, FileText } from "lucide-react";
-import { VehicleAcceptance } from "@/lib/api/types";
+import { Car, CheckCircle2, Factory, Loader2, Search, FileText } from "lucide-react";
 import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
 import { toast } from "sonner";
 
@@ -20,12 +19,7 @@ interface ProductionSendModalProps {
     offerId?: number;
 }
 
-export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({
-    isOpen,
-    onClose,
-    onSendToProduction,
-    offerId,
-}) => {
+export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({ isOpen, onClose, onSendToProduction }) => {
     const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
     const [sending, setSending] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -59,11 +53,6 @@ export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString("tr-TR");
-    };
-
-    const formatDateTime = (dateString?: string) => {
-        if (!dateString) return "-";
-        return new Date(dateString).toLocaleString("tr-TR");
     };
 
     // Filtrelenmiş araç listesi
@@ -254,7 +243,7 @@ export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({
                         <div className="text-center py-8">
                             <Search className="h-8 w-8 mx-auto text-gray-400 mb-3" />
                             <h3 className="text-base font-semibold text-gray-900 mb-1">Araç Bulunamadı</h3>
-                            <p className="text-sm text-gray-600">"{searchTerm}" araması için sonuç bulunamadı.</p>
+                            <p className="text-sm text-gray-600">araması için sonuç bulunamadı.</p>
                         </div>
                     )}
 
