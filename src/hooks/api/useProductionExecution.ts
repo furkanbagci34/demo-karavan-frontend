@@ -16,9 +16,17 @@ export const useProductionExecution = () => {
     // Yeni üretim execution oluştur
     const create = useMutation({
         mutationFn: async (data: CreateProductionExecutionData): Promise<ApiResponse<{ executionId: number }>> => {
+            const backendData = {
+                // Map all fields from data to backendData as needed
+                // Example (replace with actual fields of CreateProductionExecutionData):
+                // name: data.name,
+                // description: data.description,
+                // ...data
+                ...data,
+            };
             const response = await apiClient.post<ApiResponse<{ executionId: number }>>(
                 API_ENDPOINTS.productionExecution.create,
-                data
+                backendData
             );
             return response;
         },
@@ -50,7 +58,7 @@ export const useProductionExecution = () => {
         }): Promise<ApiResponse<{ success: boolean }>> => {
             const response = await apiClient.put<ApiResponse<{ success: boolean }>>(
                 API_ENDPOINTS.productionExecution.update(id.toString()),
-                data
+                data as Record<string, unknown>
             );
             return response;
         },
@@ -84,7 +92,7 @@ export const useProductionExecution = () => {
         }): Promise<ApiResponse<{ success: boolean }>> => {
             const response = await apiClient.put<ApiResponse<{ success: boolean }>>(
                 API_ENDPOINTS.productionExecution.updateOperation(executionId.toString(), operationId.toString()),
-                data
+                data as Record<string, unknown>
             );
             return response;
         },
