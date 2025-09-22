@@ -86,7 +86,7 @@ const OfferDetailPage = () => {
     };
 
     // Sadece "Gönderildi" durumunda sayfa aktif olacak
-    const isOfferActive = offer?.status === OfferStatus.GONDERILDI;
+    //const isOfferActive = offer?.status === OfferStatus.GONDERILDI;
 
     // İşlem sonucu var mı kontrol et
     const hasActionResult = actionResult.type !== null;
@@ -102,7 +102,7 @@ const OfferDetailPage = () => {
         );
     }
 
-    if (error || !offer || (!isOfferActive && !hasActionResult)) {
+    if (error || !offer || !hasActionResult) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center max-w-md mx-auto p-6">
