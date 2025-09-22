@@ -85,13 +85,13 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/stations/${id}`,
         delete: (id: string) => `/api/stations/${id}`,
     },
-    productionPlans: {
-        create: "/api/production-plans",
-        getAll: "/api/production-plans",
-        getById: (id: string) => `/api/production-plans/${id}`,
-        update: (id: string) => `/api/production-plans/${id}`,
-        delete: (id: string) => `/api/production-plans/${id}`,
-        getByVehicle: (vehicleId: string) => `/api/production-plans/vehicle/${vehicleId}`,
+    productionTemplates: {
+        create: "/api/production-template",
+        getAll: "/api/production-template",
+        getById: (id: string) => `/api/production-template/${id}`,
+        update: (id: string) => `/api/production-template/${id}`,
+        delete: (id: string) => `/api/production-template/${id}`,
+        getByVehicle: (vehicleId: string) => `/api/production-template/vehicle/${vehicleId}`,
     },
     production: {
         getActiveOperations: "/api/production/active-operations",

@@ -18,7 +18,7 @@ import { Plus, Settings, Pencil, Trash2, Loader2, AlertTriangle, Search, X, Car,
 import Link from "next/link";
 import React, { useEffect, useState, useMemo } from "react";
 import { Pagination } from "@/components/ui/pagination";
-import { useProductionPlans } from "@/hooks/api/useProductionPlans";
+import { useProductionTemplates } from "@/hooks/api/useProductionTemplates";
 import { ProductionPlan } from "@/lib/api/types";
 import { toast } from "sonner";
 import {
@@ -53,15 +53,15 @@ const normalizeTurkishText = (text: string): string => {
         .toLowerCase();
 };
 
-export default function ProductionPlansListPage() {
+export default function ProductionTemplatesListPage() {
     const [currentPage, setCurrentPage] = React.useState(1);
-    const [planToDelete, setPlanToDelete] = useState<ProductionPlan | null>(null);
+    const [templateToDelete, setTemplateToDelete] = useState<ProductionPlan | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const { get, remove } = useProductionPlans();
+    const { get, remove } = useProductionTemplates();
 
-    // Filtrelenmiş planlar
-    const filteredPlans = useMemo(() => {
+    // Filtrelenmiş şablonlar
+    const filteredTemplates = useMemo(() => {
         if (!get.data) return [];
 
         if (!searchTerm.trim()) {
@@ -69,9 +69,9 @@ export default function ProductionPlansListPage() {
         }
 
         const searchNormalized = normalizeTurkishText(searchTerm.trim());
-        return get.data.filter((plan) => {
-            const nameMatch = normalizeTurkishText(plan.name).includes(searchNormalized);
-            const vehicleMatch = normalizeTurkishText(plan.vehicle_name).includes(searchNormalized);
+        return get.data.filter((template) => {
+            const nameMatch = normalizeTurkishText(template.name).includes(searchNormalized);
+            const vehicleMatch = normalizeTurkishText(template.vehicle_name).includes(searchNormalized);
             return nameMatch || vehicleMatch;
         });
     }, [get.data, searchTerm]);
@@ -81,29 +81,29 @@ export default function ProductionPlansListPage() {
         setCurrentPage(1);
     }, [searchTerm]);
 
-    // Plan silme dialog'unu aç
-    const openDeleteDialog = (plan: ProductionPlan) => {
-        setPlanToDelete(plan);
+    // Şablon silme dialog'unu aç
+    const openDeleteDialog = (template: ProductionPlan) => {
+        setTemplateToDelete(template);
         setIsDeleteDialogOpen(true);
     };
 
-    // Plan silme fonksiyonu
-    const handleDeletePlan = async () => {
-        if (!planToDelete) return;
+    // Şablon silme fonksiyonu
+    const handleDeleteTemplate = async () => {
+        if (!templateToDelete) return;
 
         try {
-            await remove.mutateAsync(planToDelete.id);
-            toast.success("Üretim planı başarıyla silindi", {
-                description: `${planToDelete.name} planı artık listede görünmeyecek.`,
+            await remove.mutateAsync(templateToDelete.id);
+            toast.success("Üretim şablonu başarıyla silindi", {
+                description: `${templateToDelete.name} şablonu artık listede görünmeyecek.`,
             });
 
             // Dialog'u kapat (React Query otomatik olarak listeyi güncelleyecek)
             setIsDeleteDialogOpen(false);
-            setPlanToDelete(null);
+            setTemplateToDelete(null);
         } catch (error: unknown) {
-            console.error("Üretim planı silme hatası:", error);
+            console.error("Üretim şablonu silme hatası:", error);
             const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
-            toast.error("Üretim planı silinemedi", {
+            toast.error("Üretim şablonu silinemedi", {
                 description: errorMessage,
             });
         }
@@ -115,8 +115,8 @@ export default function ProductionPlansListPage() {
     };
 
     // Pagination hesaplamaları
-    const totalPages = Math.max(1, Math.ceil(filteredPlans.length / PAGE_SIZE));
-    const paginatedPlans = filteredPlans.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE));
+    const paginatedTemplates = filteredTemplates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     // Sayfa değiştiğinde scroll'u yukarı çek
     useEffect(() => {
@@ -136,11 +136,11 @@ export default function ProductionPlansListPage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem className="hidden sm:block">
-                                <BreadcrumbLink href="/production-plans">Üretim Planları</BreadcrumbLink>
+                                <BreadcrumbLink href="/production-templates">Üretim Şablonları</BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Üretim Planları</BreadcrumbPage>
+                                <BreadcrumbPage>Üretim Şablonları</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -151,12 +151,12 @@ export default function ProductionPlansListPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                         <MapPin className="h-6 w-6" />
-                        Üretim Planları
+                        Üretim Şablonları
                     </h1>
                     <Button asChild className="w-full sm:w-auto">
-                        <Link href="/production-plans/add">
+                        <Link href="/production-templates/add">
                             <Plus className="h-4 w-4 mr-2" />
-                            Yeni Üretim Planı
+                            Yeni Üretim Şablonu
                         </Link>
                     </Button>
                 </div>
@@ -166,7 +166,7 @@ export default function ProductionPlansListPage() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Plan adı veya araç adı ile arayın..."
+                            placeholder="Şablon adı veya araç adı ile arayın..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10 pr-10"
@@ -184,15 +184,15 @@ export default function ProductionPlansListPage() {
                     </div>
                     {searchTerm && (
                         <p className="text-sm text-muted-foreground mt-2">
-                            {filteredPlans.length} plan bulundu
-                            {filteredPlans.length !== get.data?.length && ` (${get.data?.length} toplam plan)`}
+                            {filteredTemplates.length} şablon bulundu
+                            {filteredTemplates.length !== get.data?.length && ` (${get.data?.length} toplam şablon)`}
                         </p>
                     )}
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Üretim Planları Listesi</CardTitle>
+                        <CardTitle>Üretim Şablonları Listesi</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                         {/* Desktop Tablo Görünümü */}
@@ -200,7 +200,7 @@ export default function ProductionPlansListPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Plan Adı</TableHead>
+                                        <TableHead>Şablon Adı</TableHead>
                                         <TableHead>Araç</TableHead>
                                         <TableHead>Oluşturulma Tarihi</TableHead>
                                         <TableHead>Son Güncelleme</TableHead>
@@ -214,42 +214,42 @@ export default function ProductionPlansListPage() {
                                             <TableCell colSpan={6} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Üretim planları yükleniyor...
+                                                    Üretim şablonları yükleniyor...
                                                 </div>
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        paginatedPlans.map((plan) => (
-                                            <TableRow key={plan.id}>
-                                                <TableCell className="font-medium">{plan.name}</TableCell>
+                                        paginatedTemplates.map((template) => (
+                                            <TableRow key={template.id}>
+                                                <TableCell className="font-medium">{template.name}</TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2">
                                                             <Car className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="font-medium">{plan.vehicle_name}</span>
+                                                            <span className="font-medium">{template.vehicle_name}</span>
                                                         </div>
-                                                        {plan.vehicle_brand_model && (
+                                                        {template.vehicle_brand_model && (
                                                             <span className="text-xs text-muted-foreground ml-6">
-                                                                {plan.vehicle_brand_model}
+                                                                {template.vehicle_brand_model}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {new Date(plan.created_at).toLocaleDateString("tr-TR")}
+                                                    {new Date(template.created_at).toLocaleDateString("tr-TR")}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {new Date(plan.updated_at).toLocaleDateString("tr-TR")}
+                                                    {new Date(template.updated_at).toLocaleDateString("tr-TR")}
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <span
                                                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                            plan.is_active
+                                                            template.is_active
                                                                 ? "bg-green-100 text-green-800"
                                                                 : "bg-red-100 text-red-800"
                                                         }`}
                                                     >
-                                                        {plan.is_active ? "Aktif" : "Pasif"}
+                                                        {template.is_active ? "Aktif" : "Pasif"}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="flex items-center justify-center">
@@ -263,7 +263,7 @@ export default function ProductionPlansListPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem asChild>
                                                                 <Link
-                                                                    href={`/production-plans/edit/${plan.id}`}
+                                                                    href={`/production-templates/edit/${template.id}`}
                                                                     className="flex items-center"
                                                                 >
                                                                     <Pencil className="mr-2 h-4 w-4" />
@@ -272,7 +272,7 @@ export default function ProductionPlansListPage() {
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(plan)}
+                                                                onClick={() => openDeleteDialog(template)}
                                                             >
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 <span>Sil</span>
@@ -293,25 +293,29 @@ export default function ProductionPlansListPage() {
                                 <div className="p-8 text-center">
                                     <div className="flex items-center justify-center gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        Üretim planları yükleniyor...
+                                        Üretim şablonları yükleniyor...
                                     </div>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                                    {paginatedPlans.map((plan) => (
-                                        <Card key={plan.id} className="overflow-hidden">
+                                    {paginatedTemplates.map((template) => (
+                                        <Card key={template.id} className="overflow-hidden">
                                             <div className="p-4">
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="font-semibold text-sm truncate">{plan.name}</h3>
+                                                        <h3 className="font-semibold text-sm truncate">
+                                                            {template.name}
+                                                        </h3>
                                                         <div className="flex flex-col gap-1 mt-1">
                                                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                                                 <Car className="h-3 w-3" />
-                                                                <span className="font-medium">{plan.vehicle_name}</span>
+                                                                <span className="font-medium">
+                                                                    {template.vehicle_name}
+                                                                </span>
                                                             </div>
-                                                            {plan.vehicle_brand_model && (
+                                                            {template.vehicle_brand_model && (
                                                                 <span className="text-xs text-muted-foreground ml-5">
-                                                                    {plan.vehicle_brand_model}
+                                                                    {template.vehicle_brand_model}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -325,7 +329,7 @@ export default function ProductionPlansListPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem asChild>
                                                                 <Link
-                                                                    href={`/production-plans/edit/${plan.id}`}
+                                                                    href={`/production-templates/edit/${template.id}`}
                                                                     className="flex items-center"
                                                                 >
                                                                     <Pencil className="mr-2 h-4 w-4" />
@@ -334,7 +338,7 @@ export default function ProductionPlansListPage() {
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem
                                                                 className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(plan)}
+                                                                onClick={() => openDeleteDialog(template)}
                                                             >
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 <span>Sil</span>
@@ -345,16 +349,16 @@ export default function ProductionPlansListPage() {
                                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                     <span>
                                                         Oluşturulma:{" "}
-                                                        {new Date(plan.created_at).toLocaleDateString("tr-TR")}
+                                                        {new Date(template.created_at).toLocaleDateString("tr-TR")}
                                                     </span>
                                                     <span
                                                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                            plan.is_active
+                                                            template.is_active
                                                                 ? "bg-green-100 text-green-800"
                                                                 : "bg-red-100 text-red-800"
                                                         }`}
                                                     >
-                                                        {plan.is_active ? "Aktif" : "Pasif"}
+                                                        {template.is_active ? "Aktif" : "Pasif"}
                                                     </span>
                                                 </div>
                                             </div>
@@ -374,22 +378,22 @@ export default function ProductionPlansListPage() {
                 )}
 
                 {/* Boş Durum */}
-                {!get.isLoading && filteredPlans.length === 0 && (
+                {!get.isLoading && filteredTemplates.length === 0 && (
                     <Card>
                         <CardContent className="p-8">
                             <div className="text-center">
                                 <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-semibold mb-2">Üretim planı bulunamadı</h3>
+                                <h3 className="text-lg font-semibold mb-2">Üretim şablonu bulunamadı</h3>
                                 <p className="text-muted-foreground mb-4">
                                     {searchTerm
                                         ? `"${searchTerm}" araması için sonuç bulunamadı.`
-                                        : "Henüz hiç üretim planı oluşturulmamış."}
+                                        : "Henüz hiç üretim şablonu oluşturulmamış."}
                                 </p>
                                 {!searchTerm && (
                                     <Button asChild>
-                                        <Link href="/production-plans/add">
+                                        <Link href="/production-templates/add">
                                             <Plus className="h-4 w-4 mr-2" />
-                                            İlk Üretim Planını Oluştur
+                                            İlk Üretim Şablonunu Oluştur
                                         </Link>
                                     </Button>
                                 )}
@@ -403,16 +407,16 @@ export default function ProductionPlansListPage() {
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Üretim planını silmek istediğinize emin misiniz?</AlertDialogTitle>
+                        <AlertDialogTitle>Üretim şablonunu silmek istediğinize emin misiniz?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Bu işlem geri alınamaz. <strong>{planToDelete?.name}</strong> planı kalıcı olarak
+                            Bu işlem geri alınamaz. <strong>{templateToDelete?.name}</strong> şablonu kalıcı olarak
                             silinecektir.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={handleDeletePlan}
+                            onClick={handleDeleteTemplate}
                             className="bg-red-600 hover:bg-red-700"
                             disabled={remove.isPending}
                         >

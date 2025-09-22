@@ -126,8 +126,8 @@ const adminMenus: MenuGroup[] = [
                         url: "/production",
                     },
                     {
-                        title: "Üretim Planları",
-                        url: "/production-plans",
+                        title: "Üretim Şablonu",
+                        url: "/production-templates",
                     },
                     {
                         title: "İstasyonlar",
@@ -235,8 +235,8 @@ const userMenus: MenuGroup[] = [
                         url: "/production",
                     },
                     {
-                        title: "Üretim Planları",
-                        url: "/production-plans",
+                        title: "Üretim Şablonu",
+                        url: "/production-templates",
                     },
                     {
                         title: "İstasyonlar",

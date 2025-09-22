@@ -4,11 +4,11 @@ import { API_ENDPOINTS } from "@/lib/api/endpoints";
 import { ProductionPlan, CreateProductionPlanData, UpdateProductionPlanData, ApiResponse } from "@/lib/api/types";
 import { toast } from "sonner";
 
-export const useProductionPlans = () => {
+export const useProductionTemplates = () => {
     const queryClient = useQueryClient();
 
     const create = useMutation({
-        mutationFn: async (data: CreateProductionPlanData): Promise<ApiResponse<{ planId: number }>> => {
+        mutationFn: async (data: CreateProductionPlanData): Promise<ApiResponse<{ templateId: number }>> => {
             const backendData = {
                 name: data.name,
                 vehicleId: data.vehicleId,
@@ -16,16 +16,16 @@ export const useProductionPlans = () => {
                 stations: data.stations,
             };
 
-            const response = await apiClient.post<ApiResponse<{ planId: number }>>(
-                API_ENDPOINTS.productionPlans.create,
+            const response = await apiClient.post<ApiResponse<{ templateId: number }>>(
+                API_ENDPOINTS.productionTemplates.create,
                 backendData
             );
 
             return response;
         },
         onSuccess: () => {
-            toast.success("Üretim planı başarıyla oluşturuldu.");
-            queryClient.invalidateQueries({ queryKey: ["productionPlans"] });
+            toast.success("Üretim şablonu başarıyla oluşturuldu.");
+            queryClient.invalidateQueries({ queryKey: ["productionTemplates"] });
         },
         onError: (error: unknown) => {
             const errorMessage =
@@ -34,7 +34,7 @@ export const useProductionPlans = () => {
                 "response" in error &&
                 typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
                     ? (error as { response?: { data?: { message?: string } } }).response!.data!.message!
-                    : "Üretim planı oluşturulurken bir hata oluştu.";
+                    : "Üretim şablonu oluşturulurken bir hata oluştu.";
             toast.error(errorMessage);
         },
     });
@@ -48,17 +48,17 @@ export const useProductionPlans = () => {
             data: UpdateProductionPlanData;
         }): Promise<ApiResponse<ProductionPlan>> => {
             const response = await apiClient.put<ApiResponse<ProductionPlan>>(
-                API_ENDPOINTS.productionPlans.update(id.toString()),
+                API_ENDPOINTS.productionTemplates.update(id.toString()),
                 data as Record<string, unknown>
             );
             return response;
         },
         onSuccess: () => {
-            toast.success("Üretim planı başarıyla güncellendi.");
-            queryClient.invalidateQueries({ queryKey: ["productionPlans"] });
+            toast.success("Üretim şablonu başarıyla güncellendi.");
+            queryClient.invalidateQueries({ queryKey: ["productionTemplates"] });
         },
         onError: (error: unknown) => {
-            let errorMessage = "Üretim planı güncellenirken bir hata oluştu.";
+            let errorMessage = "Üretim şablonu güncellenirken bir hata oluştu.";
             if (typeof error === "object" && error !== null && "response" in error) {
                 const errObj = error as { response?: { data?: { message?: string } } };
                 if (typeof errObj.response?.data?.message === "string") {
@@ -72,16 +72,16 @@ export const useProductionPlans = () => {
     const remove = useMutation({
         mutationFn: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
             const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(
-                API_ENDPOINTS.productionPlans.delete(id.toString())
+                API_ENDPOINTS.productionTemplates.delete(id.toString())
             );
             return response;
         },
         onSuccess: () => {
-            toast.success("Üretim planı başarıyla silindi.");
-            queryClient.invalidateQueries({ queryKey: ["productionPlans"] });
+            toast.success("Üretim şablonu başarıyla silindi.");
+            queryClient.invalidateQueries({ queryKey: ["productionTemplates"] });
         },
         onError: (error: unknown) => {
-            let errorMessage = "Üretim planı silinirken bir hata oluştu.";
+            let errorMessage = "Üretim şablonu silinirken bir hata oluştu.";
             if (typeof error === "object" && error !== null && "response" in error) {
                 const errObj = error as { response?: { data?: { message?: string } } };
                 if (typeof errObj.response?.data?.message === "string") {
@@ -93,19 +93,19 @@ export const useProductionPlans = () => {
     });
 
     const get = useQuery({
-        queryKey: ["productionPlans"],
+        queryKey: ["productionTemplates"],
         queryFn: async (): Promise<ProductionPlan[]> => {
-            const response = await apiClient.get<ProductionPlan[]>(API_ENDPOINTS.productionPlans.getAll);
+            const response = await apiClient.get<ProductionPlan[]>(API_ENDPOINTS.productionTemplates.getAll);
             return response;
         },
     });
 
-    const useProductionPlanById = (id: number | null) => {
+    const useProductionTemplateById = (id: number | null) => {
         return useQuery({
-            queryKey: ["productionPlans", id],
+            queryKey: ["productionTemplates", id],
             queryFn: async (): Promise<ProductionPlan> => {
                 const response = await apiClient.get<ProductionPlan>(
-                    API_ENDPOINTS.productionPlans.getById(id!.toString())
+                    API_ENDPOINTS.productionTemplates.getById(id!.toString())
                 );
                 return response;
             },
@@ -113,12 +113,12 @@ export const useProductionPlans = () => {
         });
     };
 
-    const useProductionPlansByVehicle = (vehicleId: number | null) => {
+    const useProductionTemplatesByVehicle = (vehicleId: number | null) => {
         return useQuery({
-            queryKey: ["productionPlans", "vehicle", vehicleId],
+            queryKey: ["productionTemplates", "vehicle", vehicleId],
             queryFn: async (): Promise<ProductionPlan[]> => {
                 const response = await apiClient.get<ProductionPlan[]>(
-                    API_ENDPOINTS.productionPlans.getByVehicle(vehicleId!.toString())
+                    API_ENDPOINTS.productionTemplates.getByVehicle(vehicleId!.toString())
                 );
                 return response;
             },
@@ -131,7 +131,7 @@ export const useProductionPlans = () => {
         update,
         remove,
         get,
-        useProductionPlanById,
-        useProductionPlansByVehicle,
+        useProductionTemplateById,
+        useProductionTemplatesByVehicle,
     };
 };

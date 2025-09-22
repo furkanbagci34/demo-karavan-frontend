@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useProductionPlans } from "@/hooks/api/useProductionPlans";
+import { useProductionTemplates } from "@/hooks/api/useProductionTemplates";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useStations } from "@/hooks/api/useStations";
 import { useOperations } from "@/hooks/api/useOperations";
@@ -64,7 +64,7 @@ interface EditProductionPlanPageProps {
 export default function EditProductionPlanPage({ params }: EditProductionPlanPageProps) {
     const resolvedParams = use(params);
     const router = useRouter();
-    const { update, useProductionPlanById } = useProductionPlans();
+    const { update, useProductionTemplateById } = useProductionTemplates();
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
     const { get: stationsQuery, isLoading: stationsLoading } = useStations();
     const { operations, isLoading: operationsLoading } = useOperations();
@@ -80,7 +80,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
     );
     const [openOperationPopover, setOpenOperationPopover] = useState<{ [stationId: number]: boolean }>({});
 
-    const productionPlanQuery = useProductionPlanById(parseInt(resolvedParams.id));
+    const productionTemplateQuery = useProductionTemplateById(parseInt(resolvedParams.id));
     const stationsData = stationsQuery.data || [];
 
     const form = useForm<ProductionPlanFormData>({
@@ -92,15 +92,15 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
         },
     });
 
-    // Üretim planı bilgilerini yükle
+    // Üretim şablonu bilgilerini yükle
     useEffect(() => {
-        if (productionPlanQuery.data && !productionPlan) {
-            setProductionPlan(productionPlanQuery.data);
+        if (productionTemplateQuery.data && !productionPlan) {
+            setProductionPlan(productionTemplateQuery.data);
             setIsLoadingPlan(false);
         }
-    }, [productionPlanQuery.data, productionPlan]);
+    }, [productionTemplateQuery.data, productionPlan]);
 
-    // Üretim planı yüklendiğinde form'u ve istasyonları doldur
+    // Üretim şablonu yüklendiğinde form'u ve istasyonları doldur
     useEffect(() => {
         if (productionPlan && !isFormInitialized) {
             // Form'u doldur
@@ -157,24 +157,26 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
             }));
             setStations(stationObjects);
         }
-    }, [isFormInitialized, productionPlan, stations.length]);
+    }, [isFormInitialized, productionPlan]);
 
     // Seçilen istasyonlar değiştiğinde operasyonları güncelle
     useEffect(() => {
         if (selectedStations.length > 0 && isFormInitialized) {
-            const newStations: Station[] = [];
-            selectedStations.forEach((stationId, index) => {
-                const stationData = stationsData.find((s) => s.id === stationId);
-                const existingStation = stations.find((s) => s.stationId === stationId);
+            setStations((prevStations) => {
+                const newStations: Station[] = [];
+                selectedStations.forEach((stationId, index) => {
+                    const stationData = stationsData.find((s) => s.id === stationId);
+                    const existingStation = prevStations.find((s) => s.stationId === stationId);
 
-                newStations.push({
-                    id: `station-${index}`,
-                    stationId: stationId,
-                    stationName: stationData ? stationData.name : "",
-                    operations: existingStation ? existingStation.operations : [],
+                    newStations.push({
+                        id: `station-${index}`,
+                        stationId: stationId,
+                        stationName: stationData ? stationData.name : "",
+                        operations: existingStation ? existingStation.operations : [],
+                    });
                 });
+                return newStations;
             });
-            setStations(newStations);
         } else if (selectedStations.length === 0 && isFormInitialized) {
             setStations([]);
         }
@@ -320,7 +322,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
         }
 
         try {
-            const productionPlanData = {
+            const productionTemplateData = {
                 name: data.name,
                 vehicleId: data.vehicleId,
                 isActive: data.isActive,
@@ -333,24 +335,24 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                 })),
             };
 
-            await update.mutateAsync({ id: parseInt(resolvedParams.id), data: productionPlanData });
+            await update.mutateAsync({ id: parseInt(resolvedParams.id), data: productionTemplateData });
 
-            toast.success("Üretim planı başarıyla güncellendi!", {
-                description: `${data.name} planı güncellendi.`,
+            toast.success("Üretim şablonu başarıyla güncellendi!", {
+                description: `${data.name} şablonu güncellendi.`,
             });
 
-            router.push("/production-plans");
+            router.push("/production-templates");
         } catch (error: unknown) {
-            console.error("Üretim planı güncelleme hatası:", error);
+            console.error("Üretim şablonu güncelleme hatası:", error);
             const errorMessage = error instanceof Error ? error.message : "Bir hata oluştu, lütfen tekrar deneyin.";
-            toast.error("Üretim planı güncellenemedi", {
+            toast.error("Üretim şablonu güncellenemedi", {
                 description: errorMessage,
             });
         }
     };
 
     const isLoading =
-        vehiclesLoading || stationsLoading || operationsLoading || isLoadingPlan || productionPlanQuery.isLoading;
+        vehiclesLoading || stationsLoading || operationsLoading || isLoadingPlan || productionTemplateQuery.isLoading;
 
     // Loading durumunda loading göster
     if (isLoading) {
@@ -367,11 +369,11 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden sm:block" />
                                 <BreadcrumbItem className="hidden sm:block">
-                                    <BreadcrumbLink href="/production-plans">Üretim Planları</BreadcrumbLink>
+                                    <BreadcrumbLink href="/production-templates">Üretim Şablonları</BreadcrumbLink>
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden sm:block" />
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage>Üretim Planı Düzenle</BreadcrumbPage>
+                                    <BreadcrumbPage>Üretim Şablonu Düzenle</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
@@ -382,7 +384,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                     <div className="flex items-center justify-center h-64">
                         <div className="flex items-center gap-2">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                            <span>Üretim planı yükleniyor...</span>
+                            <span>Üretim şablonu yükleniyor...</span>
                         </div>
                     </div>
                 </div>
@@ -404,11 +406,11 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden sm:block" />
                                 <BreadcrumbItem className="hidden sm:block">
-                                    <BreadcrumbLink href="/production-plans">Üretim Planları</BreadcrumbLink>
+                                    <BreadcrumbLink href="/production-templates">Üretim Şablonları</BreadcrumbLink>
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden sm:block" />
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage>Üretim Planı Düzenle</BreadcrumbPage>
+                                    <BreadcrumbPage>Üretim Şablonu Düzenle</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
@@ -419,11 +421,13 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                     <div className="flex items-center justify-center h-64">
                         <div className="text-center">
                             <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">Üretim planı bulunamadı</h3>
+                            <h3 className="text-lg font-semibold mb-2">Üretim şablonu bulunamadı</h3>
                             <p className="text-muted-foreground mb-4">
-                                Aradığınız üretim planı mevcut değil veya silinmiş olabilir.
+                                Aradığınız üretim şablonu mevcut değil veya silinmiş olabilir.
                             </p>
-                            <Button onClick={() => router.push("/production-plans")}>Üretim Planlarına Dön</Button>
+                            <Button onClick={() => router.push("/production-templates")}>
+                                Üretim Şablonlarına Dön
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -444,11 +448,11 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem className="hidden sm:block">
-                                <BreadcrumbLink href="/production-plans">Üretim Planları</BreadcrumbLink>
+                                <BreadcrumbLink href="/production-templates">Üretim Şablonları</BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Üretim Planı Düzenle</BreadcrumbPage>
+                                <BreadcrumbPage>Üretim Şablonu Düzenle</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -460,7 +464,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                         <Edit className="h-6 w-6" />
-                        Üretim Planı Düzenle
+                        Üretim Şablonu Düzenle
                     </h1>
                 </div>
 
@@ -473,7 +477,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <MapPin className="h-5 w-5" />
-                                        Plan Bilgileri
+                                        Şablon Bilgileri
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
@@ -483,9 +487,9 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Plan Adı *</FormLabel>
+                                                <FormLabel>Şablon Adı *</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="Üretim planı adını giriniz" {...field} />
+                                                    <Input placeholder="Üretim şablonu adını giriniz" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -552,12 +556,12 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                             name="isActive"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Plan Durumu</FormLabel>
+                                                    <FormLabel>Şablon Durumu</FormLabel>
                                                     <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/50">
                                                         <div className="space-y-0.5">
-                                                            <div className="text-sm font-medium">Aktif Plan</div>
+                                                            <div className="text-sm font-medium">Aktif Şablon</div>
                                                             <div className="text-xs text-muted-foreground">
-                                                                Üretim planının aktif olup olmadığını belirler
+                                                                Üretim şablonunun aktif olup olmadığını belirler
                                                             </div>
                                                         </div>
                                                         <FormControl>
@@ -888,7 +892,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                                 type="button"
                                 variant="outline"
                                 className="w-full sm:w-auto"
-                                onClick={() => router.push("/production-plans")}
+                                onClick={() => router.push("/production-templates")}
                             >
                                 İptal
                             </Button>

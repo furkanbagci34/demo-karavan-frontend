@@ -22,7 +22,7 @@ import { Car, MapPin, Wrench, Trash2, X, GripVertical, Save } from "lucide-react
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useStations } from "@/hooks/api/useStations";
 import { useOperations } from "@/hooks/api/useOperations";
-import { useProductionPlans } from "@/hooks/api/useProductionPlans";
+import { useProductionTemplates } from "@/hooks/api/useProductionTemplates";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -55,28 +55,30 @@ export default function ManufacturePage() {
     const { vehicles, isLoading: vehiclesLoading } = useVehicles();
     const { get: stationsQuery, isLoading: stationsLoading } = useStations();
     const { operations, isLoading: operationsLoading } = useOperations();
-    const { create: createProductionPlan } = useProductionPlans();
+    const { create: createProductionTemplate } = useProductionTemplates();
 
     const stationsData = stationsQuery.data || [];
 
     // Seçilen istasyonlar değiştiğinde operasyonları güncelle
     useEffect(() => {
         if (selectedStations.length > 0) {
-            const newStations: Station[] = [];
-            selectedStations.forEach((stationId, index) => {
-                const stationData = stationsData.find((s) => s.id === stationId);
+            setStations((prevStations) => {
+                const newStations: Station[] = [];
+                selectedStations.forEach((stationId, index) => {
+                    const stationData = stationsData.find((s) => s.id === stationId);
 
-                // Mevcut istasyonun operasyonlarını koru
-                const existingStation = stations.find((s) => s.stationId === stationId);
+                    // Mevcut istasyonun operasyonlarını koru
+                    const existingStation = prevStations.find((s) => s.stationId === stationId);
 
-                newStations.push({
-                    id: `station-${index}`,
-                    stationId: stationId,
-                    stationName: stationData ? stationData.name : "",
-                    operations: existingStation ? existingStation.operations : [],
+                    newStations.push({
+                        id: `station-${index}`,
+                        stationId: stationId,
+                        stationName: stationData ? stationData.name : "",
+                        operations: existingStation ? existingStation.operations : [],
+                    });
                 });
+                return newStations;
             });
-            setStations(newStations);
         } else {
             setStations([]);
         }
@@ -214,8 +216,8 @@ export default function ManufacturePage() {
         setDraggedOperation(null);
     };
 
-    // Reçeteyi kaydet
-    const handleSaveRecipe = () => {
+    // Şablon'i kaydet
+    const handleSaveTemplate = () => {
         if (!selectedVehicle) {
             toast.error("Lütfen bir araç seçin");
             return;
@@ -238,12 +240,12 @@ export default function ManufacturePage() {
 
         const selectedVehicleData = vehicles.find((v) => v.id === selectedVehicle);
 
-        const productionPlanData = {
-            name: `Üretim Planı - ${
+        const productionTemplateData = {
+            name: `Üretim Şablonu - ${
                 selectedVehicleData?.brand_model || selectedVehicleData?.name || "Bilinmeyen Araç"
             }`,
             vehicleId: selectedVehicle,
-            description: `${stations.length} istasyonlu üretim planı`,
+            description: `${stations.length} istasyonlu üretim şablonu`,
             stations: stations.map((station) => ({
                 stationId: station.stationId,
                 operations: station.operations.map((operation, index) => ({
@@ -253,20 +255,20 @@ export default function ManufacturePage() {
             })),
         };
 
-        createProductionPlan.mutate(productionPlanData, {
+        createProductionTemplate.mutate(productionTemplateData, {
             onSuccess: () => {
-                toast.success("Üretim planı başarıyla oluşturuldu!", {
+                toast.success("Üretim şablonu başarıyla oluşturuldu!", {
                     description: `${selectedVehicleData?.brand_model || selectedVehicleData?.name} için ${
                         stations.length
-                    } istasyonlu plan kaydedildi.`,
+                    } istasyonlu şablon kaydedildi.`,
                 });
 
-                // Üretim planları listesi ekranına yönlendir
-                router.push("/production-plans");
+                // Üretim şablonları listesi ekranına yönlendir
+                router.push("/production-templates");
             },
             onError: (error) => {
-                console.error("Üretim planı oluşturma hatası:", error);
-                toast.error("Üretim planı oluşturulurken bir hata oluştu");
+                console.error("Üretim şablonu oluşturma hatası:", error);
+                toast.error("Üretim şablonu oluşturulurken bir hata oluştu");
             },
         });
     };
@@ -294,7 +296,7 @@ export default function ManufacturePage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Üretim Planı</BreadcrumbPage>
+                                <BreadcrumbPage>Üretim Şablonu</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -304,7 +306,7 @@ export default function ManufacturePage() {
             <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-6">
                 {/* Başlık */}
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl sm:text-3xl font-bold">Üretim Planı Hazırlama</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold">Üretim Şablonu Hazırlama</h1>
                 </div>
 
                 {isLoading ? (
@@ -465,10 +467,10 @@ export default function ManufacturePage() {
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-xl font-semibold">İstasyonlar ve Operasyonlar</h2>
                                     <Button
-                                        onClick={handleSaveRecipe}
+                                        onClick={handleSaveTemplate}
                                         className="bg-green-600 hover:bg-green-700"
                                         disabled={
-                                            createProductionPlan.isPending ||
+                                            createProductionTemplate.isPending ||
                                             stations.some((station) => station.stationId === 0) ||
                                             stations.some((station) => station.operations.length === 0) ||
                                             stations.some((station) =>
@@ -477,7 +479,9 @@ export default function ManufacturePage() {
                                         }
                                     >
                                         <Save className="h-4 w-4 mr-2" />
-                                        {createProductionPlan.isPending ? "Kaydediliyor..." : "Üretim Planını Kaydet"}
+                                        {createProductionTemplate.isPending
+                                            ? "Kaydediliyor..."
+                                            : "Üretim şablonunu kaydet"}
                                     </Button>
                                 </div>
 
