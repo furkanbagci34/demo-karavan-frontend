@@ -123,7 +123,7 @@ const adminMenus: MenuGroup[] = [
                 items: [
                     {
                         title: "Üretim Planı",
-                        url: "/production-plan",
+                        url: "/production-execution",
                     },
                     {
                         title: "Üretim Ekranı",
@@ -236,7 +236,7 @@ const userMenus: MenuGroup[] = [
                 items: [
                     {
                         title: "Üretim Planı",
-                        url: "/production-plan",
+                        url: "/production-execution",
                     },
                     {
                         title: "Üretim Ekranı",
