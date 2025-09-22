@@ -498,3 +498,89 @@ export interface UpdateProductionOperationData {
     elapsed_time?: number;
     end_time?: string;
 }
+
+// Production Execution tipleri
+export type ProductionExecutionStatus = "idle" | "running" | "paused" | "completed" | "cancelled";
+export type OperationExecutionStatus = "pending" | "in_progress" | "completed" | "paused" | "skipped";
+
+export interface ProductionExecution {
+    id: number;
+    production_plan_id: number;
+    offer_id?: number;
+    customer_id?: number;
+    vehicle_acceptance_id?: number;
+    status: ProductionExecutionStatus;
+    started_at?: string;
+    paused_at?: string;
+    completed_at?: string;
+    cancelled_at?: string;
+    total_duration: number;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+    created_by: number;
+    updated_by?: number;
+    // JOIN'den gelen veriler
+    plan_name?: string;
+    vehicle_name?: string;
+    vehicle_brand_model?: string;
+    customer_name?: string;
+    offer_number?: string;
+    plate_number?: string;
+    created_by_name?: string;
+    total_operations?: number;
+    completed_operations?: number;
+    in_progress_operations?: number;
+    operations?: ProductionExecutionOperation[];
+}
+
+export interface ProductionExecutionOperation {
+    id: number;
+    production_execution_id: number;
+    station_id: number;
+    operation_id: number;
+    sort_order: number;
+    status: OperationExecutionStatus;
+    assigned_user_id?: number;
+    start_time?: string;
+    end_time?: string;
+    pause_time?: string;
+    resume_time?: string;
+    duration: number;
+    target_duration?: number;
+    quality_control: boolean;
+    quality_check_passed?: boolean;
+    quality_notes?: string;
+    operation_notes?: string;
+    created_at: string;
+    updated_at: string;
+    // JOIN'den gelen veriler
+    station_name?: string;
+    operation_name?: string;
+    assigned_user_name?: string;
+}
+
+export interface CreateProductionExecutionData {
+    productionPlanId: number;
+    offerId?: number;
+    customerId?: number;
+    vehicleAcceptanceId?: number;
+    status?: ProductionExecutionStatus;
+    notes?: string;
+}
+
+export interface UpdateProductionExecutionData {
+    offerId?: number;
+    customerId?: number;
+    vehicleAcceptanceId?: number;
+    status?: ProductionExecutionStatus;
+    notes?: string;
+}
+
+export interface UpdateOperationExecutionData {
+    status?: OperationExecutionStatus;
+    assignedUserId?: number;
+    qualityCheckPassed?: boolean;
+    qualityNotes?: string;
+    operationNotes?: string;
+}

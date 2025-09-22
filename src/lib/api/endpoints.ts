@@ -93,6 +93,16 @@ export const API_ENDPOINTS = {
         delete: (id: string) => `/api/production-template/${id}`,
         getByVehicle: (vehicleId: string) => `/api/production-template/vehicle/${vehicleId}`,
     },
+    productionExecution: {
+        create: "/api/production-execution",
+        getAll: "/api/production-execution",
+        getActive: "/api/production-execution/active",
+        getById: (id: string) => `/api/production-execution/${id}`,
+        update: (id: string) => `/api/production-execution/${id}`,
+        delete: (id: string) => `/api/production-execution/${id}`,
+        updateOperation: (executionId: string, operationId: string) =>
+            `/api/production-execution/${executionId}/operation/${operationId}`,
+    },
     production: {
         getActiveOperations: "/api/production/active-operations",
         startOperation: (id: string) => `/api/production/operations/${id}/start`,

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car, Warehouse } from "lucide-react";
+import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car, Warehouse, Play } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -122,6 +122,10 @@ const adminMenus: MenuGroup[] = [
                 icon: Factory,
                 items: [
                     {
+                        title: "Üretim Planı",
+                        url: "/production-plan",
+                    },
+                    {
                         title: "Üretim Ekranı",
                         url: "/production",
                     },
@@ -230,6 +234,10 @@ const userMenus: MenuGroup[] = [
                 url: "/production",
                 icon: Factory,
                 items: [
+                    {
+                        title: "Üretim Planı",
+                        url: "/production-plan",
+                    },
                     {
                         title: "Üretim Ekranı",
                         url: "/production",

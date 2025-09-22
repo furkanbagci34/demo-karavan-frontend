@@ -98,7 +98,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
             setProductionPlan(productionTemplateQuery.data);
             setIsLoadingPlan(false);
         }
-    }, [productionTemplateQuery.data, productionPlan]);
+    }, [productionTemplateQuery.data]);
 
     // Üretim şablonu yüklendiğinde form'u ve istasyonları doldur
     useEffect(() => {
