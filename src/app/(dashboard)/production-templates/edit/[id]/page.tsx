@@ -34,34 +34,34 @@ import { Car, MapPin, Wrench, Trash2, X, GripVertical, Save, Edit, AlertTriangle
 import { Label } from "@/components/ui/label";
 
 // Form doğrulama şeması
-const productionPlanSchema = z.object({
+const productionTemplateSchema = z.object({
     name: z.string().min(2, "Plan adı en az 2 karakter olmalıdır").max(500, "Plan adı çok uzun"),
     vehicleId: z.number().min(1, "Lütfen bir araç seçin"),
     isActive: z.boolean(),
 });
 
-type ProductionPlanFormData = z.infer<typeof productionPlanSchema>;
+type ProductionTemplateFormData = z.infer<typeof productionTemplateSchema>;
 
-interface StationOperation {
+interface ProductionTemplateOperation {
     operationId: number;
     operationName: string;
     quality_control: boolean;
 }
 
-interface Station {
+interface ProductionTemplateStation {
     id: string;
     stationId: number;
     stationName: string;
-    operations: StationOperation[];
+    operations: ProductionTemplateOperation[];
 }
 
-interface EditProductionPlanPageProps {
+interface EditProductionTemplatePageProps {
     params: Promise<{
         id: string;
     }>;
 }
 
-export default function EditProductionPlanPage({ params }: EditProductionPlanPageProps) {
+export default function EditProductionTemplatePage({ params }: EditProductionTemplatePageProps) {
     const resolvedParams = use(params);
     const router = useRouter();
     const { update, useProductionTemplateById } = useProductionTemplates();
@@ -73,7 +73,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
     const [isLoadingPlan, setIsLoadingPlan] = useState(true);
     const [isFormInitialized, setIsFormInitialized] = useState(false);
     const [selectedStations, setSelectedStations] = useState<number[]>([]);
-    const [stations, setStations] = useState<Station[]>([]);
+    const [stations, setStations] = useState<ProductionTemplateStation[]>([]);
     const [draggedStation, setDraggedStation] = useState<string | null>(null);
     const [draggedOperation, setDraggedOperation] = useState<{ stationId: string; operationIndex: number } | null>(
         null
@@ -83,8 +83,8 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
     const productionTemplateQuery = useProductionTemplateById(parseInt(resolvedParams.id));
     const stationsData = stationsQuery.data || [];
 
-    const form = useForm<ProductionPlanFormData>({
-        resolver: zodResolver(productionPlanSchema),
+    const form = useForm<ProductionTemplateFormData>({
+        resolver: zodResolver(productionTemplateSchema),
         defaultValues: {
             name: "",
             vehicleId: 0,
@@ -116,7 +116,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
                 const stationIds = productionPlan.stations.map((station) => station.station_id);
                 setSelectedStations(stationIds);
 
-                const stationObjects: Station[] = productionPlan.stations.map((station, index) => ({
+                const stationObjects: ProductionTemplateStation[] = productionPlan.stations.map((station, index) => ({
                     id: `station-${index}`,
                     stationId: station.station_id,
                     stationName: station.station_name,
@@ -145,7 +145,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
     // İstasyonlar yüklendiğinde operasyonları koru
     useEffect(() => {
         if (isFormInitialized && productionPlan?.stations && stations.length === 0) {
-            const stationObjects: Station[] = productionPlan.stations.map((station, index) => ({
+            const stationObjects: ProductionTemplateStation[] = productionPlan.stations.map((station, index) => ({
                 id: `station-${index}`,
                 stationId: station.station_id,
                 stationName: station.station_name,
@@ -163,7 +163,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
     useEffect(() => {
         if (selectedStations.length > 0 && isFormInitialized) {
             setStations((prevStations) => {
-                const newStations: Station[] = [];
+                const newStations: ProductionTemplateStation[] = [];
                 selectedStations.forEach((stationId, index) => {
                     const stationData = stationsData.find((s) => s.id === stationId);
                     const existingStation = prevStations.find((s) => s.stationId === stationId);
@@ -310,7 +310,7 @@ export default function EditProductionPlanPage({ params }: EditProductionPlanPag
         }));
     };
 
-    const onSubmit = async (data: ProductionPlanFormData) => {
+    const onSubmit = async (data: ProductionTemplateFormData) => {
         if (stations.some((station) => station.stationId === 0)) {
             toast.error("Lütfen tüm istasyonları seçin");
             return;

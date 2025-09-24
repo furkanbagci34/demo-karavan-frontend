@@ -96,12 +96,9 @@ export const API_ENDPOINTS = {
     productionExecution: {
         create: "/api/production-execution",
         getAll: "/api/production-execution",
-        getActive: "/api/production-execution/active",
         getById: (id: string) => `/api/production-execution/${id}`,
         update: (id: string) => `/api/production-execution/${id}`,
         delete: (id: string) => `/api/production-execution/${id}`,
-        updateOperation: (executionId: string, operationId: string) =>
-            `/api/production-execution/${executionId}/operation/${operationId}`,
     },
     production: {
         getActiveOperations: "/api/production/active-operations",

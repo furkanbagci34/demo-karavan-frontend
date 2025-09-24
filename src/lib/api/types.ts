@@ -514,23 +514,29 @@ export interface ProductionExecution {
     paused_at?: string;
     completed_at?: string;
     cancelled_at?: string;
-    total_duration: number;
+    total_duration?: number;
     notes?: string;
     created_at: string;
     updated_at: string;
     created_by: number;
     updated_by?: number;
-    // JOIN'den gelen veriler
-    plan_name?: string;
+    // JOIN'den gelen veriler - listeleme için optimize edilmiş
+    production_plan_name?: string;
+    vehicle_id?: number;
     vehicle_name?: string;
     vehicle_brand_model?: string;
     customer_name?: string;
+    customer_email?: string;
     offer_number?: string;
+    offer_total_amount?: number;
     plate_number?: string;
+    acceptance_date?: string;
     created_by_name?: string;
     total_operations?: number;
     completed_operations?: number;
     in_progress_operations?: number;
+    pending_operations?: number;
+    progress_percentage?: number;
     operations?: ProductionExecutionOperation[];
 }
 
@@ -560,6 +566,15 @@ export interface ProductionExecutionOperation {
     assigned_user_name?: string;
 }
 
+export interface ProductionExecutionOperationData {
+    stationId: number;
+    operationId: number;
+    originalOperationId: number; // operations tablosundaki gerçek operation ID
+    sortOrder: number;
+    targetDuration?: number;
+    qualityControl?: boolean;
+}
+
 export interface CreateProductionExecutionData {
     productionPlanId: number;
     offerId?: number;
@@ -567,6 +582,7 @@ export interface CreateProductionExecutionData {
     vehicleAcceptanceId?: number;
     status?: ProductionExecutionStatus;
     notes?: string;
+    operations?: ProductionExecutionOperationData[];
 }
 
 export interface UpdateProductionExecutionData {
@@ -575,6 +591,7 @@ export interface UpdateProductionExecutionData {
     vehicleAcceptanceId?: number;
     status?: ProductionExecutionStatus;
     notes?: string;
+    operations?: ProductionExecutionOperationData[];
 }
 
 export interface UpdateOperationExecutionData {

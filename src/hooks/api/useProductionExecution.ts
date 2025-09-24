@@ -5,7 +5,6 @@ import {
     ProductionExecution,
     CreateProductionExecutionData,
     UpdateProductionExecutionData,
-    UpdateOperationExecutionData,
     ApiResponse,
 } from "@/lib/api/types";
 import { toast } from "sonner";
@@ -33,7 +32,6 @@ export const useProductionExecution = () => {
         onSuccess: () => {
             toast.success("Üretim planı başarıyla başlatıldı.");
             queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
-            queryClient.invalidateQueries({ queryKey: ["activeProductionExecutions"] });
         },
         onError: (error: unknown) => {
             const errorMessage =
@@ -47,71 +45,7 @@ export const useProductionExecution = () => {
         },
     });
 
-    // Üretim execution güncelle (durum değişiklikleri)
-    const update = useMutation({
-        mutationFn: async ({
-            id,
-            data,
-        }: {
-            id: number;
-            data: UpdateProductionExecutionData;
-        }): Promise<ApiResponse<{ success: boolean }>> => {
-            const response = await apiClient.put<ApiResponse<{ success: boolean }>>(
-                API_ENDPOINTS.productionExecution.update(id.toString()),
-                data as Record<string, unknown>
-            );
-            return response;
-        },
-        onSuccess: () => {
-            toast.success("Üretim planı başarıyla güncellendi.");
-            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
-            queryClient.invalidateQueries({ queryKey: ["activeProductionExecutions"] });
-        },
-        onError: (error: unknown) => {
-            let errorMessage = "Üretim planı güncellenirken bir hata oluştu.";
-            if (typeof error === "object" && error !== null && "response" in error) {
-                const errObj = error as { response?: { data?: { message?: string } } };
-                if (typeof errObj.response?.data?.message === "string") {
-                    errorMessage = errObj.response.data.message;
-                }
-            }
-            toast.error(errorMessage);
-        },
-    });
 
-    // Operasyon durumu güncelle
-    const updateOperation = useMutation({
-        mutationFn: async ({
-            executionId,
-            operationId,
-            data,
-        }: {
-            executionId: number;
-            operationId: number;
-            data: UpdateOperationExecutionData;
-        }): Promise<ApiResponse<{ success: boolean }>> => {
-            const response = await apiClient.put<ApiResponse<{ success: boolean }>>(
-                API_ENDPOINTS.productionExecution.updateOperation(executionId.toString(), operationId.toString()),
-                data as Record<string, unknown>
-            );
-            return response;
-        },
-        onSuccess: () => {
-            toast.success("Operasyon durumu güncellendi.");
-            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
-            queryClient.invalidateQueries({ queryKey: ["activeProductionExecutions"] });
-        },
-        onError: (error: unknown) => {
-            let errorMessage = "Operasyon güncellenirken bir hata oluştu.";
-            if (typeof error === "object" && error !== null && "response" in error) {
-                const errObj = error as { response?: { data?: { message?: string } } };
-                if (typeof errObj.response?.data?.message === "string") {
-                    errorMessage = errObj.response.data.message;
-                }
-            }
-            toast.error(errorMessage);
-        },
-    });
 
     // Üretim execution sil
     const remove = useMutation({
@@ -124,10 +58,49 @@ export const useProductionExecution = () => {
         onSuccess: () => {
             toast.success("Üretim planı başarıyla silindi.");
             queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
-            queryClient.invalidateQueries({ queryKey: ["activeProductionExecutions"] });
         },
         onError: (error: unknown) => {
             let errorMessage = "Üretim planı silinirken bir hata oluştu.";
+            if (typeof error === "object" && error !== null && "response" in error) {
+                const errObj = error as { response?: { data?: { message?: string } } };
+                if (typeof errObj.response?.data?.message === "string") {
+                    errorMessage = errObj.response.data.message;
+                }
+            }
+            toast.error(errorMessage);
+        },
+    });
+
+    // Tekil üretim execution getir hook'u
+    const useProductionExecutionById = (id: number) => {
+        return useQuery({
+            queryKey: ["productionExecution", id],
+            queryFn: async (): Promise<ProductionExecution> => {
+                const response = await apiClient.get<ProductionExecution>(
+                    API_ENDPOINTS.productionExecution.getById(id.toString())
+                );
+                return response;
+            },
+            enabled: !!id,
+        });
+    };
+
+    // Üretim execution güncelle
+    const update = useMutation({
+        mutationFn: async ({ id, data }: { id: number; data: UpdateProductionExecutionData }): Promise<ApiResponse<{ success: boolean }>> => {
+            const response = await apiClient.put<ApiResponse<{ success: boolean }>>(
+                API_ENDPOINTS.productionExecution.update(id.toString()),
+                data as Record<string, unknown>
+            );
+            return response;
+        },
+        onSuccess: () => {
+            toast.success("Üretim planı başarıyla güncellendi.");
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecution"] });
+        },
+        onError: (error: unknown) => {
+            let errorMessage = "Üretim planı güncellenirken bir hata oluştu.";
             if (typeof error === "object" && error !== null && "response" in error) {
                 const errObj = error as { response?: { data?: { message?: string } } };
                 if (typeof errObj.response?.data?.message === "string") {
@@ -147,37 +120,16 @@ export const useProductionExecution = () => {
         },
     });
 
-    // Aktif üretim execution'ları getir
-    const getActive = useQuery({
-        queryKey: ["activeProductionExecutions"],
-        queryFn: async (): Promise<ProductionExecution[]> => {
-            const response = await apiClient.get<ProductionExecution[]>(API_ENDPOINTS.productionExecution.getActive);
-            return response;
-        },
-        refetchInterval: 5000, // 5 saniyede bir güncelle
-    });
-
-    // ID ile üretim execution getir
-    const useProductionExecutionById = (id: number | null) => {
-        return useQuery({
-            queryKey: ["productionExecutions", id],
-            queryFn: async (): Promise<ProductionExecution> => {
-                const response = await apiClient.get<ProductionExecution>(
-                    API_ENDPOINTS.productionExecution.getById(id!.toString())
-                );
-                return response;
-            },
-            enabled: !!id,
-        });
-    };
 
     return {
         create,
+        useProductionExecutionById,
         update,
-        updateOperation,
         remove,
         getAll,
-        getActive,
-        useProductionExecutionById,
+        // Compatibility aliases
+        productionExecutions: getAll.data || [],
+        isLoading: getAll.isLoading,
+        error: getAll.error,
     };
 };
