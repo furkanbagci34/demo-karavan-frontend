@@ -26,9 +26,7 @@ import {
     Play,
     AlertCircle,
     Loader2,
-    Pause,
     Trash2,
-    Square,
     Pencil,
     GripVertical,
     X,
@@ -44,6 +42,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface VehicleInfo {
     vehicleId: number | null;
@@ -71,6 +70,8 @@ interface SelectedTemplate {
             quality_control: boolean;
             sort_order: number;
             operation_id: number;
+            station_id: number;
+            target_duration: number;
         }>;
     }>;
 }
@@ -80,6 +81,7 @@ interface EditableOperation {
     stationId: number;
     operationId: number;
     originalOperationId?: number; // operations tablosundaki gerçek operation ID
+    originalStationId?: number; // operations tablosundaki gerçek station ID
     operationName: string;
     stationName: string;
     sortOrder: number;
@@ -91,6 +93,7 @@ interface EditableOperation {
 export default function ProductionExecutionPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const queryClient = useQueryClient();
 
     const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo>({
         vehicleId: null,
@@ -109,7 +112,6 @@ export default function ProductionExecutionPage() {
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
     const [productionStatus, setProductionStatus] = useState<"idle" | "running" | "paused">("idle");
-    const [currentExecutionId, setCurrentExecutionId] = useState<number | null>(null);
 
     // Operasyon düzenleme state'leri
     const [editableOperations, setEditableOperations] = useState<EditableOperation[]>([]);
@@ -153,7 +155,7 @@ export default function ProductionExecutionPage() {
     // Template verisi değiştiğinde selectedTemplate'i güncelle
     useEffect(() => {
         if (templateData) {
-            setSelectedTemplate(templateData as SelectedTemplate);
+            setSelectedTemplate(templateData as unknown as SelectedTemplate);
         } else if (selectedTemplateId === null) {
             setSelectedTemplate(null);
         }
@@ -170,14 +172,18 @@ export default function ProductionExecutionPage() {
                         stationId: station.id,
                         operationId: operation.id, // Bu template operation ID'si
                         originalOperationId: operation.operation_id, // Bu gerçek operations tablosundaki ID
+                        originalStationId: operation.station_id, // Bu gerçek stations tablosundaki ID
                         operationName: operation.operation_name,
                         stationName: station.station_name,
                         sortOrder: operation.sort_order,
                         qualityControl: operation.quality_control,
                         isNew: false,
+                        targetDuration: operation.target_duration,
                     });
                 });
             });
+            console.log(selectedTemplate.stations);
+
             // Sort order'a göre sırala
             operations.sort((a, b) => a.sortOrder - b.sortOrder);
             setEditableOperations(operations);
@@ -304,6 +310,7 @@ export default function ProductionExecutionPage() {
                 stationId: op.stationId,
                 operationId: op.operationId, // Template operation ID
                 originalOperationId: op.originalOperationId || op.operationId, // operations tablosundaki gerçek ID
+                originalStationId: op.originalStationId || op.stationId, // stations tablosundaki gerçek ID
                 sortOrder: index + 1, // Yeni sıra numarası
                 targetDuration: op.targetDuration,
                 qualityControl: op.qualityControl,
@@ -321,6 +328,7 @@ export default function ProductionExecutionPage() {
             };
 
             await createProductionExecution.mutateAsync(productionExecutionData);
+            queryClient.invalidateQueries({ queryKey: ["production"] });
 
             setTimeout(() => {
                 router.push("/production-execution");
@@ -328,33 +336,6 @@ export default function ProductionExecutionPage() {
         } catch (error) {
             console.error("Üretim başlatma hatası:", error);
             toast.error("Üretim başlatma hatası");
-        }
-    };
-
-    // Üretimi durdur
-    const handlePauseProduction = async () => {
-        if (!currentExecutionId) return;
-
-        try {
-            // TODO: Update işlemi kaldırıldı, gerekirse tekrar eklenebilir
-            setProductionStatus("paused");
-            toast.info("Üretim duraklatıldı");
-        } catch (error) {
-            console.error("Üretim duraklatma hatası:", error);
-        }
-    };
-
-    // Üretimi durdur (tamamen)
-    const handleStopProduction = async () => {
-        if (!currentExecutionId) return;
-
-        try {
-            // TODO: Update işlemi kaldırıldı, gerekirse tekrar eklenebilir
-            setProductionStatus("idle");
-            setCurrentExecutionId(null);
-            toast.info("Üretim durduruldu");
-        } catch (error) {
-            console.error("Üretim durdurma hatası:", error);
         }
     };
 
@@ -374,8 +355,6 @@ export default function ProductionExecutionPage() {
         setDescription("");
         setSelectedTemplateId(null);
         setProductionStatus("idle");
-        setCurrentExecutionId(null);
-        // Combobox'ları kapat
         setOpenOfferCombobox(false);
         setOpenCustomerCombobox(false);
         setOpenPlateCombobox(false);
@@ -515,35 +494,7 @@ export default function ProductionExecutionPage() {
                                 )}
                             </Button>
                         ) : (
-                            <>
-                                {productionStatus === "running" ? (
-                                    <Button
-                                        onClick={handlePauseProduction}
-                                        variant="outline"
-                                        className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-                                    >
-                                        <Pause className="h-4 w-4 mr-2" />
-                                        Duraklat
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        onClick={handleStartProduction}
-                                        className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-                                    >
-                                        <Play className="h-4 w-4 mr-2" />
-                                        Devam Et
-                                    </Button>
-                                )}
-
-                                <Button
-                                    onClick={handleStopProduction}
-                                    variant="outline"
-                                    className="border-red-300 text-red-700 hover:bg-red-50"
-                                >
-                                    <Square className="h-4 w-4 mr-2" />
-                                    Durdur
-                                </Button>
-                            </>
+                            <></>
                         )}
 
                         <Button
@@ -1131,7 +1082,7 @@ export default function ProductionExecutionPage() {
                                                                                                             variant="outline"
                                                                                                             className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
                                                                                                         >
-                                                                                                            QC
+                                                                                                            KK
                                                                                                         </Badge>
                                                                                                     )}
                                                                                                     {operation.isNew && (

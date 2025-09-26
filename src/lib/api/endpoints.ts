@@ -102,9 +102,12 @@ export const API_ENDPOINTS = {
     },
     production: {
         getActiveOperations: "/api/production/active-operations",
+        getUserStations: "/api/production/user-stations",
         startOperation: (id: string) => `/api/production/operations/${id}/start`,
         pauseOperation: (id: string) => `/api/production/operations/${id}/pause`,
+        resumeOperation: (id: string) => `/api/production/operations/${id}/resume`,
         completeOperation: (id: string) => `/api/production/operations/${id}/complete`,
+        getOperationPauses: (id: string) => `/api/production/operations/${id}/pauses`,
         updateProgress: (id: string) => `/api/production/operations/${id}/progress`,
         getOperationsByUser: (userId?: string) => `/api/production/operations/user${userId ? `/${userId}` : ""}`,
     },
@@ -120,5 +123,9 @@ export const API_ENDPOINTS = {
         create: "/api/payment",
         getByCustomerId: (customerId: string) => `/api/payment?customerId=${customerId}`,
         delete: (paymentId: string) => `/api/payment/${paymentId}`,
+    },
+    workers: {
+        getWorkers: "/api/workers",
+        getAvailableWorkers: "/api/workers/available",
     },
 } as const;

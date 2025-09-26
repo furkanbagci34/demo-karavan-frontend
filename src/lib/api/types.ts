@@ -480,14 +480,15 @@ export interface ProductionOperation {
     plan_name: string;
     vehicle_name: string;
     station_name: string;
+    offer_number?: string;
     status: ProductionStatus;
     progress: number;
     elapsed_time: number; // dakika cinsinden
     target_time: number; // dakika cinsinden
+    target_duration_formatted?: string; // okunabilir format (örn: "1 saat 20 dk")
     start_time?: string;
     end_time?: string;
-    assigned_user_id?: number;
-    assigned_user_name?: string;
+    assigned_worker_ids?: number[]; // Atanmış usta ID'leri
     created_at: string;
     updated_at: string;
 }
@@ -497,6 +498,21 @@ export interface UpdateProductionOperationData {
     progress?: number;
     elapsed_time?: number;
     end_time?: string;
+}
+
+// Operation Pause tipleri
+export interface OperationPause {
+    id: number;
+    operation_id: number;
+    paused_by: number;
+    paused_by_name?: string;
+    paused_by_surname?: string;
+    pause_reason?: string;
+    pause_time: string;
+    resume_time?: string;
+    duration_minutes?: number;
+    created_at: string;
+    updated_at: string;
 }
 
 // Production Execution tipleri
@@ -545,9 +561,10 @@ export interface ProductionExecutionOperation {
     production_execution_id: number;
     station_id: number;
     operation_id: number;
+    original_operation_id?: number;
+    original_station_id?: number;
     sort_order: number;
     status: OperationExecutionStatus;
-    assigned_user_id?: number;
     start_time?: string;
     end_time?: string;
     pause_time?: string;
@@ -560,16 +577,17 @@ export interface ProductionExecutionOperation {
     operation_notes?: string;
     created_at: string;
     updated_at: string;
-    // JOIN'den gelen veriler
     station_name?: string;
     operation_name?: string;
-    assigned_user_name?: string;
+    original_station_name?: string;
+    original_operation_name?: string;
 }
 
 export interface ProductionExecutionOperationData {
     stationId: number;
     operationId: number;
     originalOperationId: number; // operations tablosundaki gerçek operation ID
+    originalStationId: number; // operations tablosundaki gerçek station ID
     sortOrder: number;
     targetDuration?: number;
     qualityControl?: boolean;
@@ -596,7 +614,6 @@ export interface UpdateProductionExecutionData {
 
 export interface UpdateOperationExecutionData {
     status?: OperationExecutionStatus;
-    assignedUserId?: number;
     qualityCheckPassed?: boolean;
     qualityNotes?: string;
     operationNotes?: string;

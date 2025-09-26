@@ -43,8 +43,8 @@ const getStatusConfig = (status: ProductionStatus) => {
             };
         case "in_progress":
             return {
-                badgeColor: "bg-orange-100 text-orange-800",
-                rowColor: "border-l-4 border-l-orange-500 bg-orange-50",
+                badgeColor: "bg-blue-100 text-blue-800",
+                rowColor: "border-l-4 border-l-blue-500 bg-blue-50",
                 icon: Settings,
                 text: "Devam Ediyor",
             };
@@ -94,6 +94,7 @@ const ProductionOperationCard: React.FC<{
     onComplete: (id: number) => void;
     isLoading?: boolean;
     isPausing?: boolean;
+    isResuming?: boolean;
     isCompleting?: boolean;
 }> = ({ operation, onStart, onPause, onComplete, isLoading = false, isPausing = false, isCompleting = false }) => {
     const statusConfig = getStatusConfig(operation.status);
@@ -110,7 +111,10 @@ const ProductionOperationCard: React.FC<{
                     <StatusIcon className="h-4 w-4 text-gray-600 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-sm text-gray-900 truncate">{operation.name}</h3>
+                            <h3 className="font-semibold text-sm text-gray-900 truncate">
+                                {operation.name}
+                                {operation.offer_number && ` - ${operation.offer_number}`}
+                            </h3>
                             {/* Durum kutucuğu */}
                             <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.badgeColor}`}>
                                 {statusConfig.text}
@@ -137,7 +141,9 @@ const ProductionOperationCard: React.FC<{
                         <Timer className="h-4 w-4 text-gray-500" />
                         <div className="text-xs text-gray-500">Hedef Süre</div>
                     </div>
-                    <div className="font-semibold text-sm">{formatTime(operation.target_time)}</div>
+                    <div className="font-semibold text-sm">
+                        {operation.target_duration_formatted || formatTime(operation.target_time)}
+                    </div>
                 </div>
 
                 {/* İlerleme - Kutucuk içinde */}
@@ -146,28 +152,39 @@ const ProductionOperationCard: React.FC<{
                     <div className="font-semibold text-sm">{operation.progress}%</div>
                 </div>
 
-                {/* Action Buttons - Fotoğraftaki gibi her satırda 3 buton */}
+                {/* Action Buttons - Eşit genişlikte 3 buton */}
                 <div className="flex gap-2">
-                    {/* Başlat Butonu */}
+                    {/* Başlat/Devam Et Butonu */}
                     <Button
                         size="lg"
                         onClick={() => onStart(operation.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-base font-medium h-12"
-                        disabled={isLoading || operation.status === "completed" || operation.status === "in_progress"}
+                        className={`w-32 px-6 py-4 text-base font-medium h-12 ${
+                            operation.start_time
+                                ? operation.status === "in_progress"
+                                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                        }`}
+                        disabled={
+                            isLoading ||
+                            operation.status === "completed" ||
+                            operation.status === "in_progress" ||
+                            (operation.start_time ? operation.status !== "paused" : false)
+                        }
                     >
-                        {isLoading && (operation.status === "pending" || operation.status === "paused") ? (
+                        {isLoading && (operation.status === "pending" || operation.start_time) ? (
                             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                         ) : (
                             <Play className="h-5 w-5 mr-2" />
                         )}
-                        Başlat
+                        {operation.start_time ? "Devam Et" : "Başlat"}
                     </Button>
 
                     {/* Durdur Butonu */}
                     <Button
                         size="lg"
                         onClick={() => onPause(operation.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 text-base font-medium h-12"
+                        className="w-32 bg-red-600 hover:bg-red-700 text-white px-6 py-4 text-base font-medium h-12"
                         disabled={isLoading || operation.status !== "in_progress"}
                     >
                         {isLoading && operation.status === "in_progress" && isPausing ? (
@@ -182,7 +199,7 @@ const ProductionOperationCard: React.FC<{
                     <Button
                         size="lg"
                         onClick={() => onComplete(operation.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-base font-medium h-12"
+                        className="w-32 bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-base font-medium h-12"
                         disabled={isLoading || operation.status === "completed" || operation.status === "pending"}
                     >
                         {isLoading &&
@@ -203,12 +220,16 @@ const ProductionOperationCard: React.FC<{
 export default function ProductionPage() {
     const {
         operations,
+        userStations,
         isLoading,
+        isLoadingStations,
         startOperation,
         pauseOperation,
+        resumeOperation,
         completeOperation,
         isStarting,
         isPausing,
+        isResuming,
         isCompleting,
     } = useProduction();
 
@@ -217,12 +238,22 @@ export default function ProductionPage() {
     const [showPauseModal, setShowPauseModal] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<ProductionOperation | null>(null);
 
-    // Operation durumunu güncelle
-    const handleStart = (id: number) => {
+    // Operation durumunu güncelle - start_time varsa resume, yoksa start
+    const handleStart = async (id: number) => {
         const operation = operations.find((op) => op.id === id);
-        if (operation) {
-            setSelectedOperation(operation);
-            setShowStartModal(true);
+        if (!operation) return;
+
+        try {
+            if (operation.start_time) {
+                // Eğer operasyon daha önce başlamışsa, devam ettir
+                await resumeOperation(id);
+            } else if (operation.status === "pending") {
+                // Eğer operasyon hiç başlamamışsa, başlat modalını aç
+                setSelectedOperation(operation);
+                setShowStartModal(true);
+            }
+        } catch (error) {
+            console.error("Operasyon işlemi hatası:", error);
         }
     };
 
@@ -247,7 +278,7 @@ export default function ProductionPage() {
         if (!selectedOperation) return;
 
         try {
-            await startOperation(selectedOperation.id);
+            await startOperation(selectedOperation.id, workerIds);
             toast.success("Operasyon başlatıldı", {
                 description: `${selectedOperation.name} operasyonu ${workerNames.join(", ")} tarafından başlatıldı.`,
             });
@@ -260,7 +291,7 @@ export default function ProductionPage() {
         if (!selectedOperation) return;
 
         try {
-            await pauseOperation(selectedOperation.id);
+            await pauseOperation(selectedOperation.id, reason);
             toast.success("Operasyon durduruldu", {
                 description: `${selectedOperation.name} operasyonu durduruldu. Neden: ${reason}`,
             });
@@ -282,7 +313,7 @@ export default function ProductionPage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Üretim Ekranı</BreadcrumbPage>
+                                <BreadcrumbPage>Üretim</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -293,10 +324,35 @@ export default function ProductionPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                         <Factory className="h-6 w-6" />
-                        Üretim Ekranı
+                        Üretim
                     </h1>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>İstasyon: Montaj İstasyonu</span>
+                    <div className="flex items-center gap-2">
+                        {isLoadingStations ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>İstasyonlar yükleniyor...</span>
+                            </div>
+                        ) : userStations.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                                <span className="text-sm font-medium text-gray-700">Listelenen:</span>
+                                <div className="flex flex-wrap gap-1">
+                                    {userStations.map((station) => (
+                                        <span
+                                            key={station.id}
+                                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                                        >
+                                            {station.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-sm text-red-600">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span>Yetkili istasyon bulunamadı</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -329,8 +385,9 @@ export default function ProductionPage() {
                                 onStart={handleStart}
                                 onPause={handlePause}
                                 onComplete={handleComplete}
-                                isLoading={isStarting || isPausing || isCompleting}
+                                isLoading={isStarting || isPausing || isResuming || isCompleting}
                                 isPausing={isPausing}
+                                isResuming={isResuming}
                                 isCompleting={isCompleting}
                             />
                         ))}

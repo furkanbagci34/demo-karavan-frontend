@@ -122,12 +122,12 @@ const adminMenus: MenuGroup[] = [
                 icon: Factory,
                 items: [
                     {
-                        title: "Üretim Planı",
-                        url: "/production-execution",
+                        title: "Üretim",
+                        url: "/production",
                     },
                     {
-                        title: "Üretim Ekranı",
-                        url: "/production",
+                        title: "Üretim Planı",
+                        url: "/production-execution",
                     },
                     {
                         title: "Üretim Şablonu",
@@ -235,12 +235,12 @@ const userMenus: MenuGroup[] = [
                 icon: Factory,
                 items: [
                     {
-                        title: "Üretim Planı",
-                        url: "/production-execution",
+                        title: "Üretim",
+                        url: "/production",
                     },
                     {
-                        title: "Üretim Ekranı",
-                        url: "/production",
+                        title: "Üretim Planı",
+                        url: "/production-execution",
                     },
                     {
                         title: "Üretim Şablonu",

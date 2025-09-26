@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useStations } from "@/hooks/api/useStations";
 import { useUsers } from "@/hooks/api/useUsers";
 import { Station, User } from "@/lib/api/types";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -50,6 +51,7 @@ interface EditStationPageProps {
 export default function EditStationPage({ params }: EditStationPageProps) {
     const resolvedParams = use(params);
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { update, isLoading } = useStations();
     const { users, isLoading: isLoadingUsers } = useUsers({ limit: 100 });
     const [station, setStation] = useState<Station | null>(null);
@@ -157,6 +159,9 @@ export default function EditStationPage({ params }: EditStationPageProps) {
             };
 
             await update.mutateAsync({ id: parseInt(resolvedParams.id), data: stationData });
+
+            // Production cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["production"] });
 
             toast.success("İstasyon başarıyla güncellendi!", {
                 description: `${data.name} istasyonu güncellendi.`,

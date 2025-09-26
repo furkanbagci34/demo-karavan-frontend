@@ -62,15 +62,30 @@ const getStatusColor = (status: ProductionExecutionStatus) => {
         case "idle":
             return "bg-gray-100 text-gray-800";
         case "running":
-            return "bg-green-100 text-green-800";
-        case "paused":
-            return "bg-yellow-100 text-yellow-800";
-        case "completed":
             return "bg-blue-100 text-blue-800";
+        case "paused":
+            return "bg-red-100 text-red-800";
+        case "completed":
+            return "bg-green-100 text-green-800";
         case "cancelled":
             return "bg-red-100 text-red-800";
         default:
             return "bg-gray-100 text-gray-800";
+    }
+};
+
+const getProgressColor = (status: ProductionExecutionStatus) => {
+    switch (status) {
+        case "completed":
+            return "bg-green-500"; // Tamamlandıysa yeşil
+        case "running":
+            return "bg-blue-500"; // Çalışıyorsa mavi
+        case "paused":
+            return "bg-red-500"; // Duraklatılmışsa kırmızı
+        case "cancelled":
+            return "bg-red-500"; // İptal edilmişse kırmızı
+        default:
+            return "bg-gray-500"; // Diğer durumlar için gri
     }
 };
 
@@ -237,7 +252,15 @@ export default function ProductionExecutionListPage() {
                                         paginatedExecutions.map((execution) => (
                                             <TableRow
                                                 key={execution.id}
-                                                className="cursor-pointer text-center hover:bg-gray-50"
+                                                className={`cursor-pointer text-center hover:bg-gray-50 ${
+                                                    execution.status === "completed"
+                                                        ? "bg-green-50 border-l-4 border-l-green-500"
+                                                        : execution.status === "running"
+                                                        ? "bg-blue-50 border-l-4 border-l-blue-500"
+                                                        : execution.status === "paused"
+                                                        ? "bg-red-50 border-l-4 border-l-red-500"
+                                                        : ""
+                                                }`}
                                                 onClick={() => handleRowClick(execution.id)}
                                             >
                                                 <TableCell className="font-medium">
@@ -272,7 +295,9 @@ export default function ProductionExecutionListPage() {
                                                     <div className="space-y-1">
                                                         <Progress
                                                             value={execution.progress_percentage || 0}
-                                                            className="h-2"
+                                                            className={`h-2 [&>div]:${getProgressColor(
+                                                                execution.status
+                                                            )}`}
                                                         />
                                                         <div className="flex justify-between text-xs text-muted-foreground">
                                                             <span>
@@ -370,7 +395,15 @@ export default function ProductionExecutionListPage() {
                                     {paginatedExecutions.map((execution) => (
                                         <Card
                                             key={execution.id}
-                                            className="cursor-pointer hover:bg-gray-50"
+                                            className={`cursor-pointer hover:bg-gray-50 ${
+                                                execution.status === "completed"
+                                                    ? "bg-green-50 border-l-4 border-l-green-500"
+                                                    : execution.status === "running"
+                                                    ? "bg-blue-50 border-l-4 border-l-blue-500"
+                                                    : execution.status === "paused"
+                                                    ? "bg-red-50 border-l-4 border-l-red-500"
+                                                    : ""
+                                            }`}
                                             onClick={() => handleRowClick(execution.id)}
                                         >
                                             <div className="p-4 space-y-3">
@@ -418,7 +451,7 @@ export default function ProductionExecutionListPage() {
 
                                                     <Progress
                                                         value={execution.progress_percentage || 0}
-                                                        className="h-2"
+                                                        className={`h-2 [&>div]:${getProgressColor(execution.status)}`}
                                                     />
 
                                                     {/* Açıklama Alanı */}

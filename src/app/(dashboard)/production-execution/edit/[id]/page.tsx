@@ -39,6 +39,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface VehicleInfo {
     vehicleId: number | null;
@@ -65,6 +66,8 @@ interface SelectedTemplate {
             operation_name: string;
             quality_control: boolean;
             sort_order: number;
+            operation_id: number;
+            station_id: number;
         }>;
     }>;
 }
@@ -74,6 +77,7 @@ interface EditableOperation {
     stationId: number;
     operationId: number;
     originalOperationId?: number; // operations tablosundaki gerçek operation ID
+    originalStationId?: number; // operations tablosundaki gerçek station ID
     operationName: string;
     stationName: string;
     sortOrder: number;
@@ -85,6 +89,7 @@ interface EditableOperation {
 export default function ProductionExecutionEditPage() {
     const router = useRouter();
     const params = useParams();
+    const queryClient = useQueryClient();
     const executionId = params.id as string;
 
     const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo>({
@@ -166,8 +171,9 @@ export default function ProductionExecutionEditPage() {
                 const operations = executionData.operations.map((op: any) => ({
                     id: `existing-${op.id}`,
                     stationId: op.station_id,
-                    operationId: op.original_operation_id || op.operation_id, // Gerçek operation ID'yi kullan
-                    originalOperationId: op.original_operation_id || op.operation_id, // originalOperationId alanını da ekle
+                    operationId: op.operation_id, // Gerçek operation ID'yi kullan
+                    originalOperationId: op.original_operation_id, // originalOperationId alanını da ekle
+                    originalStationId: op.original_station_id, // originalStationId alanını da ekle
                     operationName: op.original_operation_name || op.operation_name, // Gerçek operation name'ini kullan
                     stationName: op.station_name,
                     sortOrder: op.sort_order,
@@ -186,7 +192,7 @@ export default function ProductionExecutionEditPage() {
     // Template verisi değiştiğinde selectedTemplate'i güncelle
     useEffect(() => {
         if (templateData) {
-            setSelectedTemplate(templateData as SelectedTemplate);
+            setSelectedTemplate(templateData as unknown as SelectedTemplate);
         } else if (selectedTemplateId === null) {
             setSelectedTemplate(null);
         }
@@ -205,6 +211,7 @@ export default function ProductionExecutionEditPage() {
                 stationId: op.stationId,
                 operationId: op.operationId, // Template operation ID
                 originalOperationId: op.originalOperationId || op.operationId, // operations tablosundaki gerçek ID
+                originalStationId: op.originalStationId || op.stationId, // stations tablosundaki gerçek ID
                 sortOrder: index + 1, // Yeni sıra numarası
                 targetDuration: op.targetDuration,
                 qualityControl: op.qualityControl,
@@ -220,6 +227,7 @@ export default function ProductionExecutionEditPage() {
             };
 
             await update.mutateAsync({ id: parseInt(executionId), data: updateData });
+            queryClient.invalidateQueries({ queryKey: ["production"] });
 
             // 1.5 saniye sonra yönlendir
             setTimeout(() => {
@@ -922,7 +930,7 @@ export default function ProductionExecutionEditPage() {
                                                                                                             variant="outline"
                                                                                                             className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
                                                                                                         >
-                                                                                                            QC
+                                                                                                            KK
                                                                                                         </Badge>
                                                                                                     )}
                                                                                                     {operation.isNew && (

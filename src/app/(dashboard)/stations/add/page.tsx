@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useStations } from "@/hooks/api/useStations";
 import { useUsers } from "@/hooks/api/useUsers";
 import { User } from "@/lib/api/types";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -39,6 +40,7 @@ type StationFormData = z.infer<typeof stationSchema>;
 
 export default function AddStationPage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const { create, isLoading } = useStations();
     const { users, isLoading: isLoadingUsers } = useUsers({ limit: 100 });
     const [open, setOpen] = useState(false);
@@ -86,6 +88,9 @@ export default function AddStationPage() {
             };
 
             await create.mutateAsync(stationData);
+
+            // Production cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["production"] });
 
             toast.success("İstasyon başarıyla eklendi!", {
                 description: `${data.name} istasyonu sisteme kaydedildi.`,

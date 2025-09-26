@@ -78,7 +78,7 @@ export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({ isOpen
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-5xl w-[85vw] max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogContent className="mmax-w-[95vw] sm:max-w-6xl lg:max-w-7xl max-h-[95vh] overflow-y-auto">
                 <DialogHeader className="flex-shrink-0">
                     <DialogTitle className="flex items-center gap-2">
                         <Factory className="h-5 w-5" />

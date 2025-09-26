@@ -45,8 +45,6 @@ export const useProductionExecution = () => {
         },
     });
 
-
-
     // Üretim execution sil
     const remove = useMutation({
         mutationFn: async (id: number): Promise<ApiResponse<{ success: boolean }>> => {
@@ -87,7 +85,13 @@ export const useProductionExecution = () => {
 
     // Üretim execution güncelle
     const update = useMutation({
-        mutationFn: async ({ id, data }: { id: number; data: UpdateProductionExecutionData }): Promise<ApiResponse<{ success: boolean }>> => {
+        mutationFn: async ({
+            id,
+            data,
+        }: {
+            id: number;
+            data: UpdateProductionExecutionData;
+        }): Promise<ApiResponse<{ success: boolean }>> => {
             const response = await apiClient.put<ApiResponse<{ success: boolean }>>(
                 API_ENDPOINTS.productionExecution.update(id.toString()),
                 data as Record<string, unknown>
@@ -119,7 +123,6 @@ export const useProductionExecution = () => {
             return response;
         },
     });
-
 
     return {
         create,

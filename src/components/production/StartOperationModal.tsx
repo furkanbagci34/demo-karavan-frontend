@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Play, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
+import { useWorkers } from "@/hooks/api/useWorkers";
 
 interface StartOperationModalProps {
     isOpen: boolean;
@@ -14,96 +15,23 @@ interface StartOperationModalProps {
     operationId: number;
 }
 
-// Mock worker data - gerçek API'den gelecek
-interface Worker {
-    id: number;
-    name: string;
-    surname: string;
-    email: string;
-    phone?: string;
-    specialization: string;
-    experience_years: number;
-    is_available: boolean;
-}
-
-const mockWorkers: Worker[] = [
-    {
-        id: 1,
-        name: "Test",
-        surname: "Test",
-        email: "test@gmail.com",
-        phone: "+90 555 123 45 67",
-        specialization: "Kesim Uzmanı",
-        experience_years: 5,
-        is_available: true,
-    },
-    {
-        id: 2,
-        name: "Haldun",
-        surname: "Küçük",
-        email: "haldun.kucuk@demontekaravan.com",
-        phone: "+90 555 987 65 43",
-        specialization: "Montaj Uzmanı",
-        experience_years: 8,
-        is_available: true,
-    },
-    {
-        id: 3,
-        name: "Gökhan",
-        surname: "Düzalan",
-        email: "gokhan.duzalan@demontekaravan.com",
-        phone: "+90 555 456 78 90",
-        specialization: "Elektrik Uzmanı",
-        experience_years: 6,
-        is_available: true,
-    },
-    {
-        id: 4,
-        name: "Erdem",
-        surname: "Akın",
-        email: "erdem.akin@demontekaravan.com",
-        phone: "+90 555 321 65 48",
-        specialization: "Temizlik Uzmanı",
-        experience_years: 3,
-        is_available: true,
-    },
-    {
-        id: 5,
-        name: "Mahir",
-        surname: "Gündüz",
-        email: "mhrgndz17@gmail.com",
-        phone: "+90 555 789 12 34",
-        specialization: "Genel Usta",
-        experience_years: 10,
-        is_available: false, // Müsait değil
-    },
-    {
-        id: 6,
-        name: "Furkan",
-        surname: "Bağcı",
-        email: "furkan.bagci95@gmail.com",
-        phone: "+90 555 654 32 10",
-        specialization: "Kaplama Uzmanı",
-        experience_years: 4,
-        is_available: true,
-    },
-];
-
 export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen, onClose, onStartOperation }) => {
     const [selectedWorkerIds, setSelectedWorkerIds] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [starting, setStarting] = useState(false);
 
+    // API'den worker verilerini çek
+    const { availableWorkers, isLoadingAvailable } = useWorkers();
+
     // Filtrelenmiş worker listesi
-    const filteredWorkers = mockWorkers.filter((worker) => {
-        if (!searchTerm.trim()) return worker.is_available;
+    const filteredWorkers = availableWorkers.filter((worker) => {
+        if (!searchTerm.trim()) return true;
 
         const searchLower = searchTerm.toLowerCase();
         return (
-            worker.is_available &&
-            (worker.name.toLowerCase().includes(searchLower) ||
-                worker.surname.toLowerCase().includes(searchLower) ||
-                worker.specialization.toLowerCase().includes(searchLower))
+            worker.name.toLowerCase().includes(searchLower) ||
+            worker.surname.toLowerCase().includes(searchLower) ||
+            worker.specialization.toLowerCase().includes(searchLower)
         );
     });
 
@@ -121,7 +49,7 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
             return;
         }
 
-        const selectedWorkers = mockWorkers.filter((w) => selectedWorkerIds.includes(w.id));
+        const selectedWorkers = availableWorkers.filter((w) => selectedWorkerIds.includes(w.id));
         const workerNames = selectedWorkers.map((w) => `${w.name} ${w.surname}`);
 
         try {
@@ -153,30 +81,43 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
                 </DialogHeader>
 
                 <div className="space-y-4">
+                    {/* Loading State */}
+                    {isLoadingAvailable && (
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            <span className="ml-2 text-sm text-muted-foreground">Ustalar yükleniyor...</span>
+                        </div>
+                    )}
+
                     {/* Workers Radio List - Fotoğraftaki gibi */}
-                    <div className="space-y-3">
-                        {filteredWorkers.map((worker) => (
-                            <div
-                                key={worker.id}
-                                className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
-                                onClick={() => handleWorkerToggle(worker.id)}
-                            >
-                                <input
-                                    type="checkbox"
-                                    id={`worker-${worker.id}`}
-                                    checked={selectedWorkerIds.includes(worker.id)}
-                                    onChange={() => handleWorkerToggle(worker.id)}
-                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
-                                />
-                                <div className="flex-1">
-                                    <div className="font-medium text-gray-900">
-                                        {worker.name} {worker.surname}
+                    {!isLoadingAvailable && (
+                        <div className="space-y-3">
+                            {filteredWorkers.map((worker) => (
+                                <div
+                                    key={worker.id}
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
+                                    onClick={() => handleWorkerToggle(worker.id)}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        id={`worker-${worker.id}`}
+                                        checked={selectedWorkerIds.includes(worker.id)}
+                                        onChange={() => handleWorkerToggle(worker.id)}
+                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="font-medium text-gray-900">
+                                            {worker.name} {worker.surname}
+                                        </div>
+                                        <div className="text-sm text-gray-500">{worker.email}</div>
+                                        <div className="text-xs text-gray-400">
+                                            {worker.specialization} • {worker.experience_years} yıl deneyim
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-gray-500">{worker.email}</div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Selected Workers Count */}
                     {selectedWorkerIds.length > 0 && (
@@ -184,7 +125,7 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
                             <div className="text-sm text-blue-800">
                                 <span className="font-medium">{selectedWorkerIds.length} usta seçildi:</span>
                                 <div className="mt-1 text-xs">
-                                    {mockWorkers
+                                    {availableWorkers
                                         .filter((w) => selectedWorkerIds.includes(w.id))
                                         .map((w) => `${w.name} ${w.surname}`)
                                         .join(", ")}
@@ -194,7 +135,7 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
                     )}
 
                     {/* No Workers State */}
-                    {filteredWorkers.length === 0 && (
+                    {!isLoadingAvailable && filteredWorkers.length === 0 && (
                         <div className="text-center py-6">
                             <User className="h-8 w-8 mx-auto text-gray-400 mb-2" />
                             <p className="text-sm text-gray-600">Müsait usta bulunmamaktadır.</p>
