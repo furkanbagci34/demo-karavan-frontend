@@ -218,7 +218,6 @@ export default function ProductionExecutionPage() {
         const vehicleAcceptanceId = searchParams.get("vehicleAcceptanceId");
         const vehicleId = searchParams.get("vehicleId");
         const urlDescription = searchParams.get("description");
-        const customerId = searchParams.get("customerId");
 
         if (urlDescription) {
             setDescription(urlDescription);
