@@ -515,7 +515,7 @@ export interface ProductionExecution {
     completed_at?: string;
     cancelled_at?: string;
     total_duration?: number;
-    notes?: string;
+    description?: string;
     created_at: string;
     updated_at: string;
     created_by: number;
@@ -581,7 +581,7 @@ export interface CreateProductionExecutionData {
     customerId?: number;
     vehicleAcceptanceId?: number;
     status?: ProductionExecutionStatus;
-    notes?: string;
+    description?: string;
     operations?: ProductionExecutionOperationData[];
 }
 
@@ -590,7 +590,7 @@ export interface UpdateProductionExecutionData {
     customerId?: number;
     vehicleAcceptanceId?: number;
     status?: ProductionExecutionStatus;
-    notes?: string;
+    description?: string;
     operations?: ProductionExecutionOperationData[];
 }
 

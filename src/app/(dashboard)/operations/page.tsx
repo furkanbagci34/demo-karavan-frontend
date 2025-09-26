@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Settings, Pencil, Trash2, Loader2, AlertTriangle, Search, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useMemo } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { useOperations } from "@/hooks/api/useOperations";
@@ -54,6 +55,7 @@ const normalizeTurkishText = (text: string): string => {
 };
 
 export default function OperationsListPage() {
+    const router = useRouter();
     const [currentPage, setCurrentPage] = React.useState(1);
     const [operationToDelete, setOperationToDelete] = useState<Operation | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -109,6 +111,11 @@ export default function OperationsListPage() {
     // Arama terimini temizle
     const clearSearch = () => {
         setSearchTerm("");
+    };
+
+    // Düzenleme sayfasına git
+    const handleRowClick = (operationId: number) => {
+        router.push(`/operations/edit/${operationId}`);
     };
 
     // Pagination hesaplamaları
@@ -219,7 +226,11 @@ export default function OperationsListPage() {
                                         </TableRow>
                                     ) : (
                                         paginatedOperations.map((operation) => (
-                                            <TableRow key={operation.id}>
+                                            <TableRow
+                                                key={operation.id}
+                                                className="cursor-pointer hover:bg-gray-50"
+                                                onClick={() => handleRowClick(operation.id)}
+                                            >
                                                 <TableCell className="font-medium">{operation.name}</TableCell>
                                                 <TableCell className="text-center">
                                                     <span
@@ -257,7 +268,11 @@ export default function OperationsListPage() {
                                                 <TableCell className="flex items-center justify-center">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <Button
+                                                                variant="ghost"
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
                                                                 <span className="sr-only">İşlemler</span>
                                                                 <Settings className="h-4 w-4" />
                                                             </Button>
@@ -301,7 +316,11 @@ export default function OperationsListPage() {
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                                     {paginatedOperations.map((operation) => (
-                                        <Card key={operation.id} className="overflow-hidden">
+                                        <Card
+                                            key={operation.id}
+                                            className="overflow-hidden cursor-pointer hover:bg-gray-50"
+                                            onClick={() => handleRowClick(operation.id)}
+                                        >
                                             <div className="p-4">
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="flex-1 min-w-0">
@@ -353,7 +372,11 @@ export default function OperationsListPage() {
                                                     <div className="flex items-center justify-end">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 p-0"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
                                                                     <span className="sr-only">İşlemler</span>
                                                                     <Settings className="h-4 w-4" />
                                                                 </Button>

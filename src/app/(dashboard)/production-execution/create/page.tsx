@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
     Breadcrumb,
@@ -18,7 +18,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Car, FileText, Wrench, MapPin, Play, AlertCircle, Loader2, Pause, Trash2, Square, Pencil, GripVertical, X } from "lucide-react";
+import {
+    Car,
+    FileText,
+    Wrench,
+    MapPin,
+    Play,
+    AlertCircle,
+    Loader2,
+    Pause,
+    Trash2,
+    Square,
+    Pencil,
+    GripVertical,
+    X,
+    MessageSquare,
+} from "lucide-react";
 import { useVehicles } from "@/hooks/api/useVehicles";
 import { useProductionTemplates } from "@/hooks/api/useProductionTemplates";
 import { useOffers } from "@/hooks/api/useOffers";
@@ -27,6 +42,7 @@ import { useCustomers } from "@/hooks/api/useCustomers";
 import { useProductionExecution } from "@/hooks/api/useProductionExecution";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 interface VehicleInfo {
@@ -74,6 +90,8 @@ interface EditableOperation {
 
 export default function ProductionExecutionPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo>({
         vehicleId: null,
         vehicleName: "",
@@ -85,6 +103,8 @@ export default function ProductionExecutionPage() {
         plateNumber: "",
         vehicleAcceptanceId: null,
     });
+
+    const [description, setDescription] = useState<string>("");
 
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
@@ -167,17 +187,97 @@ export default function ProductionExecutionPage() {
     }, [selectedTemplate]);
 
     // Araç seçildiğinde bilgileri güncelle
-    const handleVehicleSelect = (vehicleId: string) => {
-        const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
-        if (vehicle) {
+    const handleVehicleSelect = useCallback(
+        (vehicleId: string) => {
+            const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
+            if (vehicle) {
+                setVehicleInfo((prev) => ({
+                    ...prev,
+                    vehicleId: vehicle.id,
+                    vehicleName: vehicle.name,
+                    vehicleBrand: vehicle.brand_model || "",
+                }));
+
+                // Araç seçildiğinde o araca ait template'lar varsa ilkini otomatik seç
+                const availableTemplates = productionTemplates?.filter((t) => t.vehicle_id === vehicle.id) || [];
+                if (availableTemplates.length > 0) {
+                    const firstTemplate = availableTemplates[0];
+                    setSelectedTemplateId(firstTemplate.id);
+                    toast.success("Araç ve üretim şablonu otomatik seçildi", {
+                        description: `${vehicle.name} için ${firstTemplate.name} şablonu seçildi.`,
+                    });
+                }
+            }
+        },
+        [vehicles, productionTemplates]
+    );
+
+    // URL parametrelerinden gelen verilerle state'leri doldur
+    useEffect(() => {
+        const offerId = searchParams.get("offerId");
+        const vehicleAcceptanceId = searchParams.get("vehicleAcceptanceId");
+        const vehicleId = searchParams.get("vehicleId");
+        const urlDescription = searchParams.get("description");
+        const customerId = searchParams.get("customerId");
+
+        if (urlDescription) {
+            setDescription(urlDescription);
+        }
+
+        if (offerId) {
             setVehicleInfo((prev) => ({
                 ...prev,
-                vehicleId: vehicle.id,
-                vehicleName: vehicle.name,
-                vehicleBrand: vehicle.brand_model || "",
+                offerId: offerId ? parseInt(offerId) : null,
             }));
         }
-    };
+
+        if (vehicleId && vehicles.length > 0) {
+            const vehicle = vehicles.find((v) => v.id === parseInt(vehicleId));
+            if (vehicle) {
+                setVehicleInfo((prev) => ({
+                    ...prev,
+                    vehicleId: vehicle.id,
+                    vehicleName: vehicle.name,
+                    vehicleBrand: vehicle.brand_model || "",
+                    vehicleAcceptanceId: vehicleAcceptanceId ? parseInt(vehicleAcceptanceId) : null,
+                    offerId: offerId ? parseInt(offerId) : null,
+                }));
+
+                // Vehicle selection event'ini tetikle
+                handleVehicleSelect(vehicleId);
+            }
+        }
+    }, [searchParams, vehicles, vehicleAcceptances, handleVehicleSelect]);
+
+    // URL'den gelen offerId varsa ve teklif verileri yüklendiyse, teklif numarasını ve müşteriyi otomatik doldur
+    useEffect(() => {
+        if (!vehicleInfo.offerId) return;
+        if (!offers || offers.length === 0) return;
+
+        const matchedOffer = offers.find((o) => o.id === vehicleInfo.offerId);
+        if (matchedOffer) {
+            setVehicleInfo((prev) => ({
+                ...prev,
+                offerNumber: matchedOffer.offer_number || prev.offerNumber,
+                customerId: matchedOffer.customer_id ?? prev.customerId,
+                customerName: matchedOffer.customer_name ?? prev.customerName,
+            }));
+        }
+    }, [vehicleInfo.offerId, offers]);
+
+    // URL'den gelen vehicleAcceptanceId varsa ve kabul listesi yüklendiyse, plaka numarasını otomatik doldur
+    useEffect(() => {
+        if (!vehicleInfo.vehicleAcceptanceId) return;
+        if (!vehicleAcceptances || vehicleAcceptances.length === 0) return;
+
+        const matchedAcceptance = vehicleAcceptances.find((va) => va.id === vehicleInfo.vehicleAcceptanceId);
+        if (matchedAcceptance) {
+            setVehicleInfo((prev) => ({
+                ...prev,
+                plateNumber: matchedAcceptance.plate_number || prev.plateNumber,
+            }));
+        }
+    }, [vehicleInfo.vehicleAcceptanceId, vehicleAcceptances]);
 
     // Üretim şablonu seçildiğinde
     const handleTemplateSelect = (templateId: string) => {
@@ -217,12 +317,12 @@ export default function ProductionExecutionPage() {
                 customerId: vehicleInfo.customerId || undefined,
                 vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId || undefined,
                 status: "running" as const,
-                notes: `Teklif: ${vehicleInfo.offerNumber || 'Belirtilmemiş'}, Müşteri: ${vehicleInfo.customerName || 'Belirtilmemiş'}, Plaka: ${vehicleInfo.plateNumber || 'Belirtilmemiş'}`,
+                description: description || undefined,
                 operations: operations,
             };
 
             await createProductionExecution.mutateAsync(productionExecutionData);
-            
+
             setTimeout(() => {
                 router.push("/production-execution");
             }, 500);
@@ -272,6 +372,7 @@ export default function ProductionExecutionPage() {
             plateNumber: "",
             vehicleAcceptanceId: null,
         });
+        setDescription("");
         setSelectedTemplateId(null);
         setProductionStatus("idle");
         setCurrentExecutionId(null);
@@ -298,8 +399,8 @@ export default function ProductionExecutionPage() {
 
     // Drag and Drop fonksiyonları
     const handleDragStart = (e: React.DragEvent, operationId: string) => {
-        e.dataTransfer.setData('text/plain', operationId);
-        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData("text/plain", operationId);
+        e.dataTransfer.effectAllowed = "move";
         setDraggedOperationId(operationId);
     };
 
@@ -309,25 +410,25 @@ export default function ProductionExecutionPage() {
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
+        e.dataTransfer.dropEffect = "move";
     };
 
     const handleDrop = (e: React.DragEvent, targetOperationId: string) => {
         e.preventDefault();
-        const draggedOperationId = e.dataTransfer.getData('text/plain');
-        
+        const draggedOperationId = e.dataTransfer.getData("text/plain");
+
         if (draggedOperationId === targetOperationId) {
             setDraggedOperationId(null);
             return;
         }
 
-        const draggedIndex = editableOperations.findIndex(op => op.id === draggedOperationId);
-        const targetIndex = editableOperations.findIndex(op => op.id === targetOperationId);
+        const draggedIndex = editableOperations.findIndex((op) => op.id === draggedOperationId);
+        const targetIndex = editableOperations.findIndex((op) => op.id === targetOperationId);
 
         if (draggedIndex !== -1 && targetIndex !== -1) {
             handleMoveOperation(draggedIndex, targetIndex);
         }
-        
+
         setDraggedOperationId(null);
     };
 
@@ -335,7 +436,6 @@ export default function ProductionExecutionPage() {
         const newOperations = editableOperations.filter((_, i) => i !== index);
         setEditableOperations(newOperations);
     };
-
 
     // Filtrelenmiş şablonlar - seçilen araca göre
     const filteredTemplates = vehicleInfo.vehicleId
@@ -399,9 +499,7 @@ export default function ProductionExecutionPage() {
                             <Button
                                 onClick={handleStartProduction}
                                 disabled={
-                                    !vehicleInfo.vehicleId ||
-                                    !selectedTemplate ||
-                                    createProductionExecution.isPending
+                                    !vehicleInfo.vehicleId || !selectedTemplate || createProductionExecution.isPending
                                 }
                                 className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                             >
@@ -425,7 +523,7 @@ export default function ProductionExecutionPage() {
                                         variant="outline"
                                         className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
                                     >
-                                            <Pause className="h-4 w-4 mr-2" />
+                                        <Pause className="h-4 w-4 mr-2" />
                                         Duraklat
                                     </Button>
                                 ) : (
@@ -433,7 +531,7 @@ export default function ProductionExecutionPage() {
                                         onClick={handleStartProduction}
                                         className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                                     >
-                                            <Play className="h-4 w-4 mr-2" />
+                                        <Play className="h-4 w-4 mr-2" />
                                         Devam Et
                                     </Button>
                                 )}
@@ -443,7 +541,7 @@ export default function ProductionExecutionPage() {
                                     variant="outline"
                                     className="border-red-300 text-red-700 hover:bg-red-50"
                                 >
-                                        <Square className="h-4 w-4 mr-2" />
+                                    <Square className="h-4 w-4 mr-2" />
                                     Durdur
                                 </Button>
                             </>
@@ -470,79 +568,72 @@ export default function ProductionExecutionPage() {
                 ) : (
                     <div className="space-y-6">
                         {/* Üst Kısım - Model ve Şablon Seçimi */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Model Bilgileri */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Car className="h-5 w-5" />
-                                        Model Bilgileri
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                        <Label htmlFor="vehicle" className="text-sm font-medium whitespace-nowrap">
-                                            Model Seçimi *
-                                        </Label>
-                                        <Select
-                                            onValueChange={handleVehicleSelect}
-                                            value={vehicleInfo.vehicleId?.toString() || ""}
-                                        >
-                                            <SelectTrigger className="flex-1">
-                                                <SelectValue placeholder="Model seçiniz" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {vehicles.map((vehicle) => (
-                                                    <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                                                        <div className="flex items-center gap-3 w-full">
-                                                            <div className="w-8 h-8 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                                                                {vehicle.image ? (
-                                                                    <img
-                                                                        src={vehicle.image}
-                                                                        alt={vehicle.name}
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                ) : (
-                                                                    <Car className="w-4 h-4 text-gray-400" />
-                                                                )}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Car className="h-5 w-5" />
+                                    Model ve Şablon Seçimi
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Model ve Şablon Seçimi - Yan Yana Uzun */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Model Seçimi */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <Label htmlFor="vehicle" className="text-sm font-medium whitespace-nowrap">
+                                                Model Seçimi
+                                            </Label>
+                                            <Select
+                                                onValueChange={handleVehicleSelect}
+                                                value={vehicleInfo.vehicleId?.toString() || ""}
+                                            >
+                                                <SelectTrigger className="h-12 flex-1">
+                                                    <SelectValue placeholder="Model seçiniz" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {vehicles.map((vehicle) => (
+                                                        <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                                                            <div className="flex items-center gap-3 w-full">
+                                                                <div className="w-8 h-8 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                                                                    {vehicle.image ? (
+                                                                        <img
+                                                                            src={vehicle.image}
+                                                                            alt={vehicle.name}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <Car className="w-4 h-4 text-gray-400" />
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-medium">{vehicle.name}</span>
+                                                                    {vehicle.brand_model && (
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            {vehicle.brand_model}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{vehicle.name}</span>
-                                                                {vehicle.brand_model && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {vehicle.brand_model}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
-                                </CardContent>
-                            </Card>
 
-                            {/* Üretim Şablonu Seçimi */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <FileText className="h-5 w-5" />
-                                        Üretim Şablonu
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-3">
+                                    {/* Şablon Seçimi */}
+                                    <div className="space-y-2">
                                         <div className="flex items-center gap-3">
                                             <Label className="text-sm font-medium whitespace-nowrap">
-                                                Şablon Seçimi *
+                                                Üretim Şablonu
                                             </Label>
                                             <Select
                                                 onValueChange={handleTemplateSelect}
                                                 value={selectedTemplateId?.toString() || ""}
                                                 disabled={!vehicleInfo.vehicleId}
                                             >
-                                                <SelectTrigger className="flex-1">
+                                                <SelectTrigger className="h-12 flex-1">
                                                     <SelectValue
                                                         placeholder={
                                                             vehicleInfo.vehicleId
@@ -571,9 +662,29 @@ export default function ProductionExecutionPage() {
                                             </p>
                                         )}
                                     </div>
-                                </CardContent>
-                            </Card>
-                        </div>
+                                </div>
+
+                                {/* Açıklama Alanı - Altında */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <Label
+                                            htmlFor="description"
+                                            className="text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            <MessageSquare className="h-4 w-4" />
+                                            Açıklama
+                                        </Label>
+                                        <Textarea
+                                            id="description"
+                                            placeholder="Üretim planı hakkında notlar yazabilirsiniz..."
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            className="min-h-[60px] resize-none text-sm flex-1"
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
                         {/* Orta Kısım - Teklif ve Müşteri Bilgileri */}
                         <Card>
@@ -864,15 +975,13 @@ export default function ProductionExecutionPage() {
                                 <CardHeader>
                                     <div className="flex items-center justify-between">
                                         <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Wrench className="h-5 w-5" />
-                                        Üretim Operasyonları
-                                    </CardTitle>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <Wrench className="h-5 w-5" />
+                                                Üretim Operasyonları
+                                            </CardTitle>
                                             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-2">
-                                        <span>{selectedTemplate.name}</span>
-                                        <Badge variant="outline">
-                                                    {editableOperations.length} Operasyon
-                                        </Badge>
+                                                <span>{selectedTemplate.name}</span>
+                                                <Badge variant="outline">{editableOperations.length} Operasyon</Badge>
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
@@ -904,113 +1013,156 @@ export default function ProductionExecutionPage() {
                                                         .map((station, stationIndex) => {
                                                             // Bu istasyona ait operasyonları editableOperations'tan al
                                                             const stationOperations = editableOperations.filter(
-                                                                op => op.stationId === station.id
+                                                                (op) => op.stationId === station.id
                                                             );
 
                                                             return (
-                                                            <div
-                                                                key={station.id}
-                                                                className="border rounded-lg p-4 space-y-3 bg-gradient-to-br from-white to-gray-50"
-                                                            >
-                                                                {/* İstasyon Başlığı */}
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                                                                        {stationIndex + 1}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <h4 className="font-medium flex items-center gap-2 truncate">
-                                                                            <MapPin className="w-4 h-4 flex-shrink-0" />
-                                                                            <span className="truncate">
-                                                                                {station.station_name}
-                                                                            </span>
-                                                                        </h4>
-                                                                        <p className="text-sm text-muted-foreground">
+                                                                <div
+                                                                    key={station.id}
+                                                                    className="border rounded-lg p-4 space-y-3 bg-gradient-to-br from-white to-gray-50"
+                                                                >
+                                                                    {/* İstasyon Başlığı */}
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                                                            {stationIndex + 1}
+                                                                        </div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <h4 className="font-medium flex items-center gap-2 truncate">
+                                                                                <MapPin className="w-4 h-4 flex-shrink-0" />
+                                                                                <span className="truncate">
+                                                                                    {station.station_name}
+                                                                                </span>
+                                                                            </h4>
+                                                                            <p className="text-sm text-muted-foreground">
                                                                                 {stationOperations.length} operasyon
-                                                                        </p>
+                                                                            </p>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
 
-                                                                {/* Operasyonlar */}
-                                                                        <div className="space-y-2">
-                                                        {stationOperations.length > 0 ? (
-                                                            stationOperations
-                                                                .sort((a, b) => editableOperations.indexOf(a) - editableOperations.indexOf(b))
-                                                                .map((operation) => {
-                                                                                    const operationIndex = editableOperations.findIndex(op => op.id === operation.id);
-                                                                                    const localIndex = stationOperations.findIndex(op => op.id === operation.id);
-                                                                                    
+                                                                    {/* Operasyonlar */}
+                                                                    <div className="space-y-2">
+                                                                        {stationOperations.length > 0 ? (
+                                                                            stationOperations
+                                                                                .sort(
+                                                                                    (a, b) =>
+                                                                                        editableOperations.indexOf(a) -
+                                                                                        editableOperations.indexOf(b)
+                                                                                )
+                                                                                .map((operation) => {
+                                                                                    const operationIndex =
+                                                                                        editableOperations.findIndex(
+                                                                                            (op) =>
+                                                                                                op.id === operation.id
+                                                                                        );
+                                                                                    const localIndex =
+                                                                                        stationOperations.findIndex(
+                                                                                            (op) =>
+                                                                                                op.id === operation.id
+                                                                                        );
+
                                                                                     return (
-                                                                                    <div
-                                                                                        key={operation.id}
-                                                                                            draggable={isEditingOperations}
-                                                                                            onDragStart={(e) => handleDragStart(e, operation.id)}
+                                                                                        <div
+                                                                                            key={operation.id}
+                                                                                            draggable={
+                                                                                                isEditingOperations
+                                                                                            }
+                                                                                            onDragStart={(e) =>
+                                                                                                handleDragStart(
+                                                                                                    e,
+                                                                                                    operation.id
+                                                                                                )
+                                                                                            }
                                                                                             onDragEnd={handleDragEnd}
                                                                                             onDragOver={handleDragOver}
-                                                                                            onDrop={(e) => handleDrop(e, operation.id)}
+                                                                                            onDrop={(e) =>
+                                                                                                handleDrop(
+                                                                                                    e,
+                                                                                                    operation.id
+                                                                                                )
+                                                                                            }
                                                                                             className={`flex items-start gap-2 p-2 rounded-md border-l-3 transition-all duration-200 ${
                                                                                                 operation.qualityControl
-                                                                                                ? "bg-orange-50 border-l-orange-400"
-                                                                                                : "bg-green-50 border-l-green-400"
-                                                                                            } ${operation.isNew ? "ring-2 ring-blue-300" : ""} ${
-                                                                                                isEditingOperations ? "cursor-move hover:shadow-md hover:scale-[1.02]" : ""
+                                                                                                    ? "bg-orange-50 border-l-orange-400"
+                                                                                                    : "bg-green-50 border-l-green-400"
                                                                                             } ${
-                                                                                                draggedOperationId === operation.id ? "opacity-50 scale-105 shadow-lg" : ""
-                                                                                        }`}
-                                                                                    >
-                                                                                            <div className="flex items-center gap-1">
-                                                                                        <div
-                                                                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${
-                                                                                                        operation.qualityControl
-                                                                                                    ? "bg-orange-500"
-                                                                                                    : "bg-green-500"
+                                                                                                operation.isNew
+                                                                                                    ? "ring-2 ring-blue-300"
+                                                                                                    : ""
+                                                                                            } ${
+                                                                                                isEditingOperations
+                                                                                                    ? "cursor-move hover:shadow-md hover:scale-[1.02]"
+                                                                                                    : ""
+                                                                                            } ${
+                                                                                                draggedOperationId ===
+                                                                                                operation.id
+                                                                                                    ? "opacity-50 scale-105 shadow-lg"
+                                                                                                    : ""
                                                                                             }`}
                                                                                         >
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <div
+                                                                                                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${
+                                                                                                        operation.qualityControl
+                                                                                                            ? "bg-orange-500"
+                                                                                                            : "bg-green-500"
+                                                                                                    }`}
+                                                                                                >
                                                                                                     {localIndex + 1}
                                                                                                 </div>
                                                                                                 {isEditingOperations && (
                                                                                                     <GripVertical className="w-4 h-4 text-gray-600 cursor-grab active:cursor-grabbing" />
                                                                                                 )}
-                                                                                        </div>
-                                                                                        <div className="flex-1 min-w-0">
-                                                                                            <div className="flex items-start gap-1 flex-wrap">
-                                                                                                <Wrench
-                                                                                                    className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
+                                                                                            </div>
+                                                                                            <div className="flex-1 min-w-0">
+                                                                                                <div className="flex items-start gap-1 flex-wrap">
+                                                                                                    <Wrench
+                                                                                                        className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
                                                                                                             operation.qualityControl
-                                                                                                            ? "text-orange-600"
-                                                                                                            : "text-green-600"
-                                                                                                    }`}
-                                                                                                />
-                                                                                                <span className="font-medium text-xs leading-tight">
-                                                                                                        {operation.operationName}
-                                                                                                </span>
+                                                                                                                ? "text-orange-600"
+                                                                                                                : "text-green-600"
+                                                                                                        }`}
+                                                                                                    />
+                                                                                                    <span className="font-medium text-xs leading-tight">
+                                                                                                        {
+                                                                                                            operation.operationName
+                                                                                                        }
+                                                                                                    </span>
                                                                                                     {operation.qualityControl && (
-                                                                                                    <Badge
-                                                                                                        variant="outline"
-                                                                                                        className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
-                                                                                                    >
-                                                                                                        QC
-                                                                                                    </Badge>
-                                                                                                )}
+                                                                                                        <Badge
+                                                                                                            variant="outline"
+                                                                                                            className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
+                                                                                                        >
+                                                                                                            QC
+                                                                                                        </Badge>
+                                                                                                    )}
                                                                                                     {operation.isNew && (
                                                                                                         <Badge
                                                                                                             variant="outline"
                                                                                                             className="text-xs bg-blue-100 text-blue-700 border-blue-300 px-1 py-0 h-4"
                                                                                                         >
                                                                                                             YENİ
-                                                                                                    </Badge>
-                                                                                                )}
-                                                                                            </div>
+                                                                                                        </Badge>
+                                                                                                    )}
+                                                                                                </div>
                                                                                                 {operation.targetDuration && (
                                                                                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                                                                                        Hedef: {operation.targetDuration}dk
+                                                                                                        Hedef:{" "}
+                                                                                                        {
+                                                                                                            operation.targetDuration
+                                                                                                        }
+                                                                                                        dk
                                                                                                     </p>
                                                                                                 )}
-                                                                                        </div>
-                                                                                            
+                                                                                            </div>
+
                                                                                             {/* Silme butonu */}
                                                                                             {isEditingOperations && (
                                                                                                 <Button
-                                                                                                    onClick={() => handleDeleteOperation(operationIndex)}
+                                                                                                    onClick={() =>
+                                                                                                        handleDeleteOperation(
+                                                                                                            operationIndex
+                                                                                                        )
+                                                                                                    }
                                                                                                     variant="ghost"
                                                                                                     size="sm"
                                                                                                     className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1018,19 +1170,20 @@ export default function ProductionExecutionPage() {
                                                                                                     <X className="h-3 w-3" />
                                                                                                 </Button>
                                                                                             )}
-                                                                                    </div>
+                                                                                        </div>
                                                                                     );
                                                                                 })
-                                                        ) : (
-                                                            <div className="text-center py-4 text-muted-foreground">
-                                                                <p className="text-xs">Bu istasyonda operasyon yok</p>
-                                                                        </div>
-                                                                    )}
-                                                            </div>
+                                                                        ) : (
+                                                                            <div className="text-center py-4 text-muted-foreground">
+                                                                                <p className="text-xs">
+                                                                                    Bu istasyonda operasyon yok
+                                                                                </p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })}
-
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-12 text-muted-foreground">
@@ -1055,7 +1208,6 @@ export default function ProductionExecutionPage() {
                         )}
                     </div>
                 )}
-
             </div>
         </>
     );

@@ -893,7 +893,7 @@ export default function EditOfferPage() {
         }
     };
 
-    const handleSendToProduction = async (vehicleAcceptanceId: number) => {
+    const handleSendToProduction = async (vehicleAcceptanceId: number, productionNotes: string) => {
         if (!originalOffer?.id) {
             toast.error("Teklif bulunamadı");
             return;
@@ -909,10 +909,16 @@ export default function EditOfferPage() {
             if (originalOffer) {
                 originalOffer.status = OfferStatus.ÜRETIMDE;
             }
-
-            toast.success("Teklif üretime gönderildi!", {
-                description: `Teklif seçilen araç (ID: ${vehicleAcceptanceId}) ile üretime gönderildi.`,
+            // Production execution create sayfasına yönlendir
+            const queryParams = new URLSearchParams({
+                offerId: originalOffer.id.toString(),
+                vehicleAcceptanceId: vehicleAcceptanceId.toString(),
+                vehicleId: originalOffer.vehicle_id?.toString() || "",
+                description: productionNotes || "",
+                customerId: originalOffer.customer_id?.toString() || "",
             });
+
+            router.push(`/production-execution/create?${queryParams.toString()}`);
         } catch (error) {
             console.error("Üretime gönderme hatası:", error);
             const errorMessage = error instanceof Error ? error.message : "Üretime gönderilirken bir hata oluştu";

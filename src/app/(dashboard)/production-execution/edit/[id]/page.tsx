@@ -17,7 +17,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, FileText, Wrench, MapPin, AlertCircle, Loader2, Pencil, GripVertical, X, Save } from "lucide-react";
+import {
+    Car,
+    FileText,
+    Wrench,
+    MapPin,
+    AlertCircle,
+    Loader2,
+    Pencil,
+    GripVertical,
+    X,
+    Save,
+    MessageSquare,
+} from "lucide-react";
 import { useProductionTemplates } from "@/hooks/api/useProductionTemplates";
 import { useOffers } from "@/hooks/api/useOffers";
 import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
@@ -25,6 +37,7 @@ import { useCustomers } from "@/hooks/api/useCustomers";
 import { useProductionExecution } from "@/hooks/api/useProductionExecution";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 interface VehicleInfo {
@@ -86,6 +99,8 @@ export default function ProductionExecutionEditPage() {
         vehicleAcceptanceId: null,
     });
 
+    const [description, setDescription] = useState<string>("");
+
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
 
@@ -129,7 +144,7 @@ export default function ProductionExecutionEditPage() {
     useEffect(() => {
         if (executionData) {
             setSelectedTemplateId(executionData.production_plan_id);
-            
+
             setVehicleInfo({
                 vehicleId: executionData.vehicle_id || null,
                 vehicleName: executionData.vehicle_name || "",
@@ -141,6 +156,9 @@ export default function ProductionExecutionEditPage() {
                 plateNumber: executionData.plate_number || "",
                 vehicleAcceptanceId: executionData.vehicle_acceptance_id || null,
             });
+
+            // Açıklama alanını doldur
+            setDescription(executionData.description || "");
 
             // Operasyonları EditableOperation formatına dönüştür
             if (executionData.operations) {
@@ -197,11 +215,12 @@ export default function ProductionExecutionEditPage() {
                 offerId: vehicleInfo.offerId || undefined,
                 customerId: vehicleInfo.customerId || undefined,
                 vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId || undefined,
+                description: description || undefined,
                 operations: operations,
             };
 
             await update.mutateAsync({ id: parseInt(executionId), data: updateData });
-            
+
             // 1.5 saniye sonra yönlendir
             setTimeout(() => {
                 router.push("/production-execution");
@@ -226,8 +245,8 @@ export default function ProductionExecutionEditPage() {
 
     // Drag and Drop fonksiyonları
     const handleDragStart = (e: React.DragEvent, operationId: string) => {
-        e.dataTransfer.setData('text/plain', operationId);
-        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData("text/plain", operationId);
+        e.dataTransfer.effectAllowed = "move";
         setDraggedOperationId(operationId);
     };
 
@@ -237,25 +256,25 @@ export default function ProductionExecutionEditPage() {
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
+        e.dataTransfer.dropEffect = "move";
     };
 
     const handleDrop = (e: React.DragEvent, targetOperationId: string) => {
         e.preventDefault();
-        const draggedOperationId = e.dataTransfer.getData('text/plain');
-        
+        const draggedOperationId = e.dataTransfer.getData("text/plain");
+
         if (draggedOperationId === targetOperationId) {
             setDraggedOperationId(null);
             return;
         }
 
-        const draggedIndex = editableOperations.findIndex(op => op.id === draggedOperationId);
-        const targetIndex = editableOperations.findIndex(op => op.id === targetOperationId);
+        const draggedIndex = editableOperations.findIndex((op) => op.id === draggedOperationId);
+        const targetIndex = editableOperations.findIndex((op) => op.id === targetOperationId);
 
         if (draggedIndex !== -1 && targetIndex !== -1) {
             handleMoveOperation(draggedIndex, targetIndex);
         }
-        
+
         setDraggedOperationId(null);
     };
 
@@ -263,7 +282,6 @@ export default function ProductionExecutionEditPage() {
         const newOperations = editableOperations.filter((_, i) => i !== index);
         setEditableOperations(newOperations);
     };
-
 
     // Benzersiz veriler için helper'lar
     const uniqueOfferNumbers = [...new Set(offers.map((offer) => offer.offer_number))].filter(Boolean);
@@ -408,27 +426,55 @@ export default function ProductionExecutionEditPage() {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {/* Üst Kısım - Model Bilgileri (Sadece Gösterim) */}
+                        {/* Üst Kısım - Model ve Şablon Bilgileri */}
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Car className="h-5 w-5" />
-                                    Model Bilgileri
+                                    Model ve Şablon Bilgileri
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <div>
-                                        <Label className="text-sm font-medium">Model</Label>
-                                        <div className="mt-1 p-2 bg-gray-50 rounded border">
-                                            {vehicleInfo.vehicleName}
+                                        <div className="flex items-center gap-3">
+                                            <Label className="text-sm font-medium whitespace-nowrap">
+                                                Model Seçimi
+                                            </Label>
+                                            <div className="flex-1 h-12 px-3 py-2 bg-white border border-input rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex items-center">
+                                                {vehicleInfo.vehicleName}
+                                            </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <Label className="text-sm font-medium">Marka/Model</Label>
-                                        <div className="mt-1 p-2 bg-gray-50 rounded border">
-                                            {vehicleInfo.vehicleBrand || "Belirtilmemiş"}
+                                        <div className="flex items-center gap-3">
+                                            <Label className="text-sm font-medium whitespace-nowrap">
+                                                Üretim Şablonu
+                                            </Label>
+                                            <div className="flex-1 h-12 px-3 py-2 bg-white border border-input rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex items-center">
+                                                {selectedTemplate?.name || "Belirtilmemiş"}
+                                            </div>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Açıklama Alanı - Altında */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <Label
+                                            htmlFor="description"
+                                            className="text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                                        >
+                                            <MessageSquare className="h-4 w-4" />
+                                            Açıklama
+                                        </Label>
+                                        <Textarea
+                                            id="description"
+                                            placeholder="Üretim planı hakkında notlar yazabilirsiniz..."
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            className="min-h-[60px] resize-none text-sm flex-1"
+                                        />
                                     </div>
                                 </div>
                             </CardContent>
@@ -710,7 +756,6 @@ export default function ProductionExecutionEditPage() {
                                         </Popover>
                                     </div>
                                 </div>
-
                             </CardContent>
                         </Card>
 
@@ -726,9 +771,7 @@ export default function ProductionExecutionEditPage() {
                                             </CardTitle>
                                             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-2">
                                                 <span>{selectedTemplate.name}</span>
-                                                <Badge variant="outline">
-                                                    {editableOperations.length} Operasyon
-                                                </Badge>
+                                                <Badge variant="outline">{editableOperations.length} Operasyon</Badge>
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
@@ -760,7 +803,7 @@ export default function ProductionExecutionEditPage() {
                                                         .map((station, stationIndex) => {
                                                             // Bu istasyona ait operasyonları editableOperations'tan al
                                                             const stationOperations = editableOperations.filter(
-                                                                op => op.stationId === station.id
+                                                                (op) => op.stationId === station.id
                                                             );
 
                                                             return (
@@ -790,27 +833,60 @@ export default function ProductionExecutionEditPage() {
                                                                     <div className="space-y-2">
                                                                         {stationOperations.length > 0 ? (
                                                                             stationOperations
-                                                                                .sort((a, b) => editableOperations.indexOf(a) - editableOperations.indexOf(b))
+                                                                                .sort(
+                                                                                    (a, b) =>
+                                                                                        editableOperations.indexOf(a) -
+                                                                                        editableOperations.indexOf(b)
+                                                                                )
                                                                                 .map((operation) => {
-                                                                                    const operationIndex = editableOperations.findIndex(op => op.id === operation.id);
-                                                                                    const localIndex = stationOperations.findIndex(op => op.id === operation.id);
-                                                                                    
+                                                                                    const operationIndex =
+                                                                                        editableOperations.findIndex(
+                                                                                            (op) =>
+                                                                                                op.id === operation.id
+                                                                                        );
+                                                                                    const localIndex =
+                                                                                        stationOperations.findIndex(
+                                                                                            (op) =>
+                                                                                                op.id === operation.id
+                                                                                        );
+
                                                                                     return (
                                                                                         <div
                                                                                             key={operation.id}
-                                                                                            draggable={isEditingOperations}
-                                                                                            onDragStart={(e) => handleDragStart(e, operation.id)}
+                                                                                            draggable={
+                                                                                                isEditingOperations
+                                                                                            }
+                                                                                            onDragStart={(e) =>
+                                                                                                handleDragStart(
+                                                                                                    e,
+                                                                                                    operation.id
+                                                                                                )
+                                                                                            }
                                                                                             onDragEnd={handleDragEnd}
                                                                                             onDragOver={handleDragOver}
-                                                                                            onDrop={(e) => handleDrop(e, operation.id)}
+                                                                                            onDrop={(e) =>
+                                                                                                handleDrop(
+                                                                                                    e,
+                                                                                                    operation.id
+                                                                                                )
+                                                                                            }
                                                                                             className={`flex items-start gap-2 p-2 rounded-md border-l-3 transition-all duration-200 ${
                                                                                                 operation.qualityControl
                                                                                                     ? "bg-orange-50 border-l-orange-400"
                                                                                                     : "bg-green-50 border-l-green-400"
-                                                                                            } ${operation.isNew ? "ring-2 ring-blue-300" : ""} ${
-                                                                                                isEditingOperations ? "cursor-move hover:shadow-md hover:scale-[1.02]" : ""
                                                                                             } ${
-                                                                                                draggedOperationId === operation.id ? "opacity-50 scale-105 shadow-lg" : ""
+                                                                                                operation.isNew
+                                                                                                    ? "ring-2 ring-blue-300"
+                                                                                                    : ""
+                                                                                            } ${
+                                                                                                isEditingOperations
+                                                                                                    ? "cursor-move hover:shadow-md hover:scale-[1.02]"
+                                                                                                    : ""
+                                                                                            } ${
+                                                                                                draggedOperationId ===
+                                                                                                operation.id
+                                                                                                    ? "opacity-50 scale-105 shadow-lg"
+                                                                                                    : ""
                                                                                             }`}
                                                                                         >
                                                                                             <div className="flex items-center gap-1">
@@ -837,7 +913,9 @@ export default function ProductionExecutionEditPage() {
                                                                                                         }`}
                                                                                                     />
                                                                                                     <span className="font-medium text-xs leading-tight">
-                                                                                                        {operation.operationName}
+                                                                                                        {
+                                                                                                            operation.operationName
+                                                                                                        }
                                                                                                     </span>
                                                                                                     {operation.qualityControl && (
                                                                                                         <Badge
@@ -858,15 +936,23 @@ export default function ProductionExecutionEditPage() {
                                                                                                 </div>
                                                                                                 {operation.targetDuration && (
                                                                                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                                                                                        Hedef: {operation.targetDuration}dk
+                                                                                                        Hedef:{" "}
+                                                                                                        {
+                                                                                                            operation.targetDuration
+                                                                                                        }
+                                                                                                        dk
                                                                                                     </p>
                                                                                                 )}
                                                                                             </div>
-                                                                                            
+
                                                                                             {/* Silme butonu */}
                                                                                             {isEditingOperations && (
                                                                                                 <Button
-                                                                                                    onClick={() => handleDeleteOperation(operationIndex)}
+                                                                                                    onClick={() =>
+                                                                                                        handleDeleteOperation(
+                                                                                                            operationIndex
+                                                                                                        )
+                                                                                                    }
                                                                                                     variant="ghost"
                                                                                                     size="sm"
                                                                                                     className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -879,14 +965,15 @@ export default function ProductionExecutionEditPage() {
                                                                                 })
                                                                         ) : (
                                                                             <div className="text-center py-4 text-muted-foreground">
-                                                                                <p className="text-xs">Bu istasyonda operasyon yok</p>
+                                                                                <p className="text-xs">
+                                                                                    Bu istasyonda operasyon yok
+                                                                                </p>
                                                                             </div>
                                                                         )}
                                                                     </div>
                                                                 </div>
                                                             );
                                                         })}
-
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-12 text-muted-foreground">
@@ -901,7 +988,6 @@ export default function ProductionExecutionEditPage() {
                         )}
                     </div>
                 )}
-
             </div>
         </>
     );

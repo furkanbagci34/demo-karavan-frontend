@@ -15,7 +15,7 @@ import { toast } from "sonner";
 interface ProductionSendModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSendToProduction: (vehicleAcceptanceId: number) => void;
+    onSendToProduction: (vehicleAcceptanceId: number, productionNotes: string) => void;
     offerId?: number;
 }
 
@@ -36,7 +36,7 @@ export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({ isOpen
 
         try {
             setSending(true);
-            await onSendToProduction(selectedVehicleId);
+            await onSendToProduction(selectedVehicleId, productionNotes);
 
             // Başarılı gönderimde notları da logla
             if (productionNotes.trim()) {
@@ -269,13 +269,10 @@ export const ProductionSendModal: React.FC<ProductionSendModalProps> = ({ isOpen
                                     </div>
                                     <div>
                                         <h3 className="text-base font-semibold text-gray-900">Üretim Notları</h3>
-                                        <p className="text-sm text-gray-600">
-                                            Üretim sürecinde dikkat edilmesi gereken özel notları ekleyin
-                                        </p>
                                     </div>
                                 </div>
                                 <Textarea
-                                    placeholder="Örnek: Bu araçta özel renk uygulaması yapılacak, kalite kontrolde ekstra dikkat edilmeli..."
+                                    placeholder="Üretim ile ilgili notlarınızı ekleyiniz."
                                     value={productionNotes}
                                     onChange={(e) => setProductionNotes(e.target.value)}
                                     className="min-h-[120px] resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500"
