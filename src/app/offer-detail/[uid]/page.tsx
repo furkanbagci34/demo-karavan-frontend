@@ -85,11 +85,12 @@ const OfferDetailPage = () => {
         }
     };
 
-    // Sadece "Gönderildi" durumunda sayfa aktif olacak
-    //const isOfferActive = offer?.status === OfferStatus.GONDERILDI;
-
-    // İşlem sonucu var mı kontrol et
     const hasActionResult = actionResult.type !== null;
+    // Butonlar sadece Taslak, Gönderildi ve Onaylandı durumlarında gösterilsin
+    const shouldShowButtons =
+        offer?.status === OfferStatus.TASLAK ||
+        offer?.status === OfferStatus.GONDERILDI ||
+        offer?.status === OfferStatus.ONAYLANDI;
 
     if (loading) {
         return (
@@ -102,7 +103,7 @@ const OfferDetailPage = () => {
         );
     }
 
-    if (error || !offer || !hasActionResult) {
+    if (error || !offer) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center max-w-md mx-auto p-6">
@@ -223,8 +224,22 @@ const OfferDetailPage = () => {
                     <CardContent className="p-4">
                         <div className="text-center mb-4">
                             <h1 className="text-2xl font-bold text-gray-900 mb-1">Teklif #{offer.offer_number}</h1>
-                            <Badge className="bg-orange-100 text-orange-800 px-5 py-2 font-semibold text-lg">
-                                Onay Bekliyor
+                            <Badge
+                                className={`px-5 py-2 font-semibold text-lg ${
+                                    offer.status === OfferStatus.ONAYLANDI
+                                        ? "bg-green-100 text-green-800"
+                                        : offer.status === OfferStatus.REDDEDILDI
+                                        ? "bg-red-100 text-red-800"
+                                        : offer.status === OfferStatus.TAMAMLANDI
+                                        ? "bg-blue-100 text-blue-800"
+                                        : offer.status === OfferStatus.ÜRETIMDE
+                                        ? "bg-purple-100 text-purple-800"
+                                        : offer.status === OfferStatus.IPTAL_EDILDI
+                                        ? "bg-gray-100 text-gray-800"
+                                        : "bg-orange-100 text-orange-800"
+                                }`}
+                            >
+                                {offer.status}
                             </Badge>
                         </div>
                         {/* Müşteri Bilgisi - Belirgin */}
@@ -349,72 +364,74 @@ const OfferDetailPage = () => {
                             </div>
                         </div>
 
-                        {/* Karar Butonları */}
-                        <div className="text-center">
-                            <p className="text-gray-700 mb-4 font-medium">Lütfen kararınızı verin:</p>
-                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button
-                                            disabled={isUpdating}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 font-semibold transition-colors"
-                                        >
-                                            <CheckCircleIcon className="h-4 w-4 mr-2" />
-                                            Teklifi Onayla
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Teklifi onaylıyor musunuz?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Bu işlem geri alınamaz. Teklifi onayladığınızda sipariş işleme
-                                                alınacaktır.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>İptal</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={handleAcceptOffer}
-                                                className="bg-green-600 hover:bg-green-700"
+                        {/* Karar Butonları - Sadece Taslak, Gönderildi ve Onaylandı durumlarında */}
+                        {shouldShowButtons && (
+                            <div className="text-center">
+                                <p className="text-gray-700 mb-4 font-medium">Lütfen kararınızı verin:</p>
+                                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                disabled={isUpdating}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 font-semibold transition-colors"
                                             >
-                                                Evet, Onayla
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                                <CheckCircleIcon className="h-4 w-4 mr-2" />
+                                                Teklifi Onayla
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Teklifi onaylıyor musunuz?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Bu işlem geri alınamaz. Teklifi onayladığınızda sipariş işleme
+                                                    alınacaktır.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>İptal</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={handleAcceptOffer}
+                                                    className="bg-green-600 hover:bg-green-700"
+                                                >
+                                                    Evet, Onayla
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
 
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button
-                                            disabled={isUpdating}
-                                            variant="outline"
-                                            className="border-red-300 text-red-600 hover:bg-red-50 px-6 py-2 font-semibold"
-                                        >
-                                            <XCircleIcon className="h-4 w-4 mr-2" />
-                                            Teklifi Reddet
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Teklifi reddediyor musunuz?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Bu işlem geri alınamaz. Teklifi reddettiğinizde işlem
-                                                sonlandırılacaktır.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>İptal</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={handleRejectOffer}
-                                                className="bg-red-600 hover:bg-red-700"
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                disabled={isUpdating}
+                                                variant="outline"
+                                                className="border-red-300 text-red-600 hover:bg-red-50 px-6 py-2 font-semibold"
                                             >
-                                                Evet, Reddet
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                                <XCircleIcon className="h-4 w-4 mr-2" />
+                                                Teklifi Reddet
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Teklifi reddediyor musunuz?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Bu işlem geri alınamaz. Teklifi reddettiğinizde işlem
+                                                    sonlandırılacaktır.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>İptal</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={handleRejectOffer}
+                                                    className="bg-red-600 hover:bg-red-700"
+                                                >
+                                                    Evet, Reddet
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
