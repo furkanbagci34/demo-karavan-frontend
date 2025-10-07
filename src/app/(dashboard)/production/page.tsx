@@ -23,12 +23,16 @@ import {
     Timer,
     Loader2,
     Settings,
+    RefreshCw,
+    Maximize,
+    Minimize,
 } from "lucide-react";
 import React, { useState } from "react";
 import { ProductionOperation, ProductionStatus } from "@/lib/api/types";
 import { useProduction } from "@/hooks/api/useProduction";
 import { PauseOperationModal } from "@/components/production/PauseOperationModal";
 import { StartOperationModal } from "@/components/production/StartOperationModal";
+import { CompleteOperationModal } from "@/components/production/CompleteOperationModal";
 import { toast } from "sonner";
 
 // Status renk ve icon helper'ları - fotoğraftaki gibi satır renkleri
@@ -102,63 +106,67 @@ const ProductionOperationCard: React.FC<{
 
     return (
         <div className={`border rounded-lg p-4 ${statusConfig.rowColor}`}>
-            <div className="flex items-center gap-4">
-                {/* Sol - Numara ve Operasyon Bilgisi */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold">
-                        {operation.id}
+            {/* Header Section - Always visible */}
+            <div className="flex items-center gap-3 mb-4">
+                <StatusIcon className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-sm text-gray-900 truncate">
+                            {operation.name}
+                            {operation.offer_number && ` - ${operation.offer_number}`}
+                            {operation.customer_name && ` (${operation.customer_name})`}
+                        </h3>
+                        {/* Durum kutucuğu */}
+                        <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.badgeColor} self-start`}
+                        >
+                            {statusConfig.text}
+                        </span>
                     </div>
-                    <StatusIcon className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-sm text-gray-900 truncate">
-                                {operation.name}
-                                {operation.offer_number && ` - ${operation.offer_number}`}
-                            </h3>
-                            {/* Durum kutucuğu */}
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.badgeColor}`}>
-                                {statusConfig.text}
-                            </span>
+                    <div className="text-xs text-gray-600 truncate">
+                        {operation.vehicle_name} • İstasyon: {operation.station_name}
+                    </div>
+                </div>
+            </div>
+
+            {/* Stats and Actions Section - Responsive layout */}
+            <div className="flex flex-col lg:flex-row gap-4">
+                {/* Stats Section - Grid layout for better tablet view */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 flex-1">
+                    {/* Geçen Süre - Kutucuk içinde */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <div className="text-xs text-gray-500">Geçen Süre</div>
                         </div>
-                        <div className="text-xs text-gray-600 truncate">
-                            {operation.plan_name} • {operation.vehicle_name} • İstasyon: {operation.station_name}
+                        <div className="font-semibold text-sm">{formatTime(operation.elapsed_time)}</div>
+                    </div>
+
+                    {/* Hedef Süre - Kutucuk içinde */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                            <Timer className="h-4 w-4 text-gray-500" />
+                            <div className="text-xs text-gray-500">Hedef Süre</div>
+                        </div>
+                        <div className="font-semibold text-sm">
+                            {operation.target_duration_formatted || formatTime(operation.target_time)}
                         </div>
                     </div>
-                </div>
 
-                {/* Geçen Süre - Kutucuk içinde */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center min-w-[100px]">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                        <Clock className="h-4 w-4 text-gray-500" />
-                        <div className="text-xs text-gray-500">Geçen Süre</div>
-                    </div>
-                    <div className="font-semibold text-sm">{formatTime(operation.elapsed_time)}</div>
-                </div>
-
-                {/* Hedef Süre - Kutucuk içinde */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center min-w-[100px]">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                        <Timer className="h-4 w-4 text-gray-500" />
-                        <div className="text-xs text-gray-500">Hedef Süre</div>
-                    </div>
-                    <div className="font-semibold text-sm">
-                        {operation.target_duration_formatted || formatTime(operation.target_time)}
+                    {/* İlerleme - Kutucuk içinde */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center col-span-2 lg:col-span-1">
+                        <div className="text-xs text-gray-500 mb-1">İlerleme</div>
+                        <div className="font-semibold text-sm">{operation.progress}%</div>
                     </div>
                 </div>
 
-                {/* İlerleme - Kutucuk içinde */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center min-w-[100px]">
-                    <div className="text-xs text-gray-500 mb-1">İlerleme</div>
-                    <div className="font-semibold text-sm">{operation.progress}%</div>
-                </div>
-
-                {/* Action Buttons - Eşit genişlikte 3 buton */}
-                <div className="flex gap-2">
+                {/* Action Buttons - Responsive button layout */}
+                <div className="flex flex-row sm:flex-row gap-2 lg:flex-col xl:flex-row">
                     {/* Başlat/Devam Et Butonu */}
                     <Button
                         size="lg"
                         onClick={() => onStart(operation.id)}
-                        className={`w-32 px-6 py-4 text-base font-medium h-12 ${
+                        className={`flex-1 sm:w-32 lg:w-full xl:w-32 px-6 py-4 text-base font-medium h-12 ${
                             operation.start_time
                                 ? operation.status === "in_progress"
                                     ? "bg-blue-600 hover:bg-blue-700 text-white"
@@ -184,7 +192,7 @@ const ProductionOperationCard: React.FC<{
                     <Button
                         size="lg"
                         onClick={() => onPause(operation.id)}
-                        className="w-32 bg-red-600 hover:bg-red-700 text-white px-6 py-4 text-base font-medium h-12"
+                        className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-red-600 hover:bg-red-700 text-white px-6 py-4 text-base font-medium h-12"
                         disabled={isLoading || operation.status !== "in_progress"}
                     >
                         {isLoading && operation.status === "in_progress" && isPausing ? (
@@ -199,7 +207,7 @@ const ProductionOperationCard: React.FC<{
                     <Button
                         size="lg"
                         onClick={() => onComplete(operation.id)}
-                        className="w-32 bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-base font-medium h-12"
+                        className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-base font-medium h-12"
                         disabled={isLoading || operation.status === "completed" || operation.status === "pending"}
                     >
                         {isLoading &&
@@ -236,7 +244,11 @@ export default function ProductionPage() {
     // Modal states
     const [showStartModal, setShowStartModal] = useState(false);
     const [showPauseModal, setShowPauseModal] = useState(false);
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<ProductionOperation | null>(null);
+
+    // Fullscreen state
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Operation durumunu güncelle - start_time varsa resume, yoksa start
     const handleStart = async (id: number) => {
@@ -265,9 +277,21 @@ export default function ProductionPage() {
         }
     };
 
-    const handleComplete = async (id: number) => {
+    const handleComplete = (id: number) => {
+        const operation = operations.find((op) => op.id === id);
+        if (operation) {
+            setSelectedOperation(operation);
+            setShowCompleteModal(true);
+        }
+    };
+
+    const handleConfirmComplete = async () => {
+        if (!selectedOperation) return;
+
         try {
-            await completeOperation(id);
+            await completeOperation(selectedOperation.id);
+            setShowCompleteModal(false);
+            setSelectedOperation(null);
         } catch (error) {
             console.error("Operasyon tamamlama hatası:", error);
         }
@@ -300,10 +324,26 @@ export default function ProductionPage() {
         }
     };
 
+    // Refresh fonksiyonu
+    const handleRefresh = () => {
+        window.location.reload();
+    };
+
+    // Fullscreen toggle fonksiyonu
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            setIsFullscreen(true);
+        } else {
+            document.exitFullscreen();
+            setIsFullscreen(false);
+        }
+    };
+
     return (
         <>
             <header className="flex h-16 shrink-0 items-center gap-2 border-b">
-                <div className="flex items-center gap-2 px-4">
+                <div className="flex items-center gap-2 px-4 flex-1">
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
                     <Breadcrumb>
@@ -317,6 +357,31 @@ export default function ProductionPage() {
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 px-4">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2"
+                        title="Yenile"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        <span className="hidden sm:inline">Yenile</span>
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleFullscreen}
+                        className="flex items-center gap-2"
+                        title={isFullscreen ? "Tam Ekrandan Çık" : "Tam Ekran"}
+                    >
+                        {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                        <span className="hidden sm:inline">{isFullscreen ? "Çık" : "Tam Ekran"}</span>
+                    </Button>
                 </div>
             </header>
 
@@ -431,6 +496,17 @@ export default function ProductionPage() {
                 onPauseOperation={handlePauseWithReason}
                 operationName={selectedOperation?.name || ""}
                 operationId={selectedOperation?.id || 0}
+            />
+
+            <CompleteOperationModal
+                isOpen={showCompleteModal}
+                onClose={() => {
+                    setShowCompleteModal(false);
+                    setSelectedOperation(null);
+                }}
+                onConfirm={handleConfirmComplete}
+                operationName={selectedOperation?.name || ""}
+                isCompleting={isCompleting}
             />
         </>
     );
