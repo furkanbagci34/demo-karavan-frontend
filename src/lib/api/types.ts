@@ -474,7 +474,13 @@ export interface UpdateVehicleAcceptanceData {
 }
 
 // Production Operation tipleri
-export type ProductionStatus = "pending" | "in_progress" | "completed" | "paused" | "error";
+export type ProductionStatus =
+    | "pending"
+    | "in_progress"
+    | "completed"
+    | "paused"
+    | "error"
+    | "awaiting_quality_control";
 
 export interface ProductionOperation {
     id: number;
@@ -492,6 +498,8 @@ export interface ProductionOperation {
     start_time?: string;
     end_time?: string;
     assigned_worker_ids?: number[]; // Atanmış usta ID'leri
+    quality_control?: boolean;
+    quality_check_passed?: boolean | null;
     created_at: string;
     updated_at: string;
 }
@@ -520,7 +528,13 @@ export interface OperationPause {
 
 // Production Execution tipleri
 export type ProductionExecutionStatus = "idle" | "running" | "paused" | "completed" | "cancelled";
-export type OperationExecutionStatus = "pending" | "in_progress" | "completed" | "paused" | "skipped";
+export type OperationExecutionStatus =
+    | "pending"
+    | "in_progress"
+    | "completed"
+    | "paused"
+    | "skipped"
+    | "awaiting_quality_control";
 
 export interface ProductionExecution {
     id: number;

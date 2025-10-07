@@ -66,6 +66,13 @@ const getStatusConfig = (status: ProductionStatus) => {
                 icon: Pause,
                 text: "Durduruldu",
             };
+        case "awaiting_quality_control":
+            return {
+                badgeColor: "bg-purple-100 text-purple-800",
+                rowColor: "border-l-4 border-l-purple-500 bg-purple-50",
+                icon: Clock,
+                text: "Kalite Kontrol Bekleniyor",
+            };
         case "error":
             return {
                 badgeColor: "bg-red-100 text-red-800",
@@ -177,6 +184,7 @@ const ProductionOperationCard: React.FC<{
                             isLoading ||
                             operation.status === "completed" ||
                             operation.status === "in_progress" ||
+                            operation.status === "awaiting_quality_control" ||
                             (operation.start_time ? operation.status !== "paused" : false)
                         }
                     >
@@ -208,7 +216,12 @@ const ProductionOperationCard: React.FC<{
                         size="lg"
                         onClick={() => onComplete(operation.id)}
                         className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-base font-medium h-12"
-                        disabled={isLoading || operation.status === "completed" || operation.status === "pending"}
+                        disabled={
+                            isLoading ||
+                            operation.status === "completed" ||
+                            operation.status === "pending" ||
+                            operation.status === "awaiting_quality_control"
+                        }
                     >
                         {isLoading &&
                         (operation.status === "in_progress" || operation.status === "paused") &&
@@ -507,6 +520,7 @@ export default function ProductionPage() {
                 onConfirm={handleConfirmComplete}
                 operationName={selectedOperation?.name || ""}
                 isCompleting={isCompleting}
+                hasQualityControl={selectedOperation?.quality_control || false}
             />
         </>
     );

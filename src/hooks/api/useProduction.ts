@@ -120,6 +120,22 @@ export const useProduction = () => {
         },
     });
 
+    // Approve quality control
+    const approveQualityControl = useMutation({
+        mutationFn: async (operationId: number): Promise<void> => {
+            await apiClient.post(API_ENDPOINTS.production.approveQualityControl(operationId.toString()));
+        },
+        onSuccess: () => {
+            toast.success("Kalite kontrol onaylandı");
+            queryClient.invalidateQueries({ queryKey: ["production"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecution"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
+        },
+        onError: () => {
+            toast.error("Kalite kontrol onaylanırken bir hata oluştu");
+        },
+    });
+
     return {
         // Queries
         operations: getActiveOperations.data || [],
@@ -136,6 +152,7 @@ export const useProduction = () => {
         completeOperation: completeOperation.mutateAsync,
         updateProgress: (operationId: number, progress: number) =>
             updateProgress.mutateAsync({ operationId, progress }),
+        approveQualityControl: approveQualityControl.mutateAsync,
 
         // Loading states
         isStarting: startOperation.isPending,
@@ -143,6 +160,7 @@ export const useProduction = () => {
         isResuming: resumeOperation.isPending,
         isCompleting: completeOperation.isPending,
         isUpdatingProgress: updateProgress.isPending,
+        isApprovingQuality: approveQualityControl.isPending,
     };
 };
 

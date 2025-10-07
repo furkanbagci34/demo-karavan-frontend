@@ -110,6 +110,7 @@ export const API_ENDPOINTS = {
         getOperationPauses: (id: string) => `/api/production/operations/${id}/pauses`,
         updateProgress: (id: string) => `/api/production/operations/${id}/progress`,
         getOperationsByUser: (userId?: string) => `/api/production/operations/user${userId ? `/${userId}` : ""}`,
+        approveQualityControl: (id: string) => `/api/production/operations/${id}/quality-approve`,
     },
     dashboard: {
         summary: "/api/dashboard/summary",

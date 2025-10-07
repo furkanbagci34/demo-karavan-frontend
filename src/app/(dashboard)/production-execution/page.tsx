@@ -31,10 +31,12 @@ import {
     Clock,
     Target,
     Activity,
+    ListChecks,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { useProductionExecution } from "@/hooks/api/useProductionExecution";
 import { ProductionExecution, ProductionExecutionStatus } from "@/lib/api/types";
+import { OperationMonitorModal } from "@/components/OperationMonitorModal";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -74,6 +76,26 @@ const getStatusColor = (status: ProductionExecutionStatus) => {
     }
 };
 
+// Operation Status renklerini belirleyen fonksiyon
+const getOperationStatusColor = (status: string) => {
+    switch (status) {
+        case "pending":
+            return "bg-gray-100 text-gray-800";
+        case "in_progress":
+            return "bg-blue-100 text-blue-800";
+        case "completed":
+            return "bg-green-100 text-green-800";
+        case "paused":
+            return "bg-yellow-100 text-yellow-800";
+        case "skipped":
+            return "bg-red-100 text-red-800";
+        case "awaiting_quality_control":
+            return "bg-purple-100 text-purple-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+};
+
 const getProgressColor = (status: ProductionExecutionStatus) => {
     switch (status) {
         case "completed":
@@ -107,11 +129,34 @@ const getStatusText = (status: ProductionExecutionStatus) => {
     }
 };
 
+// Operation Status display text
+const getOperationStatusText = (status: string) => {
+    switch (status) {
+        case "pending":
+            return "Beklemede";
+        case "in_progress":
+            return "Devam Ediyor";
+        case "completed":
+            return "Tamamlandı";
+        case "paused":
+            return "Duraklatıldı";
+        case "skipped":
+            return "Atlandı";
+        case "awaiting_quality_control":
+            return "Kalite Kontrol Bekleniyor";
+        default:
+            return status;
+    }
+};
+
 export default function ProductionExecutionListPage() {
     const router = useRouter();
     const [currentPage, setCurrentPage] = useState(1);
     const [executionToDelete, setExecutionToDelete] = useState<ProductionExecution | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isOperationMonitorOpen, setIsOperationMonitorOpen] = useState(false);
+    const [selectedExecutionId, setSelectedExecutionId] = useState<number | null>(null);
+    const [selectedExecutionName, setSelectedExecutionName] = useState<string>("");
 
     const { getAll, remove } = useProductionExecution();
     const { data: productionExecutions = [], isLoading } = getAll;
@@ -119,7 +164,20 @@ export default function ProductionExecutionListPage() {
     // Sil dialog'unu aç
     const openDeleteDialog = (execution: ProductionExecution) => {
         setExecutionToDelete(execution);
-        setIsDeleteDialogOpen(true);
+        // Dropdown menünün kapanması için kısa bir gecikme
+        setTimeout(() => {
+            setIsDeleteDialogOpen(true);
+        }, 0);
+    };
+
+    // Operasyon izleme modalını aç
+    const openOperationMonitor = (execution: ProductionExecution) => {
+        setSelectedExecutionId(execution.id);
+        setSelectedExecutionName(execution.production_plan_name || `Plan #${execution.id}`);
+        // Dropdown menünün kapanması için kısa bir gecikme
+        setTimeout(() => {
+            setIsOperationMonitorOpen(true);
+        }, 0);
     };
 
     // Üretim planı silme fonksiyonu
@@ -346,6 +404,15 @@ export default function ProductionExecutionListPage() {
                                                             <DropdownMenuItem
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    openOperationMonitor(execution);
+                                                                }}
+                                                            >
+                                                                <ListChecks className="mr-2 h-4 w-4" />
+                                                                <span>Operasyon İzle</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     router.push(
                                                                         `/production-execution/edit/${execution.id}`
                                                                     );
@@ -501,6 +568,15 @@ export default function ProductionExecutionListPage() {
                                                             <DropdownMenuItem
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    openOperationMonitor(execution);
+                                                                }}
+                                                            >
+                                                                <ListChecks className="mr-2 h-4 w-4" />
+                                                                <span>Operasyon İzle</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     router.push(
                                                                         `/production-execution/edit/${execution.id}`
                                                                     );
@@ -562,6 +638,14 @@ export default function ProductionExecutionListPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Operation Monitor Modal */}
+            <OperationMonitorModal
+                isOpen={isOperationMonitorOpen}
+                onClose={() => setIsOperationMonitorOpen(false)}
+                executionId={selectedExecutionId}
+                productionPlanName={selectedExecutionName}
+            />
         </>
     );
 }
