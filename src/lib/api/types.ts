@@ -34,6 +34,8 @@ export interface User {
     email: string;
     phone_number: string;
     is_active: boolean;
+    allowed_menus?: string[]; // Kullanıcının erişebileceği menü ID'leri
+    default_page?: string; // Kullanıcının varsayılan sayfası
     created_at: string;
     last_signin_at?: string;
     role: string;

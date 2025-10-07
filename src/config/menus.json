@@ -1,0 +1,139 @@
+{
+    "menus": [
+        {
+            "id": "dashboard",
+            "title": "Anasayfa",
+            "url": "/dashboard",
+            "icon": "House",
+            "group": "Menü",
+            "items": []
+        },
+        {
+            "id": "customers",
+            "title": "Müşteriler",
+            "url": "/customer",
+            "icon": "Users",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "customers-list",
+                    "title": "Müşteri Listesi",
+                    "url": "/customer"
+                }
+            ]
+        },
+        {
+            "id": "products",
+            "title": "Ürünler",
+            "url": "/product",
+            "icon": "Newspaper",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "products-list",
+                    "title": "Ürün Listesi",
+                    "url": "/product"
+                },
+                {
+                    "id": "products-stock",
+                    "title": "Ürün Stok Durumu",
+                    "url": "/product/stock"
+                }
+            ]
+        },
+        {
+            "id": "offers",
+            "title": "Teklifler",
+            "url": "/offer",
+            "icon": "FileText",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "offers-list",
+                    "title": "Teklif Listesi",
+                    "url": "/offer"
+                }
+            ]
+        },
+        {
+            "id": "warehouses",
+            "title": "Depolar",
+            "url": "/warehouse",
+            "icon": "Warehouse",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "warehouses-list",
+                    "title": "Depo Listesi",
+                    "url": "/warehouse"
+                }
+            ]
+        },
+        {
+            "id": "vehicles",
+            "title": "Araçlar",
+            "url": "/vehicle",
+            "icon": "Car",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "vehicles-list",
+                    "title": "Araç Listesi",
+                    "url": "/vehicle"
+                },
+                {
+                    "id": "vehicles-parts",
+                    "title": "Araç Parçaları",
+                    "url": "/vehicle/parts"
+                },
+                {
+                    "id": "vehicles-acceptance",
+                    "title": "Araç Kabul",
+                    "url": "/vehicle-acceptance"
+                }
+            ]
+        },
+        {
+            "id": "production",
+            "title": "Üretim",
+            "url": "/production",
+            "icon": "Factory",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "production-main",
+                    "title": "Üretim",
+                    "url": "/production"
+                },
+                {
+                    "id": "production-execution",
+                    "title": "Üretim Planı",
+                    "url": "/production-execution"
+                },
+                {
+                    "id": "production-templates",
+                    "title": "Üretim Şablonu",
+                    "url": "/production-templates"
+                },
+                {
+                    "id": "production-stations",
+                    "title": "İstasyonlar",
+                    "url": "/stations"
+                },
+                {
+                    "id": "production-operations",
+                    "title": "Operasyonlar",
+                    "url": "/operations"
+                }
+            ]
+        },
+        {
+            "id": "users",
+            "title": "Kullanıcılar",
+            "url": "/users",
+            "icon": "Users",
+            "group": "Menü",
+            "items": []
+        }
+    ]
+}

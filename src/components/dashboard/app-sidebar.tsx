@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { type LucideIcon, Newspaper, House, Users, FileText, Factory, Car, Warehouse } from "lucide-react";
 
 import { NavMain } from "@/components/dashboard/nav-main";
 import { NavUser } from "@/components/dashboard/nav-user";
@@ -14,251 +13,11 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/api/useAuth";
+import { getFilteredMenus } from "@/lib/menu-manager";
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LogoFull, LogoIcon } from "./logo";
-
-// Menü öğelerinin tiplerini tanımlayalım
-interface SubMenuItem {
-    title: string;
-    url: string;
-    isActive?: boolean;
-}
-
-interface MenuItem {
-    title: string;
-    url: string;
-    icon: LucideIcon;
-    items?: SubMenuItem[];
-    isActive?: boolean;
-}
-
-interface MenuGroup {
-    group: string;
-    items: MenuItem[];
-}
-
-// Admin için kullanılacak menüler
-const adminMenus: MenuGroup[] = [
-    {
-        group: "Menü",
-        items: [
-            {
-                title: "Anasayfa",
-                url: "/dashboard",
-                icon: House,
-            },
-            {
-                title: "Müşteriler",
-                url: "/customer",
-                icon: Users,
-                items: [
-                    {
-                        title: "Müşteri Listesi",
-                        url: "/customer",
-                    },
-                ],
-            },
-            {
-                title: "Ürünler",
-                url: "/product",
-                icon: Newspaper,
-                items: [
-                    {
-                        title: "Ürün Listesi",
-                        url: "/product",
-                    },
-                    {
-                        title: "Ürün Stok Durumu",
-                        url: "/product/stock",
-                    },
-                ],
-            },
-            {
-                title: "Teklifler",
-                url: "/offer",
-                icon: FileText,
-                items: [
-                    {
-                        title: "Teklif Listesi",
-                        url: "/offer",
-                    },
-                ],
-            },
-            {
-                title: "Depolar",
-                url: "/warehouse",
-                icon: Warehouse,
-                items: [
-                    {
-                        title: "Depo Listesi",
-                        url: "/warehouse",
-                    },
-                ],
-            },
-            {
-                title: "Araçlar",
-                url: "/vehicle",
-                icon: Car,
-                items: [
-                    {
-                        title: "Araç Listesi",
-                        url: "/vehicle",
-                    },
-                    {
-                        title: "Araç Parçaları",
-                        url: "/vehicle/parts",
-                    },
-                    {
-                        title: "Araç Kabul",
-                        url: "/vehicle-acceptance",
-                    },
-                ],
-            },
-            {
-                title: "Üretim",
-                url: "/production",
-                icon: Factory,
-                items: [
-                    {
-                        title: "Üretim",
-                        url: "/production",
-                    },
-                    {
-                        title: "Üretim Planı",
-                        url: "/production-execution",
-                    },
-                    {
-                        title: "Üretim Şablonu",
-                        url: "/production-templates",
-                    },
-                    {
-                        title: "İstasyonlar",
-                        url: "/stations",
-                    },
-                    {
-                        title: "Operasyonlar",
-                        url: "/operations",
-                    },
-                ],
-            },
-            {
-                title: "Kullanıcılar",
-                url: "/users",
-                icon: Users,
-            },
-        ],
-    },
-];
-
-// Normal kullanıcılar için kullanılacak menüler
-const userMenus: MenuGroup[] = [
-    {
-        group: "Menü",
-        items: [
-            {
-                title: "Anasayfa",
-                url: "/dashboard",
-                icon: House,
-            },
-            {
-                title: "Müşteriler",
-                url: "/customer",
-                icon: Users,
-                items: [
-                    {
-                        title: "Müşteri Listesi",
-                        url: "/customer",
-                    },
-                ],
-            },
-            {
-                title: "Ürünler",
-                url: "/product",
-                icon: Newspaper,
-                items: [
-                    {
-                        title: "Ürün Listesi",
-                        url: "/product",
-                    },
-                    {
-                        title: "Ürün Stok Durumu",
-                        url: "/product/stock",
-                    },
-                ],
-            },
-            {
-                title: "Teklifler",
-                url: "/offer",
-                icon: FileText,
-                items: [
-                    {
-                        title: "Teklif Listesi",
-                        url: "/offer",
-                    },
-                ],
-            },
-            {
-                title: "Depolar",
-                url: "/warehouse",
-                icon: Warehouse,
-                items: [
-                    {
-                        title: "Depo Listesi",
-                        url: "/warehouse",
-                    },
-                ],
-            },
-            {
-                title: "Araçlar",
-                url: "/vehicle",
-                icon: Car,
-                items: [
-                    {
-                        title: "Araç Listesi",
-                        url: "/vehicle",
-                    },
-                    {
-                        title: "Araç Parçaları",
-                        url: "/vehicle/parts",
-                    },
-                    {
-                        title: "Araç Kabul",
-                        url: "/vehicle-acceptance",
-                    },
-                ],
-            },
-            {
-                title: "Üretim",
-                url: "/production",
-                icon: Factory,
-                items: [
-                    {
-                        title: "Üretim",
-                        url: "/production",
-                    },
-                    {
-                        title: "Üretim Planı",
-                        url: "/production-execution",
-                    },
-                    {
-                        title: "Üretim Şablonu",
-                        url: "/production-templates",
-                    },
-                    {
-                        title: "İstasyonlar",
-                        url: "/stations",
-                    },
-                    {
-                        title: "Operasyonlar",
-                        url: "/operations",
-                    },
-                ],
-            },
-        ],
-    },
-];
 
 export function AppSidebar() {
     const { user } = useAuth();
@@ -267,7 +26,8 @@ export function AppSidebar() {
 
     // Yol adına göre aktif durumları güncelle
     const menuWithActiveState = React.useMemo(() => {
-        const menus = user?.role === "admin" ? adminMenus : userMenus;
+        // Kullanıcının izinli olduğu menüleri al
+        const menus = getFilteredMenus(user?.allowed_menus);
 
         return menus.map((group) => ({
             ...group,
@@ -286,7 +46,7 @@ export function AppSidebar() {
                 };
             }),
         }));
-    }, [pathname, user?.role]);
+    }, [pathname, user?.allowed_menus]);
 
     // Temel kullanıcı bilgileri
 

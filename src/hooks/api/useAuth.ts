@@ -65,12 +65,27 @@ export const useLogin = (options?: { onSuccess?: () => void; onError?: (error: u
                 const user = await apiClient.get<User>(API_ENDPOINTS.users.profile);
                 queryClient.setQueryData(["user"], user);
 
-                router.push("/dashboard");
+                // Kullanıcının menülerini cookie'ye kaydet
+                if (user.allowed_menus && user.allowed_menus.length > 0) {
+                    Cookies.set("allowed_menus", JSON.stringify(user.allowed_menus), { expires: 7 });
+                } else {
+                    // Admin veya sınırsız erişim - boş array kaydet
+                    Cookies.set("allowed_menus", JSON.stringify([]), { expires: 7 });
+                }
+
+                // Default page varsa kaydet
+                if (user.default_page) {
+                    router.push(user.default_page);
+                } else {
+                    router.push("/dashboard");
+                }
+
                 options?.onSuccess?.();
             } catch (error) {
                 console.error("Kullanıcı bilgileri alınamadı:", error);
 
                 Cookies.remove("token");
+                Cookies.remove("allowed_menus");
                 options?.onError?.(error);
             }
         },
@@ -98,11 +113,25 @@ export const useRegister = (options?: { onError?: (error: unknown) => void }) =>
             try {
                 const user = await apiClient.get<User>(API_ENDPOINTS.users.profile);
                 queryClient.setQueryData(["user"], user);
+
+                // Kullanıcının menülerini cookie'ye kaydet
+                if (user.allowed_menus && user.allowed_menus.length > 0) {
+                    Cookies.set("allowed_menus", JSON.stringify(user.allowed_menus), { expires: 7 });
+                } else {
+                    // Admin veya sınırsız erişim - boş array kaydet
+                    Cookies.set("allowed_menus", JSON.stringify([]), { expires: 7 });
+                }
             } catch (error) {
                 console.error("Kullanıcı bilgileri alınamadı:", error);
             }
 
-            router.push("/dashboard");
+            // Default page varsa oraya git
+            const user = queryClient.getQueryData<User>(["user"]);
+            if (user?.default_page) {
+                router.push(user.default_page);
+            } else {
+                router.push("/dashboard");
+            }
         },
         onError: (error) => {
             options?.onError?.(error);
@@ -119,8 +148,9 @@ export const useLogout = () => {
             await apiClient.post(API_ENDPOINTS.users.logout);
         },
         onSuccess: () => {
-            // Token'ı sil
+            // Token ve menüleri sil
             Cookies.remove("token");
+            Cookies.remove("allowed_menus");
             // User state'ini temizle
             queryClient.setQueryData(["user"], null);
             // Login sayfasına yönlendir
