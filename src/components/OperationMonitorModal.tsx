@@ -19,9 +19,8 @@ import {
     XCircle,
     CircleDashed,
     Factory,
-    Timer,
 } from "lucide-react";
-import { ProductionExecutionOperation, OperationExecutionStatus } from "@/lib/api/types";
+import { OperationExecutionStatus } from "@/lib/api/types";
 import { useProductionExecution } from "@/hooks/api/useProductionExecution";
 import { useProduction } from "@/hooks/api/useProduction";
 

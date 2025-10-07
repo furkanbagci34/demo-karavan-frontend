@@ -45,8 +45,8 @@ export const CompleteOperationModal: React.FC<CompleteOperationModalProps> = ({
                                 <div className="text-sm text-purple-800">
                                     <p className="font-medium mb-1">Kalite Kontrol Gerekli</p>
                                     <p>
-                                        Bu operasyon tamamlandığında "Kalite Kontrol Bekleniyor" durumuna geçecektir.
-                                        Kalite kontrol onaylandıktan sonra tamamen tamamlanmış sayılacaktır.
+                                        Bu operasyon tamamlandığında &quot;Kalite Kontrol Bekleniyor&quot; durumuna
+                                        geçecektir. Kalite kontrol onaylandıktan sonra tamamen tamamlanmış sayılacaktır.
                                     </p>
                                 </div>
                             </div>
