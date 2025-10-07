@@ -478,6 +478,7 @@ export interface ProductionOperation {
     id: number;
     name: string;
     plan_name: string;
+    customer_name?: string;
     vehicle_name: string;
     station_name: string;
     offer_number?: string;

@@ -71,7 +71,7 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-md w-[90vw]">
+            <DialogContent className="max-w-md w-[90vw]" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Play className="h-5 w-5 text-blue-600" />

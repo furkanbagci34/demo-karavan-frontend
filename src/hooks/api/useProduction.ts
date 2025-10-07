@@ -41,6 +41,8 @@ export const useProduction = () => {
             toast.success("Operasyon başlatıldı");
             queryClient.invalidateQueries({ queryKey: ["production"] });
             queryClient.invalidateQueries({ queryKey: ["production-execution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
         },
         onError: () => {
             toast.error("Operasyon başlatılırken bir hata oluştu");
@@ -58,6 +60,8 @@ export const useProduction = () => {
             toast.success("Operasyon durduruldu");
             queryClient.invalidateQueries({ queryKey: ["production"] });
             queryClient.invalidateQueries({ queryKey: ["production-execution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
         },
         onError: () => {
             toast.error("Operasyon durdurulurken bir hata oluştu");
@@ -73,6 +77,8 @@ export const useProduction = () => {
             toast.success("Operasyon devam ettirildi");
             queryClient.invalidateQueries({ queryKey: ["production"] });
             queryClient.invalidateQueries({ queryKey: ["production-execution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
         },
         onError: () => {
             toast.error("Operasyon devam ettirilirken bir hata oluştu");
@@ -88,6 +94,8 @@ export const useProduction = () => {
             toast.success("Operasyon tamamlandı");
             queryClient.invalidateQueries({ queryKey: ["production"] });
             queryClient.invalidateQueries({ queryKey: ["production-execution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
         },
         onError: () => {
             toast.error("Operasyon tamamlanırken bir hata oluştu");
@@ -104,6 +112,8 @@ export const useProduction = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["production"] });
             queryClient.invalidateQueries({ queryKey: ["production-execution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
         },
         onError: () => {
             toast.error("İlerleme güncellenirken bir hata oluştu");

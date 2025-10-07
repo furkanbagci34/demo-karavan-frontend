@@ -32,6 +32,7 @@ export const useProductionExecution = () => {
         onSuccess: () => {
             toast.success("Üretim planı başarıyla başlatıldı.");
             queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
         },
         onError: (error: unknown) => {
             const errorMessage =
@@ -56,6 +57,7 @@ export const useProductionExecution = () => {
         onSuccess: () => {
             toast.success("Üretim planı başarıyla silindi.");
             queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
         },
         onError: (error: unknown) => {
             let errorMessage = "Üretim planı silinirken bir hata oluştu.";
@@ -102,6 +104,7 @@ export const useProductionExecution = () => {
             toast.success("Üretim planı başarıyla güncellendi.");
             queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
             queryClient.invalidateQueries({ queryKey: ["productionExecution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-plan"] });
         },
         onError: (error: unknown) => {
             let errorMessage = "Üretim planı güncellenirken bir hata oluştu.";

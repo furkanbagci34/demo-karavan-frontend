@@ -65,7 +65,7 @@ export const PauseOperationModal: React.FC<PauseOperationModalProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-2xl w-[90vw]">
+            <DialogContent className="max-w-2xl w-[90vw]" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Pause className="h-5 w-5 text-red-600" />
@@ -133,6 +133,7 @@ export const PauseOperationModal: React.FC<PauseOperationModalProps> = ({
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="min-h-[100px] resize-none"
+                            autoFocus={false}
                         />
                         <p className="text-xs text-gray-500 mt-2">
                             Bu açıklama operasyon geçmişinde görüntülenecektir.
