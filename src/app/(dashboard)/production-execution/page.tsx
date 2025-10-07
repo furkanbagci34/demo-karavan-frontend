@@ -76,26 +76,6 @@ const getStatusColor = (status: ProductionExecutionStatus) => {
     }
 };
 
-// Operation Status renklerini belirleyen fonksiyon
-const getOperationStatusColor = (status: string) => {
-    switch (status) {
-        case "pending":
-            return "bg-gray-100 text-gray-800";
-        case "in_progress":
-            return "bg-blue-100 text-blue-800";
-        case "completed":
-            return "bg-green-100 text-green-800";
-        case "paused":
-            return "bg-yellow-100 text-yellow-800";
-        case "skipped":
-            return "bg-red-100 text-red-800";
-        case "awaiting_quality_control":
-            return "bg-purple-100 text-purple-800";
-        default:
-            return "bg-gray-100 text-gray-800";
-    }
-};
-
 const getProgressColor = (status: ProductionExecutionStatus) => {
     switch (status) {
         case "completed":
@@ -124,26 +104,6 @@ const getStatusText = (status: ProductionExecutionStatus) => {
             return "Tamamlandı";
         case "cancelled":
             return "İptal Edildi";
-        default:
-            return status;
-    }
-};
-
-// Operation Status display text
-const getOperationStatusText = (status: string) => {
-    switch (status) {
-        case "pending":
-            return "Beklemede";
-        case "in_progress":
-            return "Devam Ediyor";
-        case "completed":
-            return "Tamamlandı";
-        case "paused":
-            return "Duraklatıldı";
-        case "skipped":
-            return "Atlandı";
-        case "awaiting_quality_control":
-            return "Kalite Kontrol Bekleniyor";
         default:
             return status;
     }
