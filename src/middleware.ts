@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const AUTH_PAGES = ["/login", "/register"];
-const PUBLIC_PAGES = ["/unauthorized"];
+const PUBLIC_PAGES = ["/offer-detail", "/unauthorized"];
 
 const isAuthPage = (path: string) => AUTH_PAGES.some((p) => path.startsWith(p));
 const isPublicPage = (path: string) => PUBLIC_PAGES.some((p) => path.startsWith(p));
