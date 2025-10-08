@@ -401,7 +401,7 @@ export default function VehicleAcceptanceFormPage() {
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
                     </h1>
                     <Image
-                        src="/images/demonte-icon.png"
+                        src="/images/mefsystem-icon.png"
                         priority
                         alt="Logo"
                         width={60}

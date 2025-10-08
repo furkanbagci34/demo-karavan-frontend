@@ -42,7 +42,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             <div className="flex flex-col items-center space-y-6 pb-16 pt-10">
                 <LogoFull className="h-20 w-auto" />
                 <div className="space-y-2 text-center">
-                    <h1 className="text-2xl font-semibold tracking-tight text-gray-800">Demonte Karavan</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight text-gray-800">MefSystem Karavan - Demo</h1>
                     <p className="text-balance text-sm text-gray-600">Yönetim Paneli</p>
                 </div>
             </div>
@@ -69,7 +69,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         autoComplete="username"
                                         name="email"
                                         className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
-                                        placeholder="ornek@demontekaravan.com"
+                                        placeholder="ornek@gmail.com"
                                         tabIndex={1}
                                     />
                                 </div>
