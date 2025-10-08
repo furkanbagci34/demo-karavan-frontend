@@ -222,6 +222,9 @@ export default function ProductionExecutionListPage() {
                                             Plan Adı
                                         </TableHead>
                                         <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
+                                            Numara
+                                        </TableHead>
+                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
                                             Araç
                                         </TableHead>
                                         <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
@@ -250,7 +253,7 @@ export default function ProductionExecutionListPage() {
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center py-8">
+                                            <TableCell colSpan={10} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                     Üretim planları yükleniyor...
@@ -259,7 +262,7 @@ export default function ProductionExecutionListPage() {
                                         </TableRow>
                                     ) : productionExecutions.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center py-8">
+                                            <TableCell colSpan={10} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <AlertTriangle className="h-4 w-4" />
                                                     Henüz üretim planı bulunmuyor
@@ -288,6 +291,17 @@ export default function ProductionExecutionListPage() {
                                                             {execution.production_plan_name || `Plan #${execution.id}`}
                                                         </span>
                                                     </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    {execution.number ? (
+                                                        <div className="flex items-center justify-center">
+                                                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                                {execution.number}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="text-center">
@@ -442,6 +456,11 @@ export default function ProductionExecutionListPage() {
                                                                 {execution.production_plan_name ||
                                                                     `Plan #${execution.id}`}
                                                             </h3>
+                                                            {execution.number && (
+                                                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xs">
+                                                                    {execution.number}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                             <Car className="h-3 w-3" />

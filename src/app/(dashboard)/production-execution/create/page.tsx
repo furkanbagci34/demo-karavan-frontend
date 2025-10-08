@@ -54,6 +54,7 @@ interface VehicleInfo {
     customerName: string;
     plateNumber: string;
     vehicleAcceptanceId: number | null;
+    number: number | null;
 }
 
 interface SelectedTemplate {
@@ -105,6 +106,7 @@ export default function ProductionExecutionPage() {
         customerName: "",
         plateNumber: "",
         vehicleAcceptanceId: null,
+        number: null,
     });
 
     const [description, setDescription] = useState<string>("");
@@ -324,6 +326,7 @@ export default function ProductionExecutionPage() {
                 vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId || undefined,
                 status: "running" as const,
                 description: description || undefined,
+                number: vehicleInfo.number || undefined,
                 operations: operations,
             };
 
@@ -351,6 +354,7 @@ export default function ProductionExecutionPage() {
             customerName: "",
             plateNumber: "",
             vehicleAcceptanceId: null,
+            number: null,
         });
         setDescription("");
         setSelectedTemplateId(null);
@@ -614,23 +618,54 @@ export default function ProductionExecutionPage() {
                                     </div>
                                 </div>
 
-                                {/* Açıklama Alanı - Altında */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        <Label
-                                            htmlFor="description"
-                                            className="text-sm font-medium flex items-center gap-2 whitespace-nowrap"
-                                        >
-                                            <MessageSquare className="h-4 w-4" />
-                                            Açıklama
-                                        </Label>
-                                        <Textarea
-                                            id="description"
-                                            placeholder="Üretim planı hakkında notlar yazabilirsiniz..."
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            className="min-h-[60px] resize-none text-sm flex-1"
-                                        />
+                                {/* Açıklama ve Numara Alanları - Altında */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Açıklama Alanı */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <Label
+                                                htmlFor="description"
+                                                className="text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                                            >
+                                                <MessageSquare className="h-4 w-4" />
+                                                Açıklama
+                                            </Label>
+                                            <Textarea
+                                                id="description"
+                                                placeholder="Üretim planı hakkında notlar yazabilirsiniz..."
+                                                value={description}
+                                                onChange={(e) => setDescription(e.target.value)}
+                                                className="min-h-[60px] resize-none text-sm flex-1"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Numara Seçimi */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <Label htmlFor="number" className="text-sm font-medium whitespace-nowrap">
+                                                Numara
+                                            </Label>
+                                            <Select
+                                                onValueChange={(value) => setVehicleInfo(prev => ({ ...prev, number: parseInt(value) }))}
+                                                value={vehicleInfo.number?.toString() || ""}
+                                            >
+                                                <SelectTrigger className="h-12 flex-1">
+                                                    <SelectValue placeholder="Numara seçiniz (1-10)" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                                                        <SelectItem key={num} value={num.toString()}>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm">
+                                                                    {num}
+                                                                </div>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>

@@ -500,6 +500,7 @@ export interface ProductionOperation {
     assigned_worker_ids?: number[]; // Atanmış usta ID'leri
     quality_control?: boolean;
     quality_check_passed?: boolean | null;
+    production_number?: number;
     created_at: string;
     updated_at: string;
 }
@@ -549,6 +550,7 @@ export interface ProductionExecution {
     cancelled_at?: string;
     total_duration?: number;
     description?: string;
+    number?: number;
     created_at: string;
     updated_at: string;
     created_by: number;
@@ -598,6 +600,7 @@ export interface ProductionExecutionOperation {
     operation_name?: string;
     original_station_name?: string;
     original_operation_name?: string;
+    production_number?: number;
 }
 
 export interface ProductionExecutionOperationData {
@@ -617,6 +620,7 @@ export interface CreateProductionExecutionData {
     vehicleAcceptanceId?: number;
     status?: ProductionExecutionStatus;
     description?: string;
+    number?: number;
     operations?: ProductionExecutionOperationData[];
 }
 
@@ -626,6 +630,7 @@ export interface UpdateProductionExecutionData {
     vehicleAcceptanceId?: number;
     status?: ProductionExecutionStatus;
     description?: string;
+    number?: number;
     operations?: ProductionExecutionOperationData[];
 }
 

@@ -112,32 +112,43 @@ const ProductionOperationCard: React.FC<{
     const StatusIcon = statusConfig.icon;
 
     return (
-        <div className={`border rounded-lg p-4 ${statusConfig.rowColor}`}>
-            {/* Header Section - Always visible */}
-            <div className="flex items-center gap-3 mb-4">
-                <StatusIcon className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-sm text-gray-900 truncate">
-                            {operation.name}
-                            {operation.offer_number && ` - ${operation.offer_number}`}
-                            {operation.customer_name && ` (${operation.customer_name})`}
-                        </h3>
-                        {/* Durum kutucuğu */}
-                        <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.badgeColor} self-start`}
-                        >
-                            {statusConfig.text}
-                        </span>
-                    </div>
-                    <div className="text-xs text-gray-600 truncate">
-                        {operation.vehicle_name} • İstasyon: {operation.station_name}
+        <div className={`border rounded-lg p-4 ${statusConfig.rowColor} flex gap-4`}>
+            {/* Production Number Badge - En solda, card'ın başlangıcında ortalı */}
+            {operation.production_number && (
+                <div className="flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg flex-shrink-0">
+                        {operation.production_number}
                     </div>
                 </div>
-            </div>
+            )}
+            
+            {/* Ana İçerik */}
+            <div className="flex-1">
+                {/* Header Section - Always visible */}
+                <div className="flex items-center gap-3 mb-4">
+                    <StatusIcon className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-sm text-gray-900 truncate">
+                                {operation.name}
+                                {operation.offer_number && ` - ${operation.offer_number}`}
+                                {operation.customer_name && ` (${operation.customer_name})`}
+                            </h3>
+                            {/* Durum kutucuğu */}
+                            <span
+                                className={`px-2 py-0.5 rounded text-xs font-medium ${statusConfig.badgeColor} self-start`}
+                            >
+                                {statusConfig.text}
+                            </span>
+                        </div>
+                        <div className="text-xs text-gray-600 truncate">
+                            {operation.vehicle_name} • İstasyon: {operation.station_name}
+                        </div>
+                    </div>
+                </div>
 
-            {/* Stats and Actions Section - Responsive layout */}
-            <div className="flex flex-col lg:flex-row gap-4">
+                {/* Stats and Actions Section - Responsive layout */}
+                <div className="flex flex-col lg:flex-row gap-4">
                 {/* Stats Section - Grid layout for better tablet view */}
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 flex-1">
                     {/* Geçen Süre - Kutucuk içinde */}
@@ -233,6 +244,7 @@ const ProductionOperationCard: React.FC<{
                         Tamamla
                     </Button>
                 </div>
+                </div>
             </div>
         </div>
     );
@@ -253,6 +265,17 @@ export default function ProductionPage() {
         isResuming,
         isCompleting,
     } = useProduction();
+
+    // Number filtreleme state'i
+    const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+
+    // Mevcut number'ları al
+    const availableNumbers = Array.from(new Set(operations.map(op => op.production_number).filter(Boolean))).sort((a, b) => (a || 0) - (b || 0));
+
+    // Filtrelenmiş operasyonlar
+    const filteredOperations = selectedNumber 
+        ? operations.filter(op => op.production_number === selectedNumber)
+        : operations;
 
     // Modal states
     const [showStartModal, setShowStartModal] = useState(false);
@@ -453,10 +476,54 @@ export default function ProductionPage() {
                     </div>
                 )}
 
+                {/* Number Filtreleme Butonları */}
+                {!isLoading && availableNumbers.length > 0 && (
+                    <div className="mb-6">
+                        <div className="flex items-center gap-3 mb-3">
+                            <h3 className="text-sm font-medium text-gray-700">Numara Filtresi:</h3>
+                            <div className="flex items-center gap-2">
+                                {/* Tümünü Göster Butonu */}
+                                <button
+                                    onClick={() => setSelectedNumber(null)}
+                                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                                        selectedNumber === null
+                                            ? 'bg-gray-800 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    Tümü
+                                </button>
+                                
+                                {/* Number Butonları */}
+                                {availableNumbers.map((number) => (
+                                    <button
+                                        key={number}
+                                        onClick={() => setSelectedNumber(number || null)}
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                                            selectedNumber === number
+                                                ? 'bg-blue-100 text-blue-600 border-2 border-blue-300'
+                                                : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                        }`}
+                                    >
+                                        {number}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Filtreleme Sonucu Bilgisi */}
+                        {selectedNumber && (
+                            <div className="text-sm text-gray-600 mb-3">
+                                <span className="font-medium">Numara {selectedNumber}</span> için {filteredOperations.length} operasyon gösteriliyor
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Operations List */}
                 {!isLoading && (
                     <div className="space-y-3">
-                        {operations.map((operation) => (
+                        {filteredOperations.map((operation) => (
                             <ProductionOperationCard
                                 key={operation.id}
                                 operation={operation}
@@ -473,15 +540,32 @@ export default function ProductionPage() {
                 )}
 
                 {/* Boş Durum */}
-                {!isLoading && operations.length === 0 && (
+                {!isLoading && filteredOperations.length === 0 && (
                     <Card>
                         <CardContent className="p-8">
                             <div className="text-center">
                                 <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-semibold mb-2">Aktif operasyon bulunamadı</h3>
-                                <p className="text-muted-foreground">
-                                    Şu anda size atanmış aktif bir üretim operasyonu bulunmamaktadır.
-                                </p>
+                                {selectedNumber ? (
+                                    <>
+                                        <h3 className="text-lg font-semibold mb-2">Numara {selectedNumber} için operasyon bulunamadı</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Seçilen numara için aktif operasyon bulunmuyor.
+                                        </p>
+                                        <button
+                                            onClick={() => setSelectedNumber(null)}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            Tüm Operasyonları Göster
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h3 className="text-lg font-semibold mb-2">Aktif operasyon bulunamadı</h3>
+                                        <p className="text-muted-foreground">
+                                            Şu anda size atanmış aktif bir üretim operasyonu bulunmamaktadır.
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

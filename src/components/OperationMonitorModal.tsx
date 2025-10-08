@@ -308,6 +308,7 @@ export const OperationMonitorModal: React.FC<OperationMonitorModalProps> = ({
                             <Table>
                                 <TableHeader className="sticky top-0 z-10">
                                     <TableRow className="bg-gray-50">
+                                        <TableHead className="text-center w-12 bg-gray-50">No</TableHead>
                                         <TableHead className="text-center w-16 bg-gray-50">#</TableHead>
                                         <TableHead className="bg-gray-50">Operasyon Adı</TableHead>
                                         <TableHead className="text-center bg-gray-50">Durum</TableHead>
@@ -333,6 +334,15 @@ export const OperationMonitorModal: React.FC<OperationMonitorModalProps> = ({
                                                 }
                                             `}
                                         >
+                                            <TableCell className="text-center">
+                                                {operation.production_number ? (
+                                                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm mx-auto">
+                                                        {operation.production_number}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                )}
+                                            </TableCell>
                                             <TableCell className="text-center font-bold">
                                                 {operation.sort_order}
                                             </TableCell>
