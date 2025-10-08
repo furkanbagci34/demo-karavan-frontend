@@ -179,6 +179,14 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
         try {
             const offersData = await getOffersByCustomerId(customer.id);
             setCustomerOffers(offersData);
+            
+            // İlk teklifi otomatik olarak seç
+            if (offersData && offersData.length > 0) {
+                setPaymentForm(prev => ({
+                    ...prev,
+                    offerId: offersData[0].id
+                }));
+            }
         } catch (error) {
             console.error("Müşteri teklifleri yüklenirken hata:", error);
         }
@@ -621,7 +629,16 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                                         <CreditCard className="h-5 w-5" />
                                         Tahsilatlar
                                     </CardTitle>
-                                    <Button onClick={() => setShowPaymentModal(true)} variant="green">
+                                    <Button 
+                                        onClick={() => {
+                                            // Eğer teklifler yüklenmemişse, önce yükle
+                                            if (customerOffers.length === 0) {
+                                                loadCustomerOffers();
+                                            }
+                                            setShowPaymentModal(true);
+                                        }} 
+                                        variant="green"
+                                    >
                                         <Plus className="h-4 w-4" />
                                         Tahsilat Ekle
                                     </Button>
@@ -636,7 +653,13 @@ export default function CustomerDetailPage({ params }: CustomerDetailPageProps) 
                                             Bu müşteriye ait henüz tahsilat kaydı bulunmuyor.
                                         </p>
                                         <Button
-                                            onClick={() => setShowPaymentModal(true)}
+                                            onClick={() => {
+                                                // Eğer teklifler yüklenmemişse, önce yükle
+                                                if (customerOffers.length === 0) {
+                                                    loadCustomerOffers();
+                                                }
+                                                setShowPaymentModal(true);
+                                            }}
                                             className="mt-4"
                                             variant="outline"
                                         >
