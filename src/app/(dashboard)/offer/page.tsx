@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OfferStatus } from "@/lib/enums";
 
 const PAGE_SIZE = 10;
@@ -130,6 +131,7 @@ export default function OfferListPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
     const [isCreatingOffer, setIsCreatingOffer] = useState(false);
     const [isCustomerSelectorOpen, setIsCustomerSelectorOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<string>("all");
     const { getAllOffers, deleteOffer, createOffer, getLastOfferId, loading } = useOffers();
     const { customers, isLoading: customersLoading } = useCustomers();
     const [offers, setOffers] = useState<Offer[]>([]);
@@ -266,9 +268,18 @@ export default function OfferListPage() {
         }
     };
 
-    // Pagination hesaplamaları
-    const totalPages = Math.max(1, Math.ceil(offers.length / PAGE_SIZE));
-    const paginatedOffers = offers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    // Filtreleme ve pagination hesaplamaları
+    const filteredOffers = statusFilter === "all" 
+        ? offers 
+        : offers.filter(offer => offer.status === statusFilter);
+    
+    const totalPages = Math.max(1, Math.ceil(filteredOffers.length / PAGE_SIZE));
+    const paginatedOffers = filteredOffers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+    // Status filtresi değiştiğinde sayfa 1'e dön
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter]);
 
     // Sayfa değiştiğinde scroll'u yukarı çek
     useEffect(() => {
@@ -312,8 +323,30 @@ export default function OfferListPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Teklif Listesi</CardTitle>
-                        <CardDescription>Teklif detayına gitmek için satırın üzerine tıklayınız.</CardDescription>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div>
+                                <CardTitle>Teklif Listesi</CardTitle>
+                                <CardDescription>Teklif detayına gitmek için satırın üzerine tıklayınız.</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-gray-700">Durum Filtresi:</label>
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-48">
+                                        <SelectValue placeholder="Tüm Durumlar" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Tüm Durumlar</SelectItem>
+                                        <SelectItem value={OfferStatus.TASLAK}>Taslak</SelectItem>
+                                        <SelectItem value={OfferStatus.GONDERILDI}>Gönderildi</SelectItem>
+                                        <SelectItem value={OfferStatus.ONAYLANDI}>Onaylandı</SelectItem>
+                                        <SelectItem value={OfferStatus.REDDEDILDI}>Reddedildi</SelectItem>
+                                        <SelectItem value={OfferStatus.TAMAMLANDI}>Tamamlandı</SelectItem>
+                                        <SelectItem value={OfferStatus.IPTAL_EDILDI}>İptal Edildi</SelectItem>
+                                        <SelectItem value={OfferStatus.ÜRETIMDE}>Üretimde</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         {/* Desktop Tablo Görünümü */}
@@ -363,12 +396,14 @@ export default function OfferListPage() {
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ) : offers.length === 0 ? (
+                                    ) : filteredOffers.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={9} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <AlertTriangle className="h-4 w-4" />
-                                                    Henüz teklif bulunmuyor
+                                                    {statusFilter === "all" 
+                                                        ? "Henüz teklif bulunmuyor" 
+                                                        : "Seçilen durumda teklif bulunmuyor"}
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -455,11 +490,13 @@ export default function OfferListPage() {
                                         Teklifler yükleniyor...
                                     </div>
                                 </div>
-                            ) : offers.length === 0 ? (
+                            ) : filteredOffers.length === 0 ? (
                                 <div className="p-8 text-center">
                                     <div className="flex items-center justify-center gap-2">
                                         <AlertTriangle className="h-4 w-4" />
-                                        Henüz teklif bulunmuyor
+                                        {statusFilter === "all" 
+                                            ? "Henüz teklif bulunmuyor" 
+                                            : "Seçilen durumda teklif bulunmuyor"}
                                     </div>
                                 </div>
                             ) : (
