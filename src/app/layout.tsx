@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "MefSystem Karavan",
-    description: "MefSystem Karavan Yönetim Paneli",
+    title: "LovaSoftware Karavan",
+    description: "LovaSoftware Karavan Yönetim Paneli",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

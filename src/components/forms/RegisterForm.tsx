@@ -50,7 +50,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
             <div className="flex flex-col items-center space-y-6 pb-16 pt-10">
                 <LogoFull className="h-12 w-auto" />
                 <div className="space-y-2 text-center">
-                    <h1 className="text-2xl font-semibold tracking-tight text-gray-800">MefSystem Karavan</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight text-gray-800">LovaSoftware Karavan</h1>
                     <p className="text-balance text-sm text-gray-600">Yeni Hesap Oluştur</p>
                 </div>
             </div>

@@ -122,8 +122,8 @@ const OfferDetailPage = () => {
                 {/* Header - Full Width */}
                 <div className="w-full p-4" style={{ backgroundColor: "#575756" }}>
                     <Image
-                        src="/images/mefsystem-logo-yatay.png"
-                        alt="MefSystem Karavan"
+                        src="/images/lovasoftware-logo-yatay.png"
+                        alt="LovaSoftware Karavan"
                         width={400}
                         height={80}
                         className="h-15 object-contain mx-auto mb-3"
@@ -160,7 +160,7 @@ const OfferDetailPage = () => {
                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                         <p className="text-sm text-gray-700">
                                             <strong>İletişim:</strong> Herhangi bir sorunuz için{" "}
-                                            <span className="font-semibold">info@mefsystem.com</span> adresinden bize
+                                            <span className="font-semibold">info@lovasoftware.com</span> adresinden bize
                                             ulaşabilirsiniz.
                                         </p>
                                     </div>
@@ -192,7 +192,7 @@ const OfferDetailPage = () => {
                                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                         <p className="text-sm text-gray-700">
                                             <strong>İletişim:</strong> Yeni sözleşme talepleriniz için{" "}
-                                            <span className="font-semibold">info@mefsystem.com</span> adresinden bize
+                                            <span className="font-semibold">info@lovasoftware.com</span> adresinden bize
                                             ulaşabilirsiniz.
                                         </p>
                                     </div>
@@ -210,8 +210,8 @@ const OfferDetailPage = () => {
             {/* Header - Full Width */}
             <div className="w-full p-4" style={{ backgroundColor: "#575756" }}>
                 <Image
-                    src="/images/mefsystem-logo-yatay.png"
-                    alt="MefSystem Karavan - Demo"
+                    src="/images/lovasoftware-logo-yatay.png"
+                    alt="LovaSoftware Karavan - Demo"
                     width={400}
                     height={80}
                     className="h-15 object-contain mx-auto mb-3"

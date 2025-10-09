@@ -401,7 +401,7 @@ export default function VehicleAcceptanceFormPage() {
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
                     </h1>
                     <Image
-                        src="/images/mefsystem-icon.png"
+                        src="/images/lovasoftware-icon.png"
                         priority
                         alt="Logo"
                         width={60}
