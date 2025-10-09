@@ -9,24 +9,24 @@ const CAROUSEL_ITEMS = [
         icon: Caravan,
         title: "Doğa sizi çağırıyor",
         description: "Geçmişten gelen en iyi kamp aracı ile özgürlüğünüze bir adım daha yakınsınız.",
-        gradient: "from-[#FF5F1F] to-[#FF3131]",
-        iconColor: "text-white",
+        gradient: "from-primary to-primary/80",
+        iconColor: "text-primary-foreground",
     },
     {
         icon: Trees,
         title: "Sınırları kaldıran rahatlık",
         description:
             "Maceraya doğru attığınız her bir adımda evinizden uzak, eviniz hep yanınızda. Keşfedilmemiş koylara, el değmemiş denizlere ve yabancı ülkelere evinizin rahatlığını taşıyın.",
-        gradient: "from-[#FF5F1F] to-[#FF3131]",
-        iconColor: "text-white",
+        gradient: "from-primary to-primary/80",
+        iconColor: "text-primary-foreground",
     },
     {
         icon: House,
         title: "Maceranın yeni ve modern yüzü",
         description:
             "Ferah ve aydınlık iç tasarımı, kullanışlı ve esnek detayları ile Demonte karavanlar en zorlu yolculukları bile unutulmaz bir serüvene dönüştürmek için hazır.",
-        gradient: "from-[#FF5F1F] to-[#FF3131]",
-        iconColor: "text-white",
+        gradient: "from-primary to-primary/80",
+        iconColor: "text-primary-foreground",
     },
 ];
 
@@ -84,7 +84,7 @@ export function AuthCarousel() {
                         key={index}
                         className={cn(
                             "h-2 rounded-full bg-gray-300 transition-all",
-                            index === currentSlide ? "w-8 bg-[#FF5F1F]" : "w-2"
+                            index === currentSlide ? "w-8 bg-primary" : "w-2"
                         )}
                         onClick={() => setCurrentSlide(index)}
                     />

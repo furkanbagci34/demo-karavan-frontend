@@ -55,7 +55,13 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon">
             <SidebarHeader>
-                <div className="px-4 py-2 flex items-center justify-between">
+                <div
+                    className={
+                        state === "expanded"
+                            ? "px-4 py-2 flex items-center justify-between"
+                            : "px-4 py-2 flex items-center justify-center"
+                    }
+                >
                     <Link href="/dashboard" className="flex items-center justify-center">
                         {state === "expanded" ? <LogoFull /> : <LogoIcon />}
                     </Link>

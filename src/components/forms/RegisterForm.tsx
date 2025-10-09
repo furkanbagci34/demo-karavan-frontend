@@ -65,7 +65,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                             htmlFor="firstName"
                                             className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                         >
-                                            <Users className="h-4 w-4 text-orange-500" />
+                                            <Users className="h-4 w-4 text-primary" />
                                             Ad
                                         </Label>
                                         <Input
@@ -77,7 +77,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                             required
                                             autoComplete="given-name"
                                             name="firstName"
-                                            className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
+                                            className="border-gray-300 focus:border-primary focus:ring-primary/20 bg-gray-50/50"
                                             placeholder="Adınız"
                                         />
                                     </div>
@@ -86,7 +86,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                             htmlFor="lastName"
                                             className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                         >
-                                            <Building className="h-4 w-4 text-orange-500" />
+                                            <Building className="h-4 w-4 text-primary" />
                                             Soyad
                                         </Label>
                                         <Input
@@ -98,7 +98,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                             required
                                             autoComplete="family-name"
                                             name="lastName"
-                                            className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
+                                            className="border-gray-300 focus:border-primary focus:ring-primary/20 bg-gray-50/50"
                                             placeholder="Soyadınız"
                                         />
                                     </div>
@@ -108,7 +108,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                         htmlFor="email"
                                         className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                     >
-                                        <Users className="h-4 w-4 text-orange-500" />
+                                        <Users className="h-4 w-4 text-primary" />
                                         E-posta Adresi
                                     </Label>
                                     <Input
@@ -120,7 +120,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                         required
                                         autoComplete="email"
                                         name="email"
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
+                                        className="border-gray-300 focus:border-primary focus:ring-primary/20 bg-gray-50/50"
                                         placeholder="ornek@gmail.com"
                                     />
                                 </div>
@@ -129,7 +129,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                         htmlFor="password"
                                         className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                     >
-                                        <Shield className="h-4 w-4 text-orange-500" />
+                                        <Shield className="h-4 w-4 text-primary" />
                                         Şifre
                                     </Label>
                                     <Input
@@ -141,7 +141,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                         required
                                         autoComplete="new-password"
                                         name="password"
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
+                                        className="border-gray-300 focus:border-primary focus:ring-primary/20 bg-gray-50/50"
                                         placeholder="••••••••"
                                     />
                                 </div>
@@ -151,7 +151,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                                     type="submit"
                                     disabled={isPending}
                                     size="lg"
-                                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                                 >
                                     {isPending ? (
                                         <>
@@ -192,7 +192,7 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                         Zaten hesabınız var mı?{" "}
                         <Button
                             variant="link"
-                            className="h-auto p-0 text-orange-600 hover:text-orange-700 font-normal"
+                            className="h-auto p-0 text-primary hover:text-primary/80 font-normal"
                             asChild
                         >
                             <Link href="/login">Giriş Yap</Link>
@@ -200,11 +200,11 @@ export function RegisterForm({ className, ...props }: React.ComponentPropsWithou
                     </div>
                     <div className="text-balance text-center text-xs text-gray-500">
                         <span className="space-x-1">
-                            <Link href="/terms" className="underline-offset-4 hover:underline text-orange-600">
+                            <Link href="/terms" className="underline-offset-4 hover:underline text-primary">
                                 Hizmet Şartları
                             </Link>
                             <span>-</span>
-                            <Link href="/privacy" className="underline-offset-4 hover:underline text-orange-600">
+                            <Link href="/privacy" className="underline-offset-4 hover:underline text-primary">
                                 Gizlilik Politikası
                             </Link>
                         </span>

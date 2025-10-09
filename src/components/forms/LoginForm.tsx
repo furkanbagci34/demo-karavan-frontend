@@ -56,7 +56,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         htmlFor="email"
                                         className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                     >
-                                        <Users className="h-4 w-4 text-orange-500" />
+                                        <Users className="h-4 w-4 text-primary" />
                                         E-posta Adresi
                                     </Label>
                                     <Input
@@ -68,7 +68,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         required
                                         autoComplete="username"
                                         name="email"
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
+                                        className="border-gray-300 focus:border-primary focus:ring-primary/20 bg-gray-50/50"
                                         placeholder="ornek@gmail.com"
                                         tabIndex={1}
                                     />
@@ -79,12 +79,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                             htmlFor="password"
                                             className="text-sm font-medium flex items-center gap-2 text-gray-700"
                                         >
-                                            <Shield className="h-4 w-4 text-orange-500" />
+                                            <Shield className="h-4 w-4 text-primary" />
                                             Şifre
                                         </Label>
                                         <Button
                                             variant="link"
-                                            className="h-auto p-0 text-xs font-normal text-orange-600 hover:text-orange-700"
+                                            className="h-auto p-0 text-xs font-normal text-primary hover:text-primary/80"
                                             asChild
                                         ></Button>
                                     </div>
@@ -97,7 +97,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                         required
                                         autoComplete="current-password"
                                         name="password"
-                                        className="border-gray-300 focus:border-orange-500 focus:ring-orange-500/20 bg-gray-50/50"
+                                        className="border-gray-300 focus:border-primary focus:ring-primary/20 bg-gray-50/50"
                                         placeholder="••••••••"
                                         tabIndex={2}
                                     />
@@ -108,7 +108,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                                     type="submit"
                                     disabled={isPending}
                                     size="lg"
-                                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-200"
                                     tabIndex={3}
                                 >
                                     {isPending ? (
@@ -150,7 +150,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                         Yeni kullanıcı mısınız?{" "}
                         <Button
                             variant="link"
-                            className="h-auto p-0 text-orange-600 hover:text-orange-700 font-normal"
+                            className="h-auto p-0 text-primary hover:text-primary/80 font-normal"
                             asChild
                             tabIndex={4}
                         >
@@ -161,7 +161,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                         <span className="space-x-1">
                             <Link
                                 href="/terms"
-                                className="underline-offset-4 hover:underline text-orange-600"
+                                className="underline-offset-4 hover:underline text-primary"
                                 tabIndex={5}
                             >
                                 Hizmet Şartları
@@ -169,7 +169,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                             <span>-</span>
                             <Link
                                 href="/privacy"
-                                className="underline-offset-4 hover:underline text-orange-600"
+                                className="underline-offset-4 hover:underline text-primary"
                                 tabIndex={6}
                             >
                                 Gizlilik Politikası
