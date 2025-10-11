@@ -61,14 +61,6 @@
             ]
         },
         {
-            "id": "service",
-            "title": "Servis",
-            "url": "#",
-            "icon": "Wrench",
-            "group": "Menü",
-            "items": []
-        },
-        {
             "id": "vehicles",
             "title": "Araçlar",
             "url": "/vehicle",
@@ -131,6 +123,14 @@
             "title": "Kullanıcılar",
             "url": "/users",
             "icon": "Users",
+            "group": "Menü",
+            "items": []
+        },
+        {
+            "id": "service",
+            "title": "Servis",
+            "url": "#",
+            "icon": "Wrench",
             "group": "Menü",
             "items": []
         }
