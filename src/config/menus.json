@@ -24,7 +24,7 @@
         },
         {
             "id": "products",
-            "title": "Ürünler",
+            "title": "Ürünler ve Depolar",
             "url": "/product",
             "icon": "Newspaper",
             "group": "Menü",
@@ -38,6 +38,11 @@
                     "id": "products-stock",
                     "title": "Ürün Stok Durumu",
                     "url": "/product/stock"
+                },
+                {
+                    "id": "warehouses-list",
+                    "title": "Depo Listesi",
+                    "url": "/warehouse"
                 }
             ]
         },
@@ -56,18 +61,12 @@
             ]
         },
         {
-            "id": "warehouses",
-            "title": "Depolar",
-            "url": "/warehouse",
-            "icon": "Warehouse",
+            "id": "service",
+            "title": "Servis",
+            "url": "#",
+            "icon": "Wrench",
             "group": "Menü",
-            "items": [
-                {
-                    "id": "warehouses-list",
-                    "title": "Depo Listesi",
-                    "url": "/warehouse"
-                }
-            ]
+            "items": []
         },
         {
             "id": "vehicles",

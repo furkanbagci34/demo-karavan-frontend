@@ -60,7 +60,7 @@ export function NavMain({ menuGroups }: { menuGroups: MenuGroup[] }) {
                                                 className={cn(item.isActive && "text-primary font-medium")}
                                             >
                                                 {item.icon && <item.icon />}
-                                                <span>{item.title}</span>
+                                                <span className="font-bold">{item.title}</span>
                                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                             </SidebarMenuButton>
                                         </CollapsibleTrigger>
@@ -101,7 +101,7 @@ export function NavMain({ menuGroups }: { menuGroups: MenuGroup[] }) {
                                             onClick={handleMobileNavigation}
                                         >
                                             {item.icon && <item.icon className="h-4 w-4" />}
-                                            <span>{item.title}</span>
+                                            <span className="font-bold">{item.title}</span>
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
