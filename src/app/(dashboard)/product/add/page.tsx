@@ -43,6 +43,7 @@ const productSchema = z.object({
     code: z.string().optional(),
     purchasePrice: z.string().optional(),
     salePrice: z.string().optional(),
+    distributorPrice: z.string().optional(),
     stockQuantity: z.string().optional(),
     description: z.string().optional(),
     unit: z.enum(["Adet", "Saat"]),
@@ -64,6 +65,7 @@ export default function AddProductPage() {
             code: "",
             purchasePrice: undefined,
             salePrice: undefined,
+            distributorPrice: undefined,
             stockQuantity: undefined,
             description: "",
             unit: "Adet",
@@ -180,6 +182,7 @@ export default function AddProductPage() {
                         code: data.code || undefined,
                         purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice) : undefined,
                         salePrice: data.salePrice ? parseFloat(data.salePrice) : undefined,
+                        distributorPrice: data.distributorPrice ? parseFloat(data.distributorPrice) : undefined,
                         stockQuantity: data.stockQuantity ? parseInt(data.stockQuantity) : undefined,
                         description: data.description || undefined,
                         unit: data.unit,
@@ -204,6 +207,7 @@ export default function AddProductPage() {
                     code: data.code || undefined,
                     purchasePrice: data.purchasePrice ? parseFloat(data.purchasePrice) : undefined,
                     salePrice: data.salePrice ? parseFloat(data.salePrice) : undefined,
+                    distributorPrice: data.distributorPrice ? parseFloat(data.distributorPrice) : undefined,
                     stockQuantity: data.stockQuantity ? parseInt(data.stockQuantity) : undefined,
                     description: data.description || undefined,
                     unit: data.unit,
@@ -300,7 +304,7 @@ export default function AddProductPage() {
                                         )}
                                     />
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <FormField
                                             control={form.control}
                                             name="purchasePrice"
@@ -328,6 +332,27 @@ export default function AddProductPage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Satış Fiyatı (€)</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            {...field}
+                                                            value={field.value ?? ""}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="distributorPrice"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Bayi Fiyatı (€)</FormLabel>
                                                     <FormControl>
                                                         <Input
                                                             type="number"

@@ -214,6 +214,7 @@ export default function ProductListPage() {
                                         <TableHead className="text-center">Birim</TableHead>
                                         <TableHead className="text-right">Alış (€)</TableHead>
                                         <TableHead className="text-right">Satış (€)</TableHead>
+                                        <TableHead className="text-right">Bayi (€)</TableHead>
                                         <TableHead>Açıklama</TableHead>
                                         <TableHead className="text-center w-20">İşlemler</TableHead>
                                     </TableRow>
@@ -221,7 +222,7 @@ export default function ProductListPage() {
                                 <TableBody>
                                     {isLoading ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center py-8">
+                                            <TableCell colSpan={10} className="text-center py-8">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                     Ürünler yükleniyor...
@@ -260,6 +261,13 @@ export default function ProductListPage() {
                                                 <TableCell className="text-right">
                                                     {product.sale_price
                                                         ? product.sale_price.toLocaleString("tr-TR", {
+                                                              minimumFractionDigits: 2,
+                                                          })
+                                                        : "-"}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {product.distributor_price
+                                                        ? product.distributor_price.toLocaleString("tr-TR", {
                                                               minimumFractionDigits: 2,
                                                           })
                                                         : "-"}
@@ -355,6 +363,15 @@ export default function ProductListPage() {
                                                             Satış:{" "}
                                                             {product.sale_price
                                                                 ? product.sale_price.toLocaleString("tr-TR", {
+                                                                      minimumFractionDigits: 2,
+                                                                  })
+                                                                : "-"}
+                                                            €
+                                                        </span>
+                                                        <span className="text-muted-foreground">
+                                                            Bayi:{" "}
+                                                            {product.distributor_price
+                                                                ? product.distributor_price.toLocaleString("tr-TR", {
                                                                       minimumFractionDigits: 2,
                                                                   })
                                                                 : "-"}

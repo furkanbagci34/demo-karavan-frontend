@@ -43,6 +43,7 @@ const productSchema = z.object({
     stockCode: z.string().max(50, "Stok kodu çok uzun").optional(),
     purchasePrice: z.coerce.number().min(0, "Alış fiyatı 0'dan küçük olamaz").max(999999, "Alış fiyatı çok yüksek"),
     salePrice: z.coerce.number().min(0, "Satış fiyatı 0'dan küçük olamaz").max(999999, "Satış fiyatı çok yüksek"),
+    distributorPrice: z.coerce.number().min(0, "Distribütör fiyatı 0'dan küçük olamaz").max(999999, "Distribütör fiyatı çok yüksek").optional(),
     stockQuantity: z.coerce.number().min(0, "Stok miktarı 0'dan küçük olamaz").max(999999, "Stok miktarı çok yüksek"),
     description: z.string().optional(),
     image: z.string().optional(),
@@ -69,6 +70,7 @@ export default function EditProductPage() {
             stockCode: "",
             purchasePrice: 0,
             salePrice: 0,
+            distributorPrice: 0,
             stockQuantity: 0,
             description: "",
             image: "",
@@ -109,6 +111,7 @@ export default function EditProductPage() {
                 stockCode: productData.code || "",
                 purchasePrice: productData.purchase_price || 0,
                 salePrice: productData.sale_price || 0,
+                distributorPrice: productData.distributor_price || 0,
                 stockQuantity: productData.stock_quantity || 0,
                 description: productData.description || "",
                 unit: (productData.unit as "Adet" | "Saat") || "Adet",
@@ -204,6 +207,7 @@ export default function EditProductPage() {
                 code: data.stockCode || null,
                 purchasePrice: data.purchasePrice,
                 salePrice: data.salePrice,
+                distributorPrice: data.distributorPrice,
                 stockQuantity: data.stockQuantity,
                 description: data.description || null,
                 unit: data.unit,
@@ -330,7 +334,7 @@ export default function EditProductPage() {
                                             </FormItem>
                                         )}
                                     />
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <FormField
                                             control={form.control}
                                             name="purchasePrice"
@@ -356,6 +360,25 @@ export default function EditProductPage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Satış Fiyatı (€)</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="distributorPrice"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Bayi Fiyatı (€)</FormLabel>
                                                     <FormControl>
                                                         <Input
                                                             type="number"

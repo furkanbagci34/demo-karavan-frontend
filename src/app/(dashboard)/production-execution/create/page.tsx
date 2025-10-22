@@ -306,6 +306,11 @@ export default function ProductionExecutionPage() {
             return;
         }
 
+        if (!vehicleInfo.number) {
+            toast.error("Lütfen bir numara seçin");
+            return;
+        }
+
         try {
             // Düzenlenmiş operasyonları backend formatına dönüştür
             const operations = editableOperations.map((op, index) => ({
@@ -321,6 +326,7 @@ export default function ProductionExecutionPage() {
             // Backend'e gönderilecek veri
             const productionExecutionData = {
                 productionPlanId: selectedTemplate.id,
+                vehicleId: vehicleInfo.vehicleId || undefined,
                 offerId: vehicleInfo.offerId || undefined,
                 customerId: vehicleInfo.customerId || undefined,
                 vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId || undefined,
@@ -332,6 +338,8 @@ export default function ProductionExecutionPage() {
 
             await createProductionExecution.mutateAsync(productionExecutionData);
             queryClient.invalidateQueries({ queryKey: ["production"] });
+            // Rapor cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["reports"] });
 
             setTimeout(() => {
                 router.push("/production-execution");
@@ -481,7 +489,10 @@ export default function ProductionExecutionPage() {
                             <Button
                                 onClick={handleStartProduction}
                                 disabled={
-                                    !vehicleInfo.vehicleId || !selectedTemplate || createProductionExecution.isPending
+                                    !vehicleInfo.vehicleId ||
+                                    !selectedTemplate ||
+                                    !vehicleInfo.number ||
+                                    createProductionExecution.isPending
                                 }
                                 className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
                             >
@@ -535,7 +546,7 @@ export default function ProductionExecutionPage() {
                                     {/* Model Seçimi */}
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <Label htmlFor="vehicle" className="text-sm font-medium whitespace-nowrap">
+                                            <Label htmlFor="vehicle" className="text-sm font-medium w-32 flex-shrink-0">
                                                 Model Seçimi
                                             </Label>
                                             <Select
@@ -579,7 +590,7 @@ export default function ProductionExecutionPage() {
                                     {/* Şablon Seçimi */}
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <Label className="text-sm font-medium whitespace-nowrap">
+                                            <Label className="text-sm font-medium w-32 flex-shrink-0">
                                                 Üretim Şablonu
                                             </Label>
                                             <Select
@@ -622,10 +633,10 @@ export default function ProductionExecutionPage() {
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {/* Açıklama Alanı */}
                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-start gap-3">
                                             <Label
                                                 htmlFor="description"
-                                                className="text-sm font-medium flex items-center gap-2 whitespace-nowrap"
+                                                className="text-sm font-medium flex items-center gap-2 w-32 flex-shrink-0 pt-3"
                                             >
                                                 <MessageSquare className="h-4 w-4" />
                                                 Açıklama
@@ -643,11 +654,13 @@ export default function ProductionExecutionPage() {
                                     {/* Numara Seçimi */}
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <Label htmlFor="number" className="text-sm font-medium whitespace-nowrap">
-                                                Numara
+                                            <Label htmlFor="number" className="text-sm font-medium w-32 flex-shrink-0">
+                                                Numara <span className="text-red-500">*</span>
                                             </Label>
                                             <Select
-                                                onValueChange={(value) => setVehicleInfo(prev => ({ ...prev, number: parseInt(value) }))}
+                                                onValueChange={(value) =>
+                                                    setVehicleInfo((prev) => ({ ...prev, number: parseInt(value) }))
+                                                }
                                                 value={vehicleInfo.number?.toString() || ""}
                                             >
                                                 <SelectTrigger className="h-12 flex-1">
@@ -656,10 +669,11 @@ export default function ProductionExecutionPage() {
                                                 <SelectContent>
                                                     {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
                                                         <SelectItem key={num} value={num.toString()}>
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-3">
                                                                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm">
                                                                     {num}
                                                                 </div>
+                                                                <span className="font-medium">Numara {num}</span>
                                                             </div>
                                                         </SelectItem>
                                                     ))}

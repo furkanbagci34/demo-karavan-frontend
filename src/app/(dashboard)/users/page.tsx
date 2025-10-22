@@ -71,10 +71,19 @@ export default function UsersListPage() {
     const handleDeleteUser = async () => {
         if (!userToDelete) return;
 
-        await deleteUser(userToDelete.id.toString());
-        toast.success(`${userToDelete.name} ${userToDelete.surname} başarıyla silindi`);
-        setIsDeleteDialogOpen(false);
-        setUserToDelete(null);
+        deleteUser(userToDelete.id.toString(), {
+            onSuccess: () => {
+                toast.success(`${userToDelete.name} ${userToDelete.surname} başarıyla silindi`);
+                setIsDeleteDialogOpen(false);
+                setUserToDelete(null);
+            },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onError: (error: any) => {
+                console.error("Kullanıcı silme hatası:", error);
+                const errorMessage = error?.message || "Kullanıcı silinirken bir hata oluştu";
+                toast.error(errorMessage);
+            },
+        });
     };
 
     // Sayfa değişikliği

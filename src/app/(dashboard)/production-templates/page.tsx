@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Settings, Pencil, Trash2, Loader2, AlertTriangle, Search, X, Car, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, AlertTriangle, Search, X, Car, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useMemo } from "react";
@@ -32,12 +32,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const PAGE_SIZE = 10;
 
@@ -263,37 +257,31 @@ export default function ProductionTemplatesListPage() {
                                                         {template.is_active ? "Aktif" : "Pasif"}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="flex items-center justify-center">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                className="h-8 w-8 p-0"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <span className="sr-only">İşlemler</span>
-                                                                <Settings className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
-                                                                <Link
-                                                                    href={`/production-templates/edit/${template.id}`}
-                                                                    className="flex items-center"
-                                                                >
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    <span>Düzenle</span>
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(template)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Sil</span>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                <TableCell className="flex items-center justify-center gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/production-templates/edit/${template.id}`);
+                                                        }}
+                                                        title="Düzenle"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openDeleteDialog(template);
+                                                        }}
+                                                        title="Sil"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -339,35 +327,34 @@ export default function ProductionTemplatesListPage() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                className="h-8 w-8 p-0"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <Settings className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem asChild>
-                                                                <Link
-                                                                    href={`/production-templates/edit/${template.id}`}
-                                                                    className="flex items-center"
-                                                                >
-                                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                                    <span>Düzenle</span>
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                className="text-red-600 focus:text-red-600"
-                                                                onClick={() => openDeleteDialog(template)}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Sil</span>
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                router.push(
+                                                                    `/production-templates/edit/${template.id}`
+                                                                );
+                                                            }}
+                                                            title="Düzenle"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openDeleteDialog(template);
+                                                            }}
+                                                            title="Sil"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                     <span>

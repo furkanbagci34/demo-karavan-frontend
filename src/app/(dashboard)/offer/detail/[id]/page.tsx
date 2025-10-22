@@ -180,6 +180,8 @@ interface OfferItem {
     totalPrice: number;
     purchasePrice: number;
     totalPurchasePrice: number;
+    distributorPrice: number;
+    totalDistributorPrice: number;
     image: string;
     unit?: string; // Ürün birimi (Adet, Saat vb.)
     itemDiscountAmount?: number;
@@ -208,7 +210,7 @@ export default function EditOfferPage() {
     const [discountType, setDiscountType] = useState<"percentage" | "amount" | null>(null);
     const [discountValue, setDiscountValue] = useState<number>(0);
     const [discountMethod, setDiscountMethod] = useState<"total" | "distribute" | null>("total");
-    const [pdfMode, setPdfMode] = useState<"detailed" | "summary" | "nameOnly">("detailed");
+    const [pdfMode, setPdfMode] = useState<"detailed" | "summary" | "nameOnly" | "distributor">("detailed");
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -367,6 +369,9 @@ export default function EditOfferPage() {
                                 purchasePrice: (typedItem.purchasePrice as number) || 0,
                                 totalPurchasePrice:
                                     ((typedItem.purchasePrice as number) || 0) * (typedItem.quantity as number),
+                                distributorPrice: (typedItem.distributorPrice as number) || 0,
+                                totalDistributorPrice:
+                                    ((typedItem.distributorPrice as number) || 0) * (typedItem.quantity as number),
                                 image: (typedItem.productImage as string) || "/images/no-image-placeholder.svg",
                                 unit: (typedItem.productUnit as string) || "Adet", // Ürün birimini al
                                 // İndirim bilgilerini de ekle
@@ -427,6 +432,15 @@ export default function EditOfferPage() {
                             purchasePrice = 0;
                         }
 
+                        let distributorPrice: number;
+                        if (typeof product.distributor_price === "string") {
+                            distributorPrice = parseFloat(product.distributor_price);
+                        } else if (typeof product.distributor_price === "number") {
+                            distributorPrice = product.distributor_price;
+                        } else {
+                            distributorPrice = 0;
+                        }
+
                         if (isNaN(purchasePrice) || purchasePrice < 0) {
                             purchasePrice = 0;
                         }
@@ -445,6 +459,8 @@ export default function EditOfferPage() {
                                     updated[existingItemIndex].unitPrice * updated[existingItemIndex].quantity;
                                 updated[existingItemIndex].totalPurchasePrice =
                                     updated[existingItemIndex].purchasePrice * updated[existingItemIndex].quantity;
+                                updated[existingItemIndex].totalDistributorPrice =
+                                    updated[existingItemIndex].distributorPrice * updated[existingItemIndex].quantity;
                                 return updated;
                             } else {
                                 // Yeni ürün oluştur ve ekle
@@ -459,6 +475,8 @@ export default function EditOfferPage() {
                                     totalPrice: unitPrice * vehiclePartQuantity,
                                     purchasePrice: purchasePrice,
                                     totalPurchasePrice: purchasePrice * vehiclePartQuantity,
+                                    distributorPrice: distributorPrice,
+                                    totalDistributorPrice: distributorPrice * vehiclePartQuantity,
                                     image: product.image || "/images/no-image-placeholder.svg",
                                     unit: product.unit || "Adet",
                                 };
@@ -548,6 +566,19 @@ export default function EditOfferPage() {
                 purchasePrice = 0;
             }
 
+            let distributorPrice: number;
+            if (typeof product.distributor_price === "string") {
+                distributorPrice = parseFloat(product.distributor_price);
+            } else if (typeof product.distributor_price === "number") {
+                distributorPrice = product.distributor_price;
+            } else {
+                distributorPrice = 0;
+            }
+
+            if (isNaN(distributorPrice) || distributorPrice < 0) {
+                distributorPrice = 0;
+            }
+
             setOfferItems((prevItems) => {
                 const existingItemIndex = prevItems.findIndex((item) => item.productId === product.id);
 
@@ -556,9 +587,12 @@ export default function EditOfferPage() {
                     updatedItems[existingItemIndex].quantity += 1;
                     const unitPrice = updatedItems[existingItemIndex].unitPrice;
                     const purchasePrice = updatedItems[existingItemIndex].purchasePrice;
+                    const distributorPrice = updatedItems[existingItemIndex].distributorPrice;
                     updatedItems[existingItemIndex].totalPrice = updatedItems[existingItemIndex].quantity * unitPrice;
                     updatedItems[existingItemIndex].totalPurchasePrice =
                         updatedItems[existingItemIndex].quantity * purchasePrice;
+                    updatedItems[existingItemIndex].totalDistributorPrice =
+                        updatedItems[existingItemIndex].quantity * distributorPrice;
                     return updatedItems;
                 } else {
                     const newItem: OfferItem = {
@@ -571,6 +605,8 @@ export default function EditOfferPage() {
                         totalPrice: unitPrice,
                         purchasePrice: purchasePrice,
                         totalPurchasePrice: purchasePrice,
+                        distributorPrice: distributorPrice,
+                        totalDistributorPrice: distributorPrice,
                         image: product.image || "/images/no-image-placeholder.svg",
                         unit: product.unit || "Adet", // Ürün birimini al
                     };
@@ -624,9 +660,15 @@ export default function EditOfferPage() {
                     typeof updatedItems[index].purchasePrice === "number" && !isNaN(updatedItems[index].purchasePrice)
                         ? updatedItems[index].purchasePrice
                         : 0;
+                const distributorPrice =
+                    typeof updatedItems[index].distributorPrice === "number" &&
+                    !isNaN(updatedItems[index].distributorPrice)
+                        ? updatedItems[index].distributorPrice
+                        : 0;
 
                 updatedItems[index].totalPrice = newQuantity * unitPrice;
                 updatedItems[index].totalPurchasePrice = newQuantity * purchasePrice;
+                updatedItems[index].totalDistributorPrice = newQuantity * distributorPrice;
 
                 return updatedItems;
             });
@@ -665,6 +707,16 @@ export default function EditOfferPage() {
             const itemTotal =
                 typeof item.totalPurchasePrice === "number" && !isNaN(item.totalPurchasePrice)
                     ? item.totalPurchasePrice
+                    : 0;
+            return total + itemTotal;
+        }, 0);
+    }, [offerItems]);
+
+    const distributorTotal = useMemo(() => {
+        return offerItems.reduce((total, item) => {
+            const itemTotal =
+                typeof item.totalDistributorPrice === "number" && !isNaN(item.totalDistributorPrice)
+                    ? item.totalDistributorPrice
                     : 0;
             return total + itemTotal;
         }, 0);
@@ -1009,7 +1061,7 @@ export default function EditOfferPage() {
             await updateOffer(offerId, offerData);
 
             // Sonra gönder
-            await sendOffer(offerId, pdfMode !== "detailed");
+            await sendOffer(offerId, pdfMode !== "detailed", pdfMode);
 
             toast.success("✅ Teklif Başarıyla Gönderildi", {
                 description: `${selectedCustomer.name} adlı müşteriye teklif e-posta ile gönderildi`,
@@ -1100,7 +1152,7 @@ export default function EditOfferPage() {
                 };
 
                 await updateOffer(offerId, offerData);
-                await sendOffer(offerId, pdfMode !== "detailed");
+                await sendOffer(offerId, pdfMode !== "detailed", pdfMode);
 
                 const updatedCustomer = customers.find((c) => c.id === selectedCustomerId);
                 toast.success("✅ Teklif Başarıyla Gönderildi", {
@@ -1167,6 +1219,8 @@ export default function EditOfferPage() {
                     price,
                     oldPrice,
                     total,
+                    distributorPrice: item.distributorPrice,
+                    distributorTotal: item.totalDistributorPrice,
                     imageUrl: item.image,
                     unit: item.unit, // Ürün birimini ekle
                 };
@@ -1176,6 +1230,11 @@ export default function EditOfferPage() {
             net: calculateNetTotal(),
             vat: calculateVAT(),
             total: calculateFinalTotal(),
+            distributorGross: distributorTotal,
+            distributorDiscount: calculateDiscount(),
+            distributorNet: distributorTotal - calculateDiscount(),
+            distributorVat: (distributorTotal - calculateDiscount()) * 0.2,
+            distributorTotal: (distributorTotal - calculateDiscount()) * 1.2,
             notes: notes,
             hidePricing: pdfMode !== "detailed",
             mode: pdfMode,
@@ -2211,7 +2270,7 @@ export default function EditOfferPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-3 gap-2">
+                                            <div className="grid grid-cols-2 gap-2">
                                                 <Button
                                                     type="button"
                                                     variant={pdfMode === "detailed" ? "default" : "outline"}
@@ -2238,6 +2297,15 @@ export default function EditOfferPage() {
                                                     onClick={() => setPdfMode("nameOnly")}
                                                 >
                                                     Üretim
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant={pdfMode === "distributor" ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-9"
+                                                    onClick={() => setPdfMode("distributor")}
+                                                >
+                                                    Bayi
                                                 </Button>
                                             </div>
 
@@ -2387,10 +2455,16 @@ export default function EditOfferPage() {
                                                     €{formatNumber(calculatePurchaseTotal())}
                                                 </span>
                                             </div>
+
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-slate-600">Brüt Toplam:</span>
                                                 <span className="text-sm font-medium text-slate-900">
-                                                    €{formatNumber(calculateGrossTotal())}
+                                                    €
+                                                    {formatNumber(
+                                                        pdfMode === "distributor"
+                                                            ? distributorTotal
+                                                            : calculateGrossTotal()
+                                                    )}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
@@ -2402,13 +2476,23 @@ export default function EditOfferPage() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-slate-600">Net Toplam:</span>
                                                 <span className="text-sm font-medium text-slate-900">
-                                                    €{formatNumber(calculateNetTotal())}
+                                                    €
+                                                    {formatNumber(
+                                                        pdfMode === "distributor"
+                                                            ? distributorTotal - calculateDiscount()
+                                                            : calculateNetTotal()
+                                                    )}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-slate-600">KDV (%20):</span>
                                                 <span className="text-sm font-medium text-slate-900">
-                                                    €{formatNumber(calculateVAT())}
+                                                    €
+                                                    {formatNumber(
+                                                        pdfMode === "distributor"
+                                                            ? (distributorTotal - calculateDiscount()) * 0.2
+                                                            : calculateVAT()
+                                                    )}
                                                 </span>
                                             </div>
                                             <Separator className="bg-slate-200" />
@@ -2417,7 +2501,12 @@ export default function EditOfferPage() {
                                                     Genel Toplam:
                                                 </span>
                                                 <span className="text-xl font-bold text-blue-600">
-                                                    €{formatNumber(calculateFinalTotal())}
+                                                    €
+                                                    {formatNumber(
+                                                        pdfMode === "distributor"
+                                                            ? (distributorTotal - calculateDiscount()) * 1.2
+                                                            : calculateFinalTotal()
+                                                    )}
                                                 </span>
                                             </div>
                                         </div>
@@ -2614,7 +2703,10 @@ export default function EditOfferPage() {
                                 <div className="flex justify-between">
                                     <span className="text-green-700">Brüt Toplam:</span>
                                     <span className="font-medium text-green-900">
-                                        €{formatNumber(calculateGrossTotal())}
+                                        €
+                                        {formatNumber(
+                                            pdfMode === "distributor" ? distributorTotal : calculateGrossTotal()
+                                        )}
                                     </span>
                                 </div>
                                 {calculateDiscount() > 0 && (
@@ -2628,17 +2720,34 @@ export default function EditOfferPage() {
                                 <div className="flex justify-between">
                                     <span className="text-green-700">Net Toplam:</span>
                                     <span className="font-medium text-green-900">
-                                        €{formatNumber(calculateNetTotal())}
+                                        €
+                                        {formatNumber(
+                                            pdfMode === "distributor"
+                                                ? distributorTotal - calculateDiscount()
+                                                : calculateNetTotal()
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-green-700">KDV (%20):</span>
-                                    <span className="font-medium text-green-900">€{formatNumber(calculateVAT())}</span>
+                                    <span className="font-medium text-green-900">
+                                        €
+                                        {formatNumber(
+                                            pdfMode === "distributor"
+                                                ? (distributorTotal - calculateDiscount()) * 0.2
+                                                : calculateVAT()
+                                        )}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between pt-2 border-t border-green-300">
                                     <span className="font-semibold text-green-800">Genel Toplam:</span>
                                     <span className="text-lg font-bold text-green-900">
-                                        €{formatNumber(calculateFinalTotal())}
+                                        €
+                                        {formatNumber(
+                                            pdfMode === "distributor"
+                                                ? (distributorTotal - calculateDiscount()) * 1.2
+                                                : calculateFinalTotal()
+                                        )}
                                     </span>
                                 </div>
                             </div>

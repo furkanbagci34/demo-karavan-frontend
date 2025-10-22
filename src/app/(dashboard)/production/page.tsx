@@ -19,7 +19,6 @@ import {
     CheckCircle,
     Clock,
     AlertTriangle,
-    MapPin,
     Timer,
     Loader2,
     Settings,
@@ -33,7 +32,9 @@ import { useProduction } from "@/hooks/api/useProduction";
 import { PauseOperationModal } from "@/components/production/PauseOperationModal";
 import { StartOperationModal } from "@/components/production/StartOperationModal";
 import { CompleteOperationModal } from "@/components/production/CompleteOperationModal";
+import { OfferProductsModal } from "@/components/production/OfferProductsModal";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Status renk ve icon helper'ları - fotoğraftaki gibi satır renkleri
 const getStatusConfig = (status: ProductionStatus) => {
@@ -103,11 +104,21 @@ const ProductionOperationCard: React.FC<{
     onStart: (id: number) => void;
     onPause: (id: number) => void;
     onComplete: (id: number) => void;
+    onOfferNumberClick: (offerNumber: string) => void;
     isLoading?: boolean;
     isPausing?: boolean;
     isResuming?: boolean;
     isCompleting?: boolean;
-}> = ({ operation, onStart, onPause, onComplete, isLoading = false, isPausing = false, isCompleting = false }) => {
+}> = ({
+    operation,
+    onStart,
+    onPause,
+    onComplete,
+    onOfferNumberClick,
+    isLoading = false,
+    isPausing = false,
+    isCompleting = false,
+}) => {
     const statusConfig = getStatusConfig(operation.status);
     const StatusIcon = statusConfig.icon;
 
@@ -121,7 +132,7 @@ const ProductionOperationCard: React.FC<{
                     </div>
                 </div>
             )}
-            
+
             {/* Ana İçerik */}
             <div className="flex-1">
                 {/* Header Section - Always visible */}
@@ -131,7 +142,17 @@ const ProductionOperationCard: React.FC<{
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
                             <h3 className="font-semibold text-sm text-gray-900 truncate">
                                 {operation.name}
-                                {operation.offer_number && ` - ${operation.offer_number}`}
+                                {operation.offer_number && (
+                                    <>
+                                        {" - "}
+                                        <button
+                                            onClick={() => onOfferNumberClick(operation.offer_number!)}
+                                            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                                        >
+                                            {operation.offer_number}
+                                        </button>
+                                    </>
+                                )}
                                 {operation.customer_name && ` (${operation.customer_name})`}
                             </h3>
                             {/* Durum kutucuğu */}
@@ -149,101 +170,101 @@ const ProductionOperationCard: React.FC<{
 
                 {/* Stats and Actions Section - Responsive layout */}
                 <div className="flex flex-col lg:flex-row gap-4">
-                {/* Stats Section - Grid layout for better tablet view */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 flex-1">
-                    {/* Geçen Süre - Kutucuk içinde */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                            <Clock className="h-4 w-4 text-gray-500" />
-                            <div className="text-xs text-gray-500">Geçen Süre</div>
+                    {/* Stats Section - Grid layout for better tablet view */}
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 flex-1">
+                        {/* Geçen Süre - Kutucuk içinde */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                                <Clock className="h-4 w-4 text-gray-500" />
+                                <div className="text-xs text-gray-500">Geçen Süre</div>
+                            </div>
+                            <div className="font-semibold text-sm">{formatTime(operation.elapsed_time)}</div>
                         </div>
-                        <div className="font-semibold text-sm">{formatTime(operation.elapsed_time)}</div>
+
+                        {/* Hedef Süre - Kutucuk içinde */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                                <Timer className="h-4 w-4 text-gray-500" />
+                                <div className="text-xs text-gray-500">Hedef Süre</div>
+                            </div>
+                            <div className="font-semibold text-sm">
+                                {operation.target_duration_formatted || formatTime(operation.target_time)}
+                            </div>
+                        </div>
+
+                        {/* İlerleme - Kutucuk içinde */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center col-span-2 lg:col-span-1">
+                            <div className="text-xs text-gray-500 mb-1">İlerleme</div>
+                            <div className="font-semibold text-sm">{operation.progress}%</div>
+                        </div>
                     </div>
 
-                    {/* Hedef Süre - Kutucuk içinde */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                            <Timer className="h-4 w-4 text-gray-500" />
-                            <div className="text-xs text-gray-500">Hedef Süre</div>
-                        </div>
-                        <div className="font-semibold text-sm">
-                            {operation.target_duration_formatted || formatTime(operation.target_time)}
-                        </div>
-                    </div>
-
-                    {/* İlerleme - Kutucuk içinde */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center col-span-2 lg:col-span-1">
-                        <div className="text-xs text-gray-500 mb-1">İlerleme</div>
-                        <div className="font-semibold text-sm">{operation.progress}%</div>
-                    </div>
-                </div>
-
-                {/* Action Buttons - Responsive button layout */}
-                <div className="flex flex-row sm:flex-row gap-2 lg:flex-col xl:flex-row">
-                    {/* Başlat/Devam Et Butonu */}
-                    <Button
-                        size="lg"
-                        onClick={() => onStart(operation.id)}
-                        className={`flex-1 sm:w-32 lg:w-full xl:w-32 px-6 py-4 text-base font-medium h-12 ${
-                            operation.start_time
-                                ? operation.status === "in_progress"
-                                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    {/* Action Buttons - Responsive button layout */}
+                    <div className="flex flex-row sm:flex-row gap-2 lg:flex-col xl:flex-row">
+                        {/* Başlat/Devam Et Butonu */}
+                        <Button
+                            size="lg"
+                            onClick={() => onStart(operation.id)}
+                            className={`flex-1 sm:w-32 lg:w-full xl:w-32 px-6 py-4 text-base font-medium h-12 ${
+                                operation.start_time
+                                    ? operation.status === "in_progress"
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                        : "bg-blue-600 hover:bg-blue-700 text-white"
                                     : "bg-blue-600 hover:bg-blue-700 text-white"
-                                : "bg-blue-600 hover:bg-blue-700 text-white"
-                        }`}
-                        disabled={
-                            isLoading ||
-                            operation.status === "completed" ||
-                            operation.status === "in_progress" ||
-                            operation.status === "awaiting_quality_control" ||
-                            (operation.start_time ? operation.status !== "paused" : false)
-                        }
-                    >
-                        {isLoading && (operation.status === "pending" || operation.start_time) ? (
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        ) : (
-                            <Play className="h-5 w-5 mr-2" />
-                        )}
-                        {operation.start_time ? "Devam Et" : "Başlat"}
-                    </Button>
+                            }`}
+                            disabled={
+                                isLoading ||
+                                operation.status === "completed" ||
+                                operation.status === "in_progress" ||
+                                operation.status === "awaiting_quality_control" ||
+                                (operation.start_time ? operation.status !== "paused" : false)
+                            }
+                        >
+                            {isLoading && (operation.status === "pending" || operation.start_time) ? (
+                                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            ) : (
+                                <Play className="h-5 w-5 mr-2" />
+                            )}
+                            {operation.start_time ? "Devam Et" : "Başlat"}
+                        </Button>
 
-                    {/* Durdur Butonu */}
-                    <Button
-                        size="lg"
-                        onClick={() => onPause(operation.id)}
-                        className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-red-600 hover:bg-red-700 text-white px-6 py-4 text-base font-medium h-12"
-                        disabled={isLoading || operation.status !== "in_progress"}
-                    >
-                        {isLoading && operation.status === "in_progress" && isPausing ? (
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        ) : (
-                            <Pause className="h-5 w-5 mr-2" />
-                        )}
-                        Durdur
-                    </Button>
+                        {/* Durdur Butonu */}
+                        <Button
+                            size="lg"
+                            onClick={() => onPause(operation.id)}
+                            className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-red-600 hover:bg-red-700 text-white px-6 py-4 text-base font-medium h-12"
+                            disabled={isLoading || operation.status !== "in_progress"}
+                        >
+                            {isLoading && operation.status === "in_progress" && isPausing ? (
+                                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            ) : (
+                                <Pause className="h-5 w-5 mr-2" />
+                            )}
+                            Durdur
+                        </Button>
 
-                    {/* Tamamla Butonu */}
-                    <Button
-                        size="lg"
-                        onClick={() => onComplete(operation.id)}
-                        className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-base font-medium h-12"
-                        disabled={
-                            isLoading ||
-                            operation.status === "completed" ||
-                            operation.status === "pending" ||
-                            operation.status === "awaiting_quality_control"
-                        }
-                    >
-                        {isLoading &&
-                        (operation.status === "in_progress" || operation.status === "paused") &&
-                        isCompleting ? (
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        ) : (
-                            <CheckCircle className="h-5 w-5 mr-2" />
-                        )}
-                        Tamamla
-                    </Button>
-                </div>
+                        {/* Tamamla Butonu */}
+                        <Button
+                            size="lg"
+                            onClick={() => onComplete(operation.id)}
+                            className="flex-1 sm:w-32 lg:w-full xl:w-32 bg-green-600 hover:bg-green-700 text-white px-6 py-4 text-base font-medium h-12"
+                            disabled={
+                                isLoading ||
+                                operation.status === "completed" ||
+                                operation.status === "pending" ||
+                                operation.status === "awaiting_quality_control"
+                            }
+                        >
+                            {isLoading &&
+                            (operation.status === "in_progress" || operation.status === "paused") &&
+                            isCompleting ? (
+                                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            ) : (
+                                <CheckCircle className="h-5 w-5 mr-2" />
+                            )}
+                            Tamamla
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -251,6 +272,7 @@ const ProductionOperationCard: React.FC<{
 };
 
 export default function ProductionPage() {
+    const queryClient = useQueryClient();
     const {
         operations,
         userStations,
@@ -266,22 +288,33 @@ export default function ProductionPage() {
         isCompleting,
     } = useProduction();
 
-    // Number filtreleme state'i
+    // Filtreleme state'leri
     const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+    const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
 
     // Mevcut number'ları al
-    const availableNumbers = Array.from(new Set(operations.map(op => op.production_number).filter(Boolean))).sort((a, b) => (a || 0) - (b || 0));
+    const availableNumbers = Array.from(new Set(operations.map((op) => op.production_number).filter(Boolean))).sort(
+        (a, b) => (a || 0) - (b || 0)
+    );
 
-    // Filtrelenmiş operasyonlar
-    const filteredOperations = selectedNumber 
-        ? operations.filter(op => op.production_number === selectedNumber)
-        : operations;
+    // Filtrelenmiş operasyonlar - hem numara hem istasyon
+    const filteredOperations = operations.filter((op) => {
+        const matchesNumber = selectedNumber ? op.production_number === selectedNumber : true;
+        const matchesStation = selectedStationId
+            ? op.station_name === userStations.find((s) => s.id === selectedStationId)?.name
+            : true;
+        return matchesNumber && matchesStation;
+    });
 
     // Modal states
     const [showStartModal, setShowStartModal] = useState(false);
     const [showPauseModal, setShowPauseModal] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<ProductionOperation | null>(null);
+
+    // Offer products modal state
+    const [showOfferProductsModal, setShowOfferProductsModal] = useState(false);
+    const [selectedOfferNumber, setSelectedOfferNumber] = useState<string | null>(null);
 
     // Fullscreen state
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -326,6 +359,8 @@ export default function ProductionPage() {
 
         try {
             await completeOperation(selectedOperation.id);
+            // Rapor cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["reports"] });
             setShowCompleteModal(false);
             setSelectedOperation(null);
         } catch (error) {
@@ -339,6 +374,8 @@ export default function ProductionPage() {
 
         try {
             await startOperation(selectedOperation.id, workerIds);
+            // Rapor cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["reports"] });
             toast.success("Operasyon başlatıldı", {
                 description: `${selectedOperation.name} operasyonu ${workerNames.join(", ")} tarafından başlatıldı.`,
             });
@@ -352,6 +389,8 @@ export default function ProductionPage() {
 
         try {
             await pauseOperation(selectedOperation.id, reason);
+            // Rapor cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["reports"] });
             toast.success("Operasyon durduruldu", {
                 description: `${selectedOperation.name} operasyonu durduruldu. Neden: ${reason}`,
             });
@@ -374,6 +413,12 @@ export default function ProductionPage() {
             document.exitFullscreen();
             setIsFullscreen(false);
         }
+    };
+
+    // Offer number click handler
+    const handleOfferNumberClick = (offerNumber: string) => {
+        setSelectedOfferNumber(offerNumber);
+        setShowOfferProductsModal(true);
     };
 
     return (
@@ -422,45 +467,10 @@ export default function ProductionPage() {
             </header>
 
             <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-                        <Factory className="h-6 w-6" />
-                        Üretim
-                    </h1>
-                    <div className="flex items-center gap-2">
-                        {isLoadingStations ? (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>İstasyonlar yükleniyor...</span>
-                            </div>
-                        ) : userStations.length > 0 ? (
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-gray-700">Listelenen:</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {userStations.map((station) => (
-                                        <span
-                                            key={station.id}
-                                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
-                                        >
-                                            {station.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 text-sm text-red-600">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span>Yetkili istasyon bulunamadı</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Operasyonlarım Başlığı */}
+                {/* Üretim Başlığı */}
                 <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    <h2 className="text-lg font-semibold">Operasyonlarım</h2>
+                    <Factory className="h-8 w-8" />
+                    <h1 className="text-2xl sm:text-3xl font-bold">Üretim</h1>
                 </div>
 
                 {/* Loading State */}
@@ -476,46 +486,102 @@ export default function ProductionPage() {
                     </div>
                 )}
 
-                {/* Number Filtreleme Butonları */}
-                {!isLoading && availableNumbers.length > 0 && (
-                    <div className="mb-6">
-                        <div className="flex items-center gap-3 mb-3">
-                            <h3 className="text-sm font-medium text-gray-700">Numara Filtresi:</h3>
+                {/* Filtreleme Bölümü */}
+                {!isLoading && (availableNumbers.length > 0 || userStations.length > 0) && (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        {/* Numara Filtreleme - Sola yaslı */}
+                        {availableNumbers.length > 0 && (
                             <div className="flex items-center gap-2">
-                                {/* Tümünü Göster Butonu */}
+                                <span className="text-sm font-medium text-gray-700">Numara:</span>
                                 <button
                                     onClick={() => setSelectedNumber(null)}
                                     className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                                         selectedNumber === null
-                                            ? 'bg-gray-800 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            ? "bg-gray-800 text-white"
+                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                                     }`}
                                 >
                                     Tümü
                                 </button>
-                                
-                                {/* Number Butonları */}
                                 {availableNumbers.map((number) => (
                                     <button
                                         key={number}
                                         onClick={() => setSelectedNumber(number || null)}
-                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                                        className={`rounded-full flex items-center justify-center font-bold transition-all ${
                                             selectedNumber === number
-                                                ? 'bg-blue-100 text-blue-600 border-2 border-blue-300'
-                                                : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                                ? "w-12 h-12 text-lg bg-blue-600 text-white border-2 border-blue-700 shadow-lg scale-110"
+                                                : "w-10 h-10 text-sm bg-blue-100 text-blue-600 hover:bg-blue-200 hover:scale-105"
                                         }`}
                                     >
                                         {number}
                                     </button>
                                 ))}
                             </div>
-                        </div>
-                        
-                        {/* Filtreleme Sonucu Bilgisi */}
-                        {selectedNumber && (
-                            <div className="text-sm text-gray-600 mb-3">
-                                <span className="font-medium">Numara {selectedNumber}</span> için {filteredOperations.length} operasyon gösteriliyor
+                        )}
+
+                        {/* İstasyon Filtreleme - Sağa yaslı */}
+                        {isLoadingStations ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>İstasyonlar yükleniyor...</span>
                             </div>
+                        ) : userStations.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">İstasyon:</span>
+                                <button
+                                    onClick={() => setSelectedStationId(null)}
+                                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                                        selectedStationId === null
+                                            ? "bg-gray-800 text-white"
+                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                    }`}
+                                >
+                                    Tümü
+                                </button>
+                                {userStations.map((station) => (
+                                    <button
+                                        key={station.id}
+                                        onClick={() =>
+                                            setSelectedStationId(selectedStationId === station.id ? null : station.id)
+                                        }
+                                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                                            selectedStationId === station.id
+                                                ? "bg-purple-600 text-white border-2 border-purple-700 shadow-md"
+                                                : "bg-purple-100 text-purple-800 border border-purple-200 hover:bg-purple-200"
+                                        }`}
+                                    >
+                                        {station.name}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 text-sm text-red-600">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span>Yetkili istasyon bulunamadı</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Filtreleme Sonucu Bilgisi */}
+                {!isLoading && (selectedNumber || selectedStationId) && (
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-600">
+                            <span className="font-semibold text-gray-900">{filteredOperations.length}</span> operasyon
+                            gösteriliyor
+                        </span>
+                        {selectedNumber && (
+                            <span className="text-gray-500">
+                                • Numara: <span className="font-medium text-blue-600">{selectedNumber}</span>
+                            </span>
+                        )}
+                        {selectedStationId && (
+                            <span className="text-gray-500">
+                                • İstasyon:{" "}
+                                <span className="font-medium text-purple-600">
+                                    {userStations.find((s) => s.id === selectedStationId)?.name}
+                                </span>
+                            </span>
                         )}
                     </div>
                 )}
@@ -530,6 +596,7 @@ export default function ProductionPage() {
                                 onStart={handleStart}
                                 onPause={handlePause}
                                 onComplete={handleComplete}
+                                onOfferNumberClick={handleOfferNumberClick}
                                 isLoading={isStarting || isPausing || isResuming || isCompleting}
                                 isPausing={isPausing}
                                 isResuming={isResuming}
@@ -545,18 +612,51 @@ export default function ProductionPage() {
                         <CardContent className="p-8">
                             <div className="text-center">
                                 <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                {selectedNumber ? (
+                                {selectedNumber || selectedStationId ? (
                                     <>
-                                        <h3 className="text-lg font-semibold mb-2">Numara {selectedNumber} için operasyon bulunamadı</h3>
+                                        <h3 className="text-lg font-semibold mb-2">
+                                            {selectedNumber && selectedStationId
+                                                ? `Numara ${selectedNumber} ve ${
+                                                      userStations.find((s) => s.id === selectedStationId)?.name
+                                                  } istasyonu için operasyon bulunamadı`
+                                                : selectedNumber
+                                                ? `Numara ${selectedNumber} için operasyon bulunamadı`
+                                                : `${
+                                                      userStations.find((s) => s.id === selectedStationId)?.name
+                                                  } istasyonu için operasyon bulunamadı`}
+                                        </h3>
                                         <p className="text-muted-foreground mb-4">
-                                            Seçilen numara için aktif operasyon bulunmuyor.
+                                            Seçilen kriterlere uygun aktif operasyon bulunmuyor.
                                         </p>
-                                        <button
-                                            onClick={() => setSelectedNumber(null)}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                        >
-                                            Tüm Operasyonları Göster
-                                        </button>
+                                        <div className="flex gap-2 justify-center">
+                                            {selectedNumber && (
+                                                <button
+                                                    onClick={() => setSelectedNumber(null)}
+                                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                                >
+                                                    Numara Filtresini Kaldır
+                                                </button>
+                                            )}
+                                            {selectedStationId && (
+                                                <button
+                                                    onClick={() => setSelectedStationId(null)}
+                                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                                >
+                                                    İstasyon Filtresini Kaldır
+                                                </button>
+                                            )}
+                                            {(selectedNumber || selectedStationId) && (
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedNumber(null);
+                                                        setSelectedStationId(null);
+                                                    }}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                >
+                                                    Tüm Filtreleri Kaldır
+                                                </button>
+                                            )}
+                                        </div>
                                     </>
                                 ) : (
                                     <>
@@ -605,6 +705,15 @@ export default function ProductionPage() {
                 operationName={selectedOperation?.name || ""}
                 isCompleting={isCompleting}
                 hasQualityControl={selectedOperation?.quality_control || false}
+            />
+
+            <OfferProductsModal
+                isOpen={showOfferProductsModal}
+                onClose={() => {
+                    setShowOfferProductsModal(false);
+                    setSelectedOfferNumber(null);
+                }}
+                offerNumber={selectedOfferNumber}
             />
         </>
     );

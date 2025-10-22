@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
     Car,
     FileText,
@@ -35,10 +36,11 @@ import { useOffers } from "@/hooks/api/useOffers";
 import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useProductionExecution } from "@/hooks/api/useProductionExecution";
+import { useOperations } from "@/hooks/api/useOperations";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface VehicleInfo {
@@ -51,6 +53,7 @@ interface VehicleInfo {
     customerName: string;
     plateNumber: string;
     vehicleAcceptanceId: number | null;
+    number: number | null;
 }
 
 interface SelectedTemplate {
@@ -59,6 +62,7 @@ interface SelectedTemplate {
     vehicle_name: string;
     stations: Array<{
         id: number;
+        station_id: number; // Gerçek stations tablosundaki ID
         station_name: string;
         sort_order: number;
         operations: Array<{
@@ -74,10 +78,10 @@ interface SelectedTemplate {
 
 interface EditableOperation {
     id: string; // Unique ID for React keys (could be temporary for new operations)
-    stationId: number;
-    operationId: number;
+    stationId: number; // Template'teki station ID (production_plan_stations.id)
+    operationId: number; // Template'teki operation ID (production_plan_operations.id)
     originalOperationId?: number; // operations tablosundaki gerçek operation ID
-    originalStationId?: number; // operations tablosundaki gerçek station ID
+    originalStationId?: number; // stations tablosundaki gerçek station ID
     operationName: string;
     stationName: string;
     sortOrder: number;
@@ -102,6 +106,7 @@ export default function ProductionExecutionEditPage() {
         customerName: "",
         plateNumber: "",
         vehicleAcceptanceId: null,
+        number: null,
     });
 
     const [description, setDescription] = useState<string>("");
@@ -114,6 +119,10 @@ export default function ProductionExecutionEditPage() {
     const [isEditingOperations, setIsEditingOperations] = useState(false);
     const [draggedOperationId, setDraggedOperationId] = useState<string | null>(null);
 
+    // Operasyon ekleme state'leri
+    const [addOperationStationId, setAddOperationStationId] = useState<number | null>(null);
+    const [openAddOperationPopover, setOpenAddOperationPopover] = useState(false);
+
     // Combobox state'leri
     const [openOfferCombobox, setOpenOfferCombobox] = useState(false);
     const [openCustomerCombobox, setOpenCustomerCombobox] = useState(false);
@@ -125,6 +134,7 @@ export default function ProductionExecutionEditPage() {
     const { vehicleAcceptances, isLoading: vehicleAcceptancesLoading } = useVehicleAcceptance();
     const { customers, isLoading: customersLoading } = useCustomers();
     const { useProductionExecutionById, update } = useProductionExecution();
+    const { operations: allOperations } = useOperations();
 
     // Offers ve vehicle acceptances verilerini yükle
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -160,6 +170,7 @@ export default function ProductionExecutionEditPage() {
                 customerName: executionData.customer_name || "",
                 plateNumber: executionData.plate_number || "",
                 vehicleAcceptanceId: executionData.vehicle_acceptance_id || null,
+                number: executionData.number || null,
             });
 
             // Açıklama alanını doldur
@@ -207,15 +218,31 @@ export default function ProductionExecutionEditPage() {
 
         try {
             // Düzenlenmiş operasyonları backend formatına dönüştür
-            const operations = editableOperations.map((op, index) => ({
-                stationId: op.stationId,
-                operationId: op.operationId, // Template operation ID
-                originalOperationId: op.originalOperationId || op.operationId, // operations tablosundaki gerçek ID
-                originalStationId: op.originalStationId || op.stationId, // stations tablosundaki gerçek ID
-                sortOrder: index + 1, // Yeni sıra numarası
-                targetDuration: op.targetDuration,
-                qualityControl: op.qualityControl,
-            }));
+            const operations = editableOperations.map((op, index) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const operationData: any = {
+                    stationId: op.stationId,
+                    operationId: op.operationId,
+                    originalOperationId: op.originalOperationId || op.operationId,
+                    originalStationId: op.originalStationId || op.stationId,
+                    sortOrder: index + 1,
+                    targetDuration: op.targetDuration,
+                    qualityControl: op.qualityControl,
+                };
+
+                // Sadece mevcut operasyonlar için ID ekle (yeni eklenenler için değil)
+                // Yeni operasyonların ID'si "new-" ile başlar ve isNew=true
+                // Backend ID olmayan operasyonları yeni operasyon olarak ekler
+                if (!op.isNew && op.id && !op.id.toString().startsWith("new-")) {
+                    // ID'yi numeric ID'ye çevir (existing- prefix'ini kaldır)
+                    const numericId = op.id.toString().replace("existing-", "");
+                    if (!isNaN(Number(numericId))) {
+                        operationData.id = Number(numericId);
+                    }
+                }
+
+                return operationData;
+            });
 
             // Backend'e gönderilecek veri
             const updateData = {
@@ -223,11 +250,14 @@ export default function ProductionExecutionEditPage() {
                 customerId: vehicleInfo.customerId || undefined,
                 vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId || undefined,
                 description: description || undefined,
+                number: vehicleInfo.number || undefined,
                 operations: operations,
             };
 
             await update.mutateAsync({ id: parseInt(executionId), data: updateData });
             queryClient.invalidateQueries({ queryKey: ["production"] });
+            // Rapor cache'ini temizle
+            queryClient.invalidateQueries({ queryKey: ["reports"] });
 
             // 1.5 saniye sonra yönlendir
             setTimeout(() => {
@@ -289,6 +319,46 @@ export default function ProductionExecutionEditPage() {
     const handleDeleteOperation = (index: number) => {
         const newOperations = editableOperations.filter((_, i) => i !== index);
         setEditableOperations(newOperations);
+    };
+
+    // Operasyon ekleme fonksiyonu
+    const handleAddOperation = (operationId: number, stationId: number) => {
+        const selectedOperation = allOperations.find((op) => op.id === operationId);
+
+        // Template'ten station bilgisini al
+        const selectedStation = selectedTemplate?.stations.find((station) => station.id === stationId);
+
+        if (!selectedOperation) {
+            toast.error("Operasyon bulunamadı");
+            console.error("Operasyon bulunamadı, ID:", operationId, "Mevcut operasyonlar:", allOperations);
+            return;
+        }
+
+        if (!selectedStation) {
+            toast.error("İstasyon bulunamadı");
+            console.error("İstasyon bulunamadı, ID:", stationId, "Template stations:", selectedTemplate?.stations);
+            return;
+        }
+
+        // Yeni operasyon oluştur
+        const newOperation: EditableOperation = {
+            id: `new-${Date.now()}-${Math.random()}`, // Benzersiz geçici ID
+            stationId: stationId, // Template'teki station ID (production_template_stations.id)
+            operationId: selectedOperation.id, // Operations tablosundaki operation ID
+            originalOperationId: selectedOperation.id, // Operations tablosundaki gerçek ID
+            originalStationId: selectedStation.station_id, // Gerçek stations tablosundaki ID
+            operationName: selectedOperation.name,
+            stationName: selectedStation.station_name,
+            sortOrder: editableOperations.filter((op) => op.stationId === stationId).length + 1,
+            targetDuration: selectedOperation.target_duration || undefined,
+            qualityControl: selectedOperation.quality_control || false,
+            isNew: true, // Yeni eklenen operasyonu işaretle
+        };
+        // Operasyonu listeye ekle
+        setEditableOperations([...editableOperations, newOperation]);
+        setOpenAddOperationPopover(false);
+        setAddOperationStationId(null);
+        toast.success(`"${selectedOperation.name}" operasyonu "${selectedStation.station_name}" istasyonuna eklendi`);
     };
 
     // Benzersiz veriler için helper'lar
@@ -444,45 +514,84 @@ export default function ProductionExecutionEditPage() {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div>
+                                    {/* Model Seçimi */}
+                                    <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <Label className="text-sm font-medium whitespace-nowrap">
+                                            <Label className="text-sm font-medium w-32 flex-shrink-0">
                                                 Model Seçimi
                                             </Label>
-                                            <div className="flex-1 h-12 px-3 py-2 bg-white border border-input rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex items-center">
-                                                {vehicleInfo.vehicleName}
+                                            <div className="flex-1 h-12 px-3 py-2 bg-gray-50 border border-input rounded-md text-sm flex items-center text-gray-600">
+                                                <Car className="h-4 w-4 mr-2 text-gray-400" />
+                                                {vehicleInfo.vehicleName || "Model seçilmedi"}
                                             </div>
                                         </div>
                                     </div>
-                                    <div>
+
+                                    {/* Üretim Şablonu */}
+                                    <div className="space-y-2">
                                         <div className="flex items-center gap-3">
-                                            <Label className="text-sm font-medium whitespace-nowrap">
+                                            <Label className="text-sm font-medium w-32 flex-shrink-0">
                                                 Üretim Şablonu
                                             </Label>
-                                            <div className="flex-1 h-12 px-3 py-2 bg-white border border-input rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex items-center">
-                                                {selectedTemplate?.name || "Belirtilmemiş"}
+                                            <div className="flex-1 h-12 px-3 py-2 bg-gray-50 border border-input rounded-md text-sm flex items-center text-gray-600">
+                                                <FileText className="h-4 w-4 mr-2 text-gray-400" />
+                                                {selectedTemplate?.name || "Şablon seçilmedi"}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Açıklama Alanı - Altında */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        <Label
-                                            htmlFor="description"
-                                            className="text-sm font-medium flex items-center gap-2 whitespace-nowrap"
-                                        >
-                                            <MessageSquare className="h-4 w-4" />
-                                            Açıklama
-                                        </Label>
-                                        <Textarea
-                                            id="description"
-                                            placeholder="Üretim planı hakkında notlar yazabilirsiniz..."
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            className="min-h-[60px] resize-none text-sm flex-1"
-                                        />
+                                {/* Açıklama ve Numara Alanları - Altında */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    {/* Açıklama Alanı */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-start gap-3">
+                                            <Label
+                                                htmlFor="description"
+                                                className="text-sm font-medium flex items-center gap-2 w-32 flex-shrink-0 pt-3"
+                                            >
+                                                <MessageSquare className="h-4 w-4" />
+                                                Açıklama
+                                            </Label>
+                                            <Textarea
+                                                id="description"
+                                                placeholder="Üretim planı hakkında notlar yazabilirsiniz..."
+                                                value={description}
+                                                onChange={(e) => setDescription(e.target.value)}
+                                                className="min-h-[60px] resize-none text-sm flex-1"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Numara Seçimi */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <Label htmlFor="number" className="text-sm font-medium w-32 flex-shrink-0">
+                                                Numara
+                                            </Label>
+                                            <Select
+                                                onValueChange={(value) =>
+                                                    setVehicleInfo((prev) => ({ ...prev, number: parseInt(value) }))
+                                                }
+                                                value={vehicleInfo.number?.toString() || ""}
+                                            >
+                                                <SelectTrigger className="h-12 flex-1">
+                                                    <SelectValue placeholder="Numara seçiniz (1-10)" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
+                                                        <SelectItem key={num} value={num.toString()}>
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium text-sm">
+                                                                    {num}
+                                                                </div>
+                                                                <span className="font-medium">Numara {num}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>
@@ -810,8 +919,11 @@ export default function ProductionExecutionEditPage() {
                                                         .sort((a, b) => a.sort_order - b.sort_order)
                                                         .map((station, stationIndex) => {
                                                             // Bu istasyona ait operasyonları editableOperations'tan al
+                                                            // stationId veya originalStationId ile eşleştir
                                                             const stationOperations = editableOperations.filter(
-                                                                (op) => op.stationId === station.id
+                                                                (op) =>
+                                                                    op.stationId === station.id ||
+                                                                    op.originalStationId === station.station_id
                                                             );
 
                                                             return (
@@ -840,143 +952,351 @@ export default function ProductionExecutionEditPage() {
                                                                     {/* Operasyonlar */}
                                                                     <div className="space-y-2">
                                                                         {stationOperations.length > 0 ? (
-                                                                            stationOperations
-                                                                                .sort(
-                                                                                    (a, b) =>
-                                                                                        editableOperations.indexOf(a) -
-                                                                                        editableOperations.indexOf(b)
-                                                                                )
-                                                                                .map((operation) => {
-                                                                                    const operationIndex =
-                                                                                        editableOperations.findIndex(
-                                                                                            (op) =>
-                                                                                                op.id === operation.id
-                                                                                        );
-                                                                                    const localIndex =
-                                                                                        stationOperations.findIndex(
-                                                                                            (op) =>
-                                                                                                op.id === operation.id
-                                                                                        );
+                                                                            <>
+                                                                                {stationOperations
+                                                                                    .sort(
+                                                                                        (a, b) =>
+                                                                                            editableOperations.indexOf(
+                                                                                                a
+                                                                                            ) -
+                                                                                            editableOperations.indexOf(
+                                                                                                b
+                                                                                            )
+                                                                                    )
+                                                                                    .map((operation) => {
+                                                                                        const operationIndex =
+                                                                                            editableOperations.findIndex(
+                                                                                                (op) =>
+                                                                                                    op.id ===
+                                                                                                    operation.id
+                                                                                            );
+                                                                                        const localIndex =
+                                                                                            stationOperations.findIndex(
+                                                                                                (op) =>
+                                                                                                    op.id ===
+                                                                                                    operation.id
+                                                                                            );
 
-                                                                                    return (
-                                                                                        <div
-                                                                                            key={operation.id}
-                                                                                            draggable={
-                                                                                                isEditingOperations
-                                                                                            }
-                                                                                            onDragStart={(e) =>
-                                                                                                handleDragStart(
-                                                                                                    e,
+                                                                                        return (
+                                                                                            <div
+                                                                                                key={operation.id}
+                                                                                                draggable={
+                                                                                                    isEditingOperations
+                                                                                                }
+                                                                                                onDragStart={(e) =>
+                                                                                                    handleDragStart(
+                                                                                                        e,
+                                                                                                        operation.id
+                                                                                                    )
+                                                                                                }
+                                                                                                onDragEnd={
+                                                                                                    handleDragEnd
+                                                                                                }
+                                                                                                onDragOver={
+                                                                                                    handleDragOver
+                                                                                                }
+                                                                                                onDrop={(e) =>
+                                                                                                    handleDrop(
+                                                                                                        e,
+                                                                                                        operation.id
+                                                                                                    )
+                                                                                                }
+                                                                                                className={`flex items-start gap-2 p-2 rounded-md border-l-3 transition-all duration-200 ${
+                                                                                                    operation.qualityControl
+                                                                                                        ? "bg-orange-50 border-l-orange-400"
+                                                                                                        : "bg-green-50 border-l-green-400"
+                                                                                                } ${
+                                                                                                    operation.isNew
+                                                                                                        ? "ring-2 ring-blue-300"
+                                                                                                        : ""
+                                                                                                } ${
+                                                                                                    isEditingOperations
+                                                                                                        ? "cursor-move hover:shadow-md hover:scale-[1.02]"
+                                                                                                        : ""
+                                                                                                } ${
+                                                                                                    draggedOperationId ===
                                                                                                     operation.id
-                                                                                                )
-                                                                                            }
-                                                                                            onDragEnd={handleDragEnd}
-                                                                                            onDragOver={handleDragOver}
-                                                                                            onDrop={(e) =>
-                                                                                                handleDrop(
-                                                                                                    e,
-                                                                                                    operation.id
-                                                                                                )
-                                                                                            }
-                                                                                            className={`flex items-start gap-2 p-2 rounded-md border-l-3 transition-all duration-200 ${
-                                                                                                operation.qualityControl
-                                                                                                    ? "bg-orange-50 border-l-orange-400"
-                                                                                                    : "bg-green-50 border-l-green-400"
-                                                                                            } ${
-                                                                                                operation.isNew
-                                                                                                    ? "ring-2 ring-blue-300"
-                                                                                                    : ""
-                                                                                            } ${
-                                                                                                isEditingOperations
-                                                                                                    ? "cursor-move hover:shadow-md hover:scale-[1.02]"
-                                                                                                    : ""
-                                                                                            } ${
-                                                                                                draggedOperationId ===
-                                                                                                operation.id
-                                                                                                    ? "opacity-50 scale-105 shadow-lg"
-                                                                                                    : ""
-                                                                                            }`}
-                                                                                        >
-                                                                                            <div className="flex items-center gap-1">
-                                                                                                <div
-                                                                                                    className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${
-                                                                                                        operation.qualityControl
-                                                                                                            ? "bg-orange-500"
-                                                                                                            : "bg-green-500"
-                                                                                                    }`}
-                                                                                                >
-                                                                                                    {localIndex + 1}
-                                                                                                </div>
-                                                                                                {isEditingOperations && (
-                                                                                                    <GripVertical className="w-4 h-4 text-gray-600 cursor-grab active:cursor-grabbing" />
-                                                                                                )}
-                                                                                            </div>
-                                                                                            <div className="flex-1 min-w-0">
-                                                                                                <div className="flex items-start gap-1 flex-wrap">
-                                                                                                    <Wrench
-                                                                                                        className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
+                                                                                                        ? "opacity-50 scale-105 shadow-lg"
+                                                                                                        : ""
+                                                                                                }`}
+                                                                                            >
+                                                                                                <div className="flex items-center gap-1">
+                                                                                                    <div
+                                                                                                        className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${
                                                                                                             operation.qualityControl
-                                                                                                                ? "text-orange-600"
-                                                                                                                : "text-green-600"
+                                                                                                                ? "bg-orange-500"
+                                                                                                                : "bg-green-500"
                                                                                                         }`}
-                                                                                                    />
-                                                                                                    <span className="font-medium text-xs leading-tight">
-                                                                                                        {
-                                                                                                            operation.operationName
-                                                                                                        }
-                                                                                                    </span>
-                                                                                                    {operation.qualityControl && (
-                                                                                                        <Badge
-                                                                                                            variant="outline"
-                                                                                                            className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
-                                                                                                        >
-                                                                                                            KK
-                                                                                                        </Badge>
-                                                                                                    )}
-                                                                                                    {operation.isNew && (
-                                                                                                        <Badge
-                                                                                                            variant="outline"
-                                                                                                            className="text-xs bg-blue-100 text-blue-700 border-blue-300 px-1 py-0 h-4"
-                                                                                                        >
-                                                                                                            YENİ
-                                                                                                        </Badge>
+                                                                                                    >
+                                                                                                        {localIndex + 1}
+                                                                                                    </div>
+                                                                                                    {isEditingOperations && (
+                                                                                                        <GripVertical className="w-4 h-4 text-gray-600 cursor-grab active:cursor-grabbing" />
                                                                                                     )}
                                                                                                 </div>
-                                                                                                {operation.targetDuration && (
-                                                                                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                                                                                        Hedef:{" "}
-                                                                                                        {
-                                                                                                            operation.targetDuration
+                                                                                                <div className="flex-1 min-w-0">
+                                                                                                    <div className="flex items-start gap-1 flex-wrap">
+                                                                                                        <Wrench
+                                                                                                            className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
+                                                                                                                operation.qualityControl
+                                                                                                                    ? "text-orange-600"
+                                                                                                                    : "text-green-600"
+                                                                                                            }`}
+                                                                                                        />
+                                                                                                        <span className="font-medium text-xs leading-tight">
+                                                                                                            {
+                                                                                                                operation.operationName
+                                                                                                            }
+                                                                                                        </span>
+                                                                                                        {operation.qualityControl && (
+                                                                                                            <Badge
+                                                                                                                variant="outline"
+                                                                                                                className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
+                                                                                                            >
+                                                                                                                KK
+                                                                                                            </Badge>
+                                                                                                        )}
+                                                                                                        {operation.isNew && (
+                                                                                                            <Badge
+                                                                                                                variant="outline"
+                                                                                                                className="text-xs bg-blue-100 text-blue-700 border-blue-300 px-1 py-0 h-4"
+                                                                                                            >
+                                                                                                                YENİ
+                                                                                                            </Badge>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                    {operation.targetDuration && (
+                                                                                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                                                                                            Hedef:{" "}
+                                                                                                            {
+                                                                                                                operation.targetDuration
+                                                                                                            }
+                                                                                                            dk
+                                                                                                        </p>
+                                                                                                    )}
+                                                                                                </div>
+
+                                                                                                {/* Silme butonu */}
+                                                                                                {isEditingOperations && (
+                                                                                                    <Button
+                                                                                                        onClick={() =>
+                                                                                                            handleDeleteOperation(
+                                                                                                                operationIndex
+                                                                                                            )
                                                                                                         }
-                                                                                                        dk
-                                                                                                    </p>
+                                                                                                        variant="ghost"
+                                                                                                        size="sm"
+                                                                                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                                                    >
+                                                                                                        <X className="h-3 w-3" />
+                                                                                                    </Button>
                                                                                                 )}
                                                                                             </div>
+                                                                                        );
+                                                                                    })}
 
-                                                                                            {/* Silme butonu */}
-                                                                                            {isEditingOperations && (
-                                                                                                <Button
-                                                                                                    onClick={() =>
-                                                                                                        handleDeleteOperation(
-                                                                                                            operationIndex
-                                                                                                        )
-                                                                                                    }
-                                                                                                    variant="ghost"
-                                                                                                    size="sm"
-                                                                                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                                                >
-                                                                                                    <X className="h-3 w-3" />
-                                                                                                </Button>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    );
-                                                                                })
+                                                                                {/* Operasyon Ekle Butonu - Düzenleme Modunda */}
+                                                                                {isEditingOperations && (
+                                                                                    <Popover
+                                                                                        open={
+                                                                                            openAddOperationPopover &&
+                                                                                            addOperationStationId ===
+                                                                                                station.id
+                                                                                        }
+                                                                                        onOpenChange={(open) => {
+                                                                                            setOpenAddOperationPopover(
+                                                                                                open
+                                                                                            );
+                                                                                            if (open) {
+                                                                                                setAddOperationStationId(
+                                                                                                    station.id
+                                                                                                );
+                                                                                            } else {
+                                                                                                setAddOperationStationId(
+                                                                                                    null
+                                                                                                );
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        <PopoverTrigger asChild>
+                                                                                            <Button
+                                                                                                variant="outline"
+                                                                                                size="sm"
+                                                                                                className="w-full mt-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-400"
+                                                                                            >
+                                                                                                <Plus className="h-4 w-4 mr-2" />
+                                                                                                Operasyon Ekle
+                                                                                            </Button>
+                                                                                        </PopoverTrigger>
+                                                                                        <PopoverContent className="w-80 p-0">
+                                                                                            <Command>
+                                                                                                <CommandInput placeholder="Operasyon ara..." />
+                                                                                                <CommandEmpty>
+                                                                                                    Operasyon
+                                                                                                    bulunamadı.
+                                                                                                </CommandEmpty>
+                                                                                                <CommandList>
+                                                                                                    <CommandGroup>
+                                                                                                        {allOperations.map(
+                                                                                                            (
+                                                                                                                operation
+                                                                                                            ) => (
+                                                                                                                <CommandItem
+                                                                                                                    key={
+                                                                                                                        operation.id
+                                                                                                                    }
+                                                                                                                    value={
+                                                                                                                        operation.name
+                                                                                                                    }
+                                                                                                                    onSelect={() =>
+                                                                                                                        handleAddOperation(
+                                                                                                                            operation.id,
+                                                                                                                            station.id
+                                                                                                                        )
+                                                                                                                    }
+                                                                                                                    className="cursor-pointer"
+                                                                                                                >
+                                                                                                                    <div className="flex flex-col">
+                                                                                                                        <span className="font-medium">
+                                                                                                                            {
+                                                                                                                                operation.name
+                                                                                                                            }
+                                                                                                                        </span>
+                                                                                                                        <div className="flex items-center gap-2 mt-1">
+                                                                                                                            {operation.target_duration && (
+                                                                                                                                <span className="text-xs text-muted-foreground">
+                                                                                                                                    Hedef:{" "}
+                                                                                                                                    {
+                                                                                                                                        operation.target_duration
+                                                                                                                                    }
+                                                                                                                                    dk
+                                                                                                                                </span>
+                                                                                                                            )}
+                                                                                                                            {operation.quality_control && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="outline"
+                                                                                                                                    className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
+                                                                                                                                >
+                                                                                                                                    KK
+                                                                                                                                </Badge>
+                                                                                                                            )}
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </CommandItem>
+                                                                                                            )
+                                                                                                        )}
+                                                                                                    </CommandGroup>
+                                                                                                </CommandList>
+                                                                                            </Command>
+                                                                                        </PopoverContent>
+                                                                                    </Popover>
+                                                                                )}
+                                                                            </>
                                                                         ) : (
-                                                                            <div className="text-center py-4 text-muted-foreground">
-                                                                                <p className="text-xs">
-                                                                                    Bu istasyonda operasyon yok
-                                                                                </p>
-                                                                            </div>
+                                                                            <>
+                                                                                <div className="text-center py-4 text-muted-foreground">
+                                                                                    <p className="text-xs">
+                                                                                        Bu istasyonda operasyon yok
+                                                                                    </p>
+                                                                                </div>
+
+                                                                                {/* Operasyon Ekle Butonu - Boş İstasyon İçin */}
+                                                                                {isEditingOperations && (
+                                                                                    <Popover
+                                                                                        open={
+                                                                                            openAddOperationPopover &&
+                                                                                            addOperationStationId ===
+                                                                                                station.id
+                                                                                        }
+                                                                                        onOpenChange={(open) => {
+                                                                                            setOpenAddOperationPopover(
+                                                                                                open
+                                                                                            );
+                                                                                            if (open) {
+                                                                                                setAddOperationStationId(
+                                                                                                    station.id
+                                                                                                );
+                                                                                            } else {
+                                                                                                setAddOperationStationId(
+                                                                                                    null
+                                                                                                );
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        <PopoverTrigger asChild>
+                                                                                            <Button
+                                                                                                variant="outline"
+                                                                                                size="sm"
+                                                                                                className="w-full border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-400"
+                                                                                            >
+                                                                                                <Plus className="h-4 w-4 mr-2" />
+                                                                                                Operasyon Ekle
+                                                                                            </Button>
+                                                                                        </PopoverTrigger>
+                                                                                        <PopoverContent className="w-80 p-0">
+                                                                                            <Command>
+                                                                                                <CommandInput placeholder="Operasyon ara..." />
+                                                                                                <CommandEmpty>
+                                                                                                    Operasyon
+                                                                                                    bulunamadı.
+                                                                                                </CommandEmpty>
+                                                                                                <CommandList>
+                                                                                                    <CommandGroup>
+                                                                                                        {allOperations.map(
+                                                                                                            (
+                                                                                                                operation
+                                                                                                            ) => (
+                                                                                                                <CommandItem
+                                                                                                                    key={
+                                                                                                                        operation.id
+                                                                                                                    }
+                                                                                                                    value={
+                                                                                                                        operation.name
+                                                                                                                    }
+                                                                                                                    onSelect={() =>
+                                                                                                                        handleAddOperation(
+                                                                                                                            operation.id,
+                                                                                                                            station.id
+                                                                                                                        )
+                                                                                                                    }
+                                                                                                                    className="cursor-pointer"
+                                                                                                                >
+                                                                                                                    <div className="flex flex-col">
+                                                                                                                        <span className="font-medium">
+                                                                                                                            {
+                                                                                                                                operation.name
+                                                                                                                            }
+                                                                                                                        </span>
+                                                                                                                        <div className="flex items-center gap-2 mt-1">
+                                                                                                                            {operation.target_duration && (
+                                                                                                                                <span className="text-xs text-muted-foreground">
+                                                                                                                                    Hedef:{" "}
+                                                                                                                                    {
+                                                                                                                                        operation.target_duration
+                                                                                                                                    }
+                                                                                                                                    dk
+                                                                                                                                </span>
+                                                                                                                            )}
+                                                                                                                            {operation.quality_control && (
+                                                                                                                                <Badge
+                                                                                                                                    variant="outline"
+                                                                                                                                    className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
+                                                                                                                                >
+                                                                                                                                    KK
+                                                                                                                                </Badge>
+                                                                                                                            )}
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </CommandItem>
+                                                                                                            )
+                                                                                                        )}
+                                                                                                    </CommandGroup>
+                                                                                                </CommandList>
+                                                                                            </Command>
+                                                                                        </PopoverContent>
+                                                                                    </Popover>
+                                                                                )}
+                                                                            </>
                                                                         )}
                                                                     </div>
                                                                 </div>
