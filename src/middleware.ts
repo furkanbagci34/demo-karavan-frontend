@@ -113,8 +113,18 @@ function checkUrlAccess(url: string, allowedMenuIds: string[]): boolean {
         return allowedMenuIds.includes("users");
     }
 
+    // Reports
+    if (url === "/reports" || url.startsWith("/reports/")) {
+        return allowedMenuIds.includes("reports");
+    }
+
     // Account (herkes kendi hesabına erişebilir)
     if (url === "/account" || url.startsWith("/account/")) {
+        return true;
+    }
+
+    // Account (herkes kendi hesabına erişebilir)
+    if (url === "/quality-control" || url.startsWith("/quality-control/")) {
         return true;
     }
 

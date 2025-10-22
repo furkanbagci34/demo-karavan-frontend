@@ -119,6 +119,41 @@
             ]
         },
         {
+            "id": "quality-control",
+            "title": "Kalite Kontrol",
+            "url": "#",
+            "icon": "ClipboardCheck",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "quality-control-definitions",
+                    "title": "Tanımlama",
+                    "url": "/quality-control",
+                    "icon": "Settings"
+                },
+                {
+                    "id": "quality-control-execution",
+                    "title": "Kalite Kontrol",
+                    "url": "/quality-control/execution",
+                    "icon": "CheckCircle"
+                }
+            ]
+        },
+        {
+            "id": "reports",
+            "title": "Raporlar",
+            "url": "/reports",
+            "icon": "FileBarChart",
+            "group": "Menü",
+            "items": [
+                {
+                    "id": "production-reports",
+                    "title": "Üretim Raporları",
+                    "url": "/reports"
+                }
+            ]
+        },
+        {
             "id": "users",
             "title": "Kullanıcılar",
             "url": "/users",
@@ -126,6 +161,7 @@
             "group": "Menü",
             "items": []
         },
+
         {
             "id": "service",
             "title": "Servis",
