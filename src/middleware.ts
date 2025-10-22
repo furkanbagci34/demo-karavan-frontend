@@ -51,6 +51,11 @@ export async function middleware(request: NextRequest) {
  * URL'in erişim yetkisi olup olmadığını kontrol eder
  */
 function checkUrlAccess(url: string, allowedMenuIds: string[]): boolean {
+    // Ana dizin - dashboard yetkisi olan kullanıcılar erişebilir
+    if (url === "/") {
+        return allowedMenuIds.includes("dashboard");
+    }
+
     // Dashboard
     if (url === "/dashboard" || url.startsWith("/dashboard/")) {
         return allowedMenuIds.includes("dashboard");

@@ -24,7 +24,7 @@ const CAROUSEL_ITEMS = [
         icon: House,
         title: "Maceranın yeni ve modern yüzü",
         description:
-            "Ferah ve aydınlık iç tasarımı, kullanışlı ve esnek detayları ile Demonte karavanlar en zorlu yolculukları bile unutulmaz bir serüvene dönüştürmek için hazır.",
+            "Ferah ve aydınlık iç tasarımı, kullanışlı ve esnek detayları ile en zorlu yolculukları bile unutulmaz bir serüvene dönüştürmek için hazır.",
         gradient: "from-primary to-primary/80",
         iconColor: "text-primary-foreground",
     },

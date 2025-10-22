@@ -249,7 +249,7 @@ export default function AddUserPage() {
                                     type="email"
                                     value={formData.email}
                                     onChange={(e) => handleInputChange("email", e.target.value)}
-                                    placeholder="ornek@demontekaravan.com"
+                                    placeholder="ornek@lovasoftware.com"
                                     required
                                     disabled={isCreating}
                                 />

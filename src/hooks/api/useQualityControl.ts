@@ -112,8 +112,26 @@ export function useQualityControl() {
             const response = await apiClient.post(API_ENDPOINTS.qualityControl.submit, data as any);
             return response;
         },
-        onSuccess: () => {
+        onSuccess: (_, variables) => {
+            // Tüm kalite kontrol cache'lerini temizle
             queryClient.invalidateQueries({ queryKey: ["quality-control"] });
+
+            // Özellikle bu plan için olan cache'leri temizle
+            queryClient.invalidateQueries({
+                queryKey: ["quality-control", "records", variables.productionExecutionId],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["quality-control", "latest-status", variables.productionExecutionId],
+            });
+            queryClient.invalidateQueries({
+                queryKey: ["quality-control", "plan-stats", variables.productionExecutionId],
+            });
+
+            // Üretim planları cache'ini de temizle
+            queryClient.invalidateQueries({
+                queryKey: ["quality-control", "production-executions"],
+            });
+
             toast.success("Kalite kontrol başarıyla kaydedildi");
         },
         onError: (error: Error) => {
@@ -177,6 +195,11 @@ export function useQualityControl() {
         });
     };
 
+    // Cache temizleme fonksiyonu
+    const invalidateAllQC = () => {
+        queryClient.invalidateQueries({ queryKey: ["quality-control"] });
+    };
+
     return {
         groupedQualityControlItems,
         isLoadingGrouped,
@@ -195,5 +218,6 @@ export function useQualityControl() {
         useLatestQCStatus,
         useQCStats,
         useQCPlanStats,
+        invalidateAllQC,
     };
 }

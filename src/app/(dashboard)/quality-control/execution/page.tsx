@@ -527,7 +527,7 @@ const QCHistoryModal: React.FC<{
 };
 
 export default function QualityControlExecutionPage() {
-    const { useProductionPlansForQC, submitQC, isSubmittingQC } = useQualityControl();
+    const { useProductionPlansForQC, submitQC, isSubmittingQC, invalidateAllQC } = useQualityControl();
 
     // Data fetching
     const { data: productionPlans = [], isLoading: plansLoading, refetch: refetchPlans } = useProductionPlansForQC();
@@ -567,6 +567,8 @@ export default function QualityControlExecutionPage() {
 
     // Refresh fonksiyonu
     const handleRefresh = () => {
+        // Cache'i temizle ve verileri yeniden yükle
+        invalidateAllQC();
         refetchPlans();
     };
 

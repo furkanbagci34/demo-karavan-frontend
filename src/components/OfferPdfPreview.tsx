@@ -127,7 +127,7 @@ export async function generateOfferPdf({
     // PNG logo için base64 - hata durumunda null döndür
     let logoBase64: string | null = null;
     try {
-        logoBase64 = await getBase64FromUrl("/images/demonte-icon.png");
+        logoBase64 = await getBase64FromUrl("/images/lovasoftware-icon.png");
     } catch (error) {
         console.warn("Failed to load logo:", error);
     }
@@ -272,10 +272,8 @@ export async function generateOfferPdf({
             {
                 columns: [
                     [
-                        { text: "DEMONTE KARAVAN SANAYİ VE TİC A.Ş", style: "companyTitle", margin: [0, 0, 0, 2] },
-                        { text: "Ziya Gökalp Mahallesi Abdullahpaşa Caddesi", fontSize: 9, margin: [0, 0, 0, 0] },
-                        { text: "Prestij İş Merkezi No:41/2", fontSize: 9, margin: [0, 0, 0, 0] },
-                        { text: "Başakşehir/İstanbul", fontSize: 9, margin: [0, 0, 0, 0] },
+                        { text: "LOVA SOFTWARE", style: "companyTitle", margin: [0, 0, 0, 2] },
+                        { text: "Üsküdar/İstanbul", fontSize: 9, margin: [0, 0, 0, 0] },
                     ],
                     logoBase64
                         ? {
@@ -328,7 +326,7 @@ export async function generateOfferPdf({
             { text: notes || "", bold: true, fontSize: 11, margin: [0, 0, 0, 6], unbreakable: true },
             !hideIntroTexts
                 ? {
-                      text: "Demonte Karavan olarak, TSE ve TÜV testlerinden geçmiş, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
+                      text: "Lova Software olarak, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
                       fontSize: 9,
                       margin: [0, 0, 0, 4],
                       unbreakable: true,
