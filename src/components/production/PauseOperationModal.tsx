@@ -42,6 +42,14 @@ export const PauseOperationModal: React.FC<PauseOperationModalProps> = ({
             return;
         }
 
+        // Eğer "diğer" seçiliyse açıklama zorunlu
+        if (selectedReason === "diger" && !description.trim()) {
+            toast.error("Açıklama Gerekli", {
+                description: "Diğer seçeneği için açıklama yazmanız zorunludur.",
+            });
+            return;
+        }
+
         try {
             setSaving(true);
             await onPauseOperation(selectedReason, description);
@@ -124,12 +132,19 @@ export const PauseOperationModal: React.FC<PauseOperationModalProps> = ({
                     <div>
                         <div className="flex items-center gap-2 mb-3">
                             <FileText className="h-4 w-4" />
-                            <label className="text-sm font-medium text-gray-900">Detay (opsiyonel)</label>
+                            <label className="text-sm font-medium text-gray-900">
+                                Detay {selectedReason === "diger" ? "(zorunlu)" : "(opsiyonel)"}
+                            </label>
+                            {selectedReason === "diger" && (
+                                <span className="text-red-500 text-sm">*</span>
+                            )}
                         </div>
                         <Textarea
-                            placeholder={`${getReasonLabel(
-                                selectedReason
-                            )} ile ilgili detayları buraya yazabilirsiniz...`}
+                            placeholder={
+                                selectedReason === "diger" 
+                                    ? "Durdurma nedeninizi detaylı olarak açıklayın..."
+                                    : `${getReasonLabel(selectedReason)} ile ilgili detayları buraya yazabilirsiniz...`
+                            }
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="min-h-[100px] resize-none"
@@ -148,7 +163,7 @@ export const PauseOperationModal: React.FC<PauseOperationModalProps> = ({
                     </Button>
                     <Button
                         onClick={handlePause}
-                        disabled={!selectedReason || saving}
+                        disabled={!selectedReason || saving || (selectedReason === "diger" && !description.trim())}
                         className="bg-red-600 hover:bg-red-700"
                     >
                         {saving ? (

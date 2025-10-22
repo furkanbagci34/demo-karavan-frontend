@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
         sendContract: (id: string) => `/api/offers/send-contract/${id}`,
         getContractByOfferId: (offerId: string) => `/api/offers/contract-by-offer-id/${offerId}`,
         getByCustomerId: (customerId: string) => `/api/offers/customer/${customerId}`,
+        getProductsByOfferNumber: (offerNumber: string) => `/api/offers/by-number/${offerNumber}/products`,
     },
     vehicles: {
         create: "/api/vehicles",
@@ -128,5 +129,24 @@ export const API_ENDPOINTS = {
     workers: {
         getWorkers: "/api/workers",
         getAvailableWorkers: "/api/workers/available",
+    },
+    reports: {
+        getProductionExecutions: "/api/reports/production-executions",
+        getProductionExecutionDetail: (id: string) => `/api/reports/production-execution/${id}`,
+        getOperationPauses: (operationId: string) => `/api/reports/operation-pauses/${operationId}`,
+    },
+    qualityControl: {
+        create: "/api/quality-control",
+        getGroupedByVehicle: "/api/quality-control/grouped/by-vehicle",
+        getByVehicle: (vehicleId: string) => `/api/quality-control/vehicle/${vehicleId}`,
+        toggleStatus: (id: string) => `/api/quality-control/${id}/toggle-status`,
+        delete: (id: string) => `/api/quality-control/${id}`,
+        getProductionPlans: "/api/quality-control/production-executions",
+        submit: "/api/quality-control/submit",
+        getRecords: (productionExecutionId: string) => `/api/quality-control/records/${productionExecutionId}`,
+        getLatestStatus: (productionExecutionId: string) =>
+            `/api/quality-control/latest-status/${productionExecutionId}`,
+        getStats: "/api/quality-control/stats",
+        getPlanStats: (productionExecutionId: string) => `/api/quality-control/stats/${productionExecutionId}`,
     },
 } as const;

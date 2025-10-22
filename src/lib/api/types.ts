@@ -118,6 +118,7 @@ export interface Product {
     code?: string;
     purchase_price?: number;
     sale_price?: number;
+    distributor_price?: number;
     stock_quantity?: number;
     description?: string;
     image?: string;
@@ -132,6 +133,7 @@ export interface CreateProductData {
     code?: string;
     purchasePrice?: number;
     salePrice?: number;
+    distributorPrice?: number;
     stockQuantity?: number;
     description?: string;
     image?: string;
@@ -144,6 +146,7 @@ export interface UpdateProductData {
     code?: string;
     purchasePrice?: number;
     salePrice?: number;
+    distributorPrice?: number;
     stockQuantity?: number;
     description?: string;
     image?: string;
@@ -615,6 +618,7 @@ export interface ProductionExecutionOperationData {
 
 export interface CreateProductionExecutionData {
     productionPlanId: number;
+    vehicleId?: number;
     offerId?: number;
     customerId?: number;
     vehicleAcceptanceId?: number;
@@ -639,4 +643,92 @@ export interface UpdateOperationExecutionData {
     qualityCheckPassed?: boolean;
     qualityNotes?: string;
     operationNotes?: string;
+}
+
+// Quality Control tipleri
+export interface QualityControlItem {
+    id: number;
+    vehicle_id: number;
+    name: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    vehicle_name?: string;
+    vehicle_brand_model?: string;
+    created_by_name?: string;
+}
+
+export interface CreateQualityControlItemData {
+    vehicleId: number;
+    name: string;
+    description?: string;
+    isActive?: boolean;
+}
+
+export interface QualityControlGroupedByVehicle {
+    vehicle_id: number;
+    vehicle_name: string;
+    vehicle_brand_model?: string;
+    vehicle_image?: string;
+    total_items: number;
+    active_items: number;
+    inactive_items: number;
+    last_updated: string;
+    created_by_names: string;
+}
+
+export interface ProductionPlanForQC {
+    id: number;
+    plan_number: string;
+    plan_name: string;
+    vehicle_name: string;
+    vehicle_brand_model?: string;
+    vehicle_id: number;
+    customer_name: string;
+    status: string;
+    created_at: string;
+}
+
+export interface QualityControlCheck {
+    itemId: number;
+    status: "approved" | "rejected";
+    rejectionReason?: string;
+}
+
+export interface SubmitQualityControlData {
+    productionExecutionId: number;
+    checks: QualityControlCheck[];
+}
+
+export interface QualityControlRecord {
+    id: number;
+    production_plan_id: number;
+    quality_control_item_id: number;
+    status: "approved" | "rejected";
+    rejection_reason?: string;
+    checked_at: string;
+    item_name: string;
+    item_description?: string;
+    checked_by_name: string;
+}
+
+export interface QualityControlStats {
+    total_plans: number;
+    running_plans: number;
+    completed_plans: number;
+    plans_with_qc: number;
+    pending_plans: number;
+    total_qc_records: number;
+    approved_records: number;
+    rejected_records: number;
+    completion_rate: number;
+}
+
+export interface QualityControlPlanStats {
+    total_items: number;
+    checked_items: number;
+    approved_items: number;
+    rejected_items: number;
+    pending_items: number;
 }

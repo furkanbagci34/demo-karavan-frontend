@@ -71,7 +71,10 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-md w-[90vw]" onOpenAutoFocus={(e) => e.preventDefault()}>
+            <DialogContent
+                className="max-w-[95vw] sm:max-w-6xl lg:max-w-7xl max-h-[95vh] flex flex-col"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Play className="h-5 w-5 text-blue-600" />
@@ -89,30 +92,91 @@ export const StartOperationModal: React.FC<StartOperationModalProps> = ({ isOpen
                         </div>
                     )}
 
-                    {/* Workers Radio List - Fotoğraftaki gibi */}
+                    {/* Workers Grid Layout */}
                     {!isLoadingAvailable && (
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             {filteredWorkers.map((worker) => (
                                 <div
                                     key={worker.id}
-                                    className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg"
+                                    className={`relative cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 ${
+                                        selectedWorkerIds.includes(worker.id)
+                                            ? "ring-2 ring-green-400 shadow-lg"
+                                            : "hover:shadow-md"
+                                    }`}
                                     onClick={() => handleWorkerToggle(worker.id)}
                                 >
-                                    <input
-                                        type="checkbox"
-                                        id={`worker-${worker.id}`}
-                                        checked={selectedWorkerIds.includes(worker.id)}
-                                        onChange={() => handleWorkerToggle(worker.id)}
-                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 rounded"
-                                    />
-                                    <div className="flex-1">
-                                        <div className="font-medium text-gray-900">
-                                            {worker.name} {worker.surname}
+                                    <div
+                                        className={`p-4 rounded-lg border-2 transition-colors duration-200 ${
+                                            selectedWorkerIds.includes(worker.id)
+                                                ? "border-green-400 bg-green-50"
+                                                : "border-gray-200 bg-white hover:border-gray-300"
+                                        }`}
+                                    >
+                                        {/* Checkbox */}
+                                        <div className="absolute top-3 right-3">
+                                            <input
+                                                type="checkbox"
+                                                id={`worker-${worker.id}`}
+                                                checked={selectedWorkerIds.includes(worker.id)}
+                                                onChange={() => handleWorkerToggle(worker.id)}
+                                                className="w-5 h-5 text-green-600 focus:ring-green-500 rounded border-2 border-gray-300"
+                                            />
                                         </div>
-                                        <div className="text-sm text-gray-500">{worker.email}</div>
-                                        <div className="text-xs text-gray-400">
-                                            {worker.specialization} • {worker.experience_years} yıl deneyim
+
+                                        {/* Avatar */}
+                                        <div className="flex justify-center mb-3">
+                                            <div
+                                                className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg transition-colors duration-200 ${
+                                                    selectedWorkerIds.includes(worker.id)
+                                                        ? "bg-gradient-to-br from-green-500 to-green-600"
+                                                        : "bg-gradient-to-br from-blue-500 to-blue-600"
+                                                }`}
+                                            >
+                                                {worker.name.charAt(0)}
+                                                {worker.surname.charAt(0)}
+                                            </div>
                                         </div>
+
+                                        {/* Worker Info */}
+                                        <div className="text-center space-y-2">
+                                            <div className="font-semibold text-gray-900 text-sm leading-tight">
+                                                {worker.name} {worker.surname}
+                                            </div>
+                                            <div className="text-xs text-gray-500 truncate" title={worker.email}>
+                                                {worker.email}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div
+                                                    className={`text-xs font-medium px-2 py-1 rounded-full inline-block transition-colors duration-200 ${
+                                                        selectedWorkerIds.includes(worker.id)
+                                                            ? "text-green-700 bg-green-200"
+                                                            : "text-blue-600 bg-blue-100"
+                                                    }`}
+                                                >
+                                                    {worker.specialization}
+                                                </div>
+                                                <div className="text-xs text-gray-400">
+                                                    {worker.experience_years} yıl deneyim
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Selection Indicator */}
+                                        {selectedWorkerIds.includes(worker.id) && (
+                                            <div className="absolute top-2 left-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                                <svg
+                                                    className="w-4 h-4 text-white"
+                                                    fill="currentColor"
+                                                    viewBox="0 0 20 20"
+                                                >
+                                                    <path
+                                                        fillRule="evenodd"
+                                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                        clipRule="evenodd"
+                                                    />
+                                                </svg>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

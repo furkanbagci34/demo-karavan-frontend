@@ -145,21 +145,36 @@ export const OperationMonitorModal: React.FC<OperationMonitorModalProps> = ({
         }
     };
 
-    // Filtrelenmiş operasyon listesi
+    // Filtrelenmiş ve sıralanmış operasyon listesi
     const filteredOperations = useMemo(() => {
-        if (!searchTerm.trim()) {
-            return operations;
+        let filtered = operations;
+
+        // Arama terimi varsa filtrele
+        if (searchTerm.trim()) {
+            const searchLower = searchTerm.toLowerCase();
+            filtered = operations.filter(
+                (operation) =>
+                    operation.original_operation_name?.toLowerCase().includes(searchLower) ||
+                    operation.operation_name?.toLowerCase().includes(searchLower) ||
+                    operation.station_name?.toLowerCase().includes(searchLower) ||
+                    getStatusText(operation.status).toLowerCase().includes(searchLower) ||
+                    operation.sort_order.toString().includes(searchLower)
+            );
         }
 
-        const searchLower = searchTerm.toLowerCase();
-        return operations.filter(
-            (operation) =>
-                operation.original_operation_name?.toLowerCase().includes(searchLower) ||
-                operation.operation_name?.toLowerCase().includes(searchLower) ||
-                operation.station_name?.toLowerCase().includes(searchLower) ||
-                getStatusText(operation.status).toLowerCase().includes(searchLower) ||
-                operation.sort_order.toString().includes(searchLower)
-        );
+        // Sıralama: Tamamlanan operasyonlar en altta, diğerleri sort_order'a göre
+        return filtered.sort((a, b) => {
+            // Tamamlanan operasyonları en altta göster
+            if (a.status === "completed" && b.status !== "completed") {
+                return 1; // a'yı b'den sonra göster
+            }
+            if (a.status !== "completed" && b.status === "completed") {
+                return -1; // b'yi a'dan sonra göster
+            }
+
+            // Her ikisi de tamamlanmış veya tamamlanmamışsa sort_order'a göre sırala
+            return a.sort_order - b.sort_order;
+        });
     }, [operations, searchTerm]);
 
     // Durum istatistikleri

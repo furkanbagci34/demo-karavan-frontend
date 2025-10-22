@@ -7,6 +7,8 @@ export interface OfferProduct {
     quantity: number;
     price: number;
     total: number;
+    distributorPrice?: number;
+    distributorTotal?: number;
     imageUrl?: string;
     oldPrice?: number;
     unit?: string; // Ürün birimi (Adet, Saat vb.)
@@ -23,9 +25,14 @@ export interface OfferPdfPreviewProps {
     net: number;
     vat: number;
     total: number;
+    distributorGross?: number;
+    distributorDiscount?: number;
+    distributorNet?: number;
+    distributorVat?: number;
+    distributorTotal?: number;
     notes?: string;
     hidePricing?: boolean; // Yeni parametre: fiyat bilgilerini gizle
-    mode?: "detailed" | "summary" | "nameOnly"; // detailed: fiyatlı, summary: miktarlı ama fiyatsız, nameOnly: sadece isim
+    mode?: "detailed" | "summary" | "nameOnly" | "distributor"; // detailed: fiyatlı, summary: miktarlı ama fiyatsız, nameOnly: sadece isim, distributor: bayi fiyatları
 }
 
 async function getBase64FromUrl(url: string): Promise<string | null> {
@@ -89,6 +96,11 @@ export async function generateOfferPdf({
     net,
     vat,
     total,
+    distributorGross,
+    distributorDiscount,
+    distributorNet,
+    distributorVat,
+    distributorTotal,
     notes,
     hidePricing = false, // Varsayılan olarak false
     mode,
@@ -115,13 +127,14 @@ export async function generateOfferPdf({
     // PNG logo için base64 - hata durumunda null döndür
     let logoBase64: string | null = null;
     try {
-        logoBase64 = await getBase64FromUrl("/images/lovasoftware-icon.png");
+        logoBase64 = await getBase64FromUrl("/images/demonte-icon.png");
     } catch (error) {
         console.warn("Failed to load logo:", error);
     }
 
     // Mod/geri uyumluluk
     const isNameOnly = mode === "nameOnly";
+    const isDistributorMode = mode === "distributor";
     const effectiveHidePricing = mode ? mode !== "detailed" : hidePricing;
     const hideQuantity = mode === "nameOnly";
     const hideSummary = mode === "nameOnly"; // 3. tipte özet gizlenir
@@ -150,6 +163,10 @@ export async function generateOfferPdf({
         }
 
         if (!effectiveHidePricing) {
+            // Distributor mode'da bayi fiyatlarını kullan
+            const displayPrice = isDistributorMode ? p.distributorPrice || p.price : p.price;
+            const displayTotal = isDistributorMode ? p.distributorTotal || p.total : p.total;
+
             row.push(
                 {
                     stack: [
@@ -164,7 +181,7 @@ export async function generateOfferPdf({
                               }
                             : "",
                         {
-                            text: `€ ${p.price.toFixed(2)}`,
+                            text: `€ ${displayPrice.toFixed(2)}`,
                             fontSize: 10,
                             alignment: "center",
                             bold: !!p.oldPrice,
@@ -175,7 +192,7 @@ export async function generateOfferPdf({
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any,
                 {
-                    text: `€ ${p.total.toFixed(2)}`,
+                    text: `€ ${displayTotal.toFixed(2)}`,
                     alignment: "center",
                     fontSize: 10,
                     bold: true,
@@ -225,17 +242,23 @@ export async function generateOfferPdf({
     });
 
     // Özet tablosunu moda göre ayarla
-    const summaryTableBody: (string | { text: string; bold: boolean })[][] = [["Brüt", `€ ${gross.toFixed(2)}`]];
+    const displayGross = isDistributorMode ? distributorGross || gross : gross;
+    const displayDiscount = isDistributorMode ? distributorDiscount || discount : discount;
+    const displayNet = isDistributorMode ? distributorNet || net : net;
+    const displayVat = isDistributorMode ? distributorVat || vat : vat;
+    const displayTotal = isDistributorMode ? distributorTotal || total : total;
+
+    const summaryTableBody: (string | { text: string; bold: boolean })[][] = [["Brüt", `€ ${displayGross.toFixed(2)}`]];
 
     // İndirim varsa ekle
-    if (discount > 0) {
-        summaryTableBody.push(["İndirim", `€ ${discount.toFixed(2)}`]);
+    if (displayDiscount > 0) {
+        summaryTableBody.push(["İndirim", `€ ${displayDiscount.toFixed(2)}`]);
     }
 
     summaryTableBody.push(
-        ["Net", `€ ${net.toFixed(2)}`],
-        ["KDV (%20)", `€ ${vat.toFixed(2)}`],
-        ["Toplam", { text: `€ ${total.toFixed(2)}`, bold: true }]
+        ["Net", `€ ${displayNet.toFixed(2)}`],
+        ["KDV (%20)", `€ ${displayVat.toFixed(2)}`],
+        ["Toplam", { text: `€ ${displayTotal.toFixed(2)}`, bold: true }]
     );
 
     const summaryTable = {
@@ -249,9 +272,10 @@ export async function generateOfferPdf({
             {
                 columns: [
                     [
-                        { text: "LOVASOFTWARE LTD. ŞTİ.", style: "companyTitle", margin: [0, 0, 0, 2] },
-                        { text: "Ferah Mahallesi Irmak Sokak", fontSize: 9, margin: [0, 0, 0, 0] },
-                        { text: "Üsküdar/İstanbul", fontSize: 9, margin: [0, 0, 0, 0] },
+                        { text: "DEMONTE KARAVAN SANAYİ VE TİC A.Ş", style: "companyTitle", margin: [0, 0, 0, 2] },
+                        { text: "Ziya Gökalp Mahallesi Abdullahpaşa Caddesi", fontSize: 9, margin: [0, 0, 0, 0] },
+                        { text: "Prestij İş Merkezi No:41/2", fontSize: 9, margin: [0, 0, 0, 0] },
+                        { text: "Başakşehir/İstanbul", fontSize: 9, margin: [0, 0, 0, 0] },
                     ],
                     logoBase64
                         ? {
@@ -304,7 +328,7 @@ export async function generateOfferPdf({
             { text: notes || "", bold: true, fontSize: 11, margin: [0, 0, 0, 6], unbreakable: true },
             !hideIntroTexts
                 ? {
-                      text: "LovaSoftware Karavan olarak, TSE ve TÜV testlerinden geçmiş, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
+                      text: "Demonte Karavan olarak, TSE ve TÜV testlerinden geçmiş, güvenilir ve dayanıklı ürünler ile en yüksek standartlarda üretim yapıyoruz. Karavanlarımızı, ithal bileşenler kullanarak hazırlıyor ve sektörün en iyi markalarıyla çalışıyoruz. Ayrıca, SCA, Vbair ve Stide markalarının yetkili satış ve servis noktası olarak, yalnızca en kaliteli ürünleri sunmakla kalmıyor, satış sonrası destek ve garanti kapsamında da profesyonel hizmet sağlıyoruz.",
                       fontSize: 9,
                       margin: [0, 0, 0, 4],
                       unbreakable: true,
