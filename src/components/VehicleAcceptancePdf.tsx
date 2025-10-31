@@ -20,6 +20,7 @@ export interface VehicleAcceptancePdfProps {
     deliveredBy?: string;
     receivedBy?: string;
     signature?: string;
+    receivedBySignature?: string;
 }
 
 async function getBase64FromUrl(url: string): Promise<string | null> {
@@ -287,6 +288,15 @@ async function buildVehicleAcceptanceDocDefinition(props: VehicleAcceptancePdfPr
                         stack: [
                             { text: "Teslim Alan", bold: true, fontSize: 11, alignment: "center" },
                             { text: props.receivedBy || "", fontSize: 10, alignment: "center", margin: [0, 2, 0, 0] },
+                            props.receivedBySignature
+                                ? {
+                                      image: props.receivedBySignature,
+                                      width: 120,
+                                      height: 45,
+                                      alignment: "center",
+                                      margin: [0, 2, 0, 0],
+                                  }
+                                : {},
                         ],
                     },
                     {

@@ -396,6 +396,7 @@ export default function VehicleAcceptanceFormPage() {
                 damageMarkerCounts: damageCounts,
                 deliveredBy: deliveredBy || undefined,
                 receivedBy: user?.name && user?.surname ? `${user.name} ${user.surname}` : undefined,
+                receivedBySignature: user?.signature || undefined,
                 signature: signature || undefined,
             });
             const formData = {
@@ -504,6 +505,21 @@ export default function VehicleAcceptanceFormPage() {
                     </div>
                 )}
 
+                {/* Yazdırma başlığı */}
+                <div className="print-only mb-4">
+                    <h1 className="text-2xl font-bold print-title">
+                        {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
+                    </h1>
+                    <Image
+                        src="/images/lovasoftware-icon.png"
+                        priority
+                        alt="Logo"
+                        width={60}
+                        height={60}
+                        className="print-logo-fixed"
+                        style={{ objectFit: "contain" }}
+                    />
+                </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print">
                     <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
@@ -540,6 +556,7 @@ export default function VehicleAcceptanceFormPage() {
                                     deliveredBy: deliveredBy || undefined,
                                     receivedBy:
                                         user?.name && user?.surname ? `${user.name} ${user.surname}` : undefined,
+                                    receivedBySignature: user?.signature || undefined,
                                     signature: signature || undefined,
                                 });
                             }}
@@ -588,6 +605,7 @@ export default function VehicleAcceptanceFormPage() {
                                                 user?.name && user?.surname
                                                     ? `${user.name} ${user.surname}`
                                                     : undefined,
+                                            receivedBySignature: user?.signature || undefined,
                                             signature: signature || undefined,
                                         });
                                         await sendVehicleAcceptanceEmail(id as string, pdfBase64);
@@ -671,7 +689,7 @@ export default function VehicleAcceptanceFormPage() {
                                         </div>
                                     </div>
 
-                                    {/* Müşteri Seçimi ve Teslim Eden yan yana */}
+                                    {/* Müşteri ve Teslim Eden yan yana */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-0">
                                         {/* Müşteri Seçimi */}
                                         <div className="space-y-2 print:space-y-0 print:m-0 no-print">
@@ -1607,7 +1625,7 @@ export default function VehicleAcceptanceFormPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* İmza Modal */}
+            {/* Teslim Eden İmza Modal */}
             <SignatureModal
                 open={isSignatureModalOpen}
                 onOpenChange={setIsSignatureModalOpen}

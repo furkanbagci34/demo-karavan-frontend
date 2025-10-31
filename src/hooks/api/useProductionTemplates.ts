@@ -79,6 +79,10 @@ export const useProductionTemplates = () => {
         onSuccess: () => {
             toast.success("Üretim şablonu başarıyla silindi.");
             queryClient.invalidateQueries({ queryKey: ["productionTemplates"] });
+            // Production execution cache'lerini temizle
+            queryClient.invalidateQueries({ queryKey: ["productionExecutions"] });
+            queryClient.invalidateQueries({ queryKey: ["productionExecution"] });
+            queryClient.invalidateQueries({ queryKey: ["production-execution"] });
         },
         onError: (error: unknown) => {
             let errorMessage = "Üretim şablonu silinirken bir hata oluştu.";

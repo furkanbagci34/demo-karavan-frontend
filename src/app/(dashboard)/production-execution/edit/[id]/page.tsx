@@ -37,11 +37,14 @@ import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
 import { useCustomers } from "@/hooks/api/useCustomers";
 import { useProductionExecution } from "@/hooks/api/useProductionExecution";
 import { useOperations } from "@/hooks/api/useOperations";
+import { useStations } from "@/hooks/api/useStations";
+import { useVehicles } from "@/hooks/api/useVehicles";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { UpdateProductionExecutionData } from "@/lib/api/types";
 
 interface VehicleInfo {
     vehicleId: number | null;
@@ -78,8 +81,8 @@ interface SelectedTemplate {
 
 interface EditableOperation {
     id: string; // Unique ID for React keys (could be temporary for new operations)
-    stationId: number; // Template'teki station ID (production_plan_stations.id)
-    operationId: number; // Template'teki operation ID (production_plan_operations.id)
+    stationId: number;
+    operationId: number;
     originalOperationId?: number; // operations tablosundaki gerçek operation ID
     originalStationId?: number; // stations tablosundaki gerçek station ID
     operationName: string;
@@ -87,7 +90,12 @@ interface EditableOperation {
     sortOrder: number;
     targetDuration?: number;
     qualityControl: boolean;
-    isNew?: boolean; // For tracking newly added operations
+}
+
+interface ManualStation {
+    id: string; // Temporary ID for React keys
+    stationId: number;
+    stationName: string;
 }
 
 export default function ProductionExecutionEditPage() {
@@ -119,22 +127,28 @@ export default function ProductionExecutionEditPage() {
     const [isEditingOperations, setIsEditingOperations] = useState(false);
     const [draggedOperationId, setDraggedOperationId] = useState<string | null>(null);
 
-    // Operasyon ekleme state'leri
-    const [addOperationStationId, setAddOperationStationId] = useState<number | null>(null);
-    const [openAddOperationPopover, setOpenAddOperationPopover] = useState(false);
+    // Manuel istasyon ve operasyon ekleme state'leri
+    const [manualStations, setManualStations] = useState<ManualStation[]>([]);
+    const [openStationCombobox, setOpenStationCombobox] = useState(false);
+    const [openOperationCombobox, setOpenOperationCombobox] = useState<{ [stationId: string]: boolean }>({});
 
     // Combobox state'leri
     const [openOfferCombobox, setOpenOfferCombobox] = useState(false);
     const [openCustomerCombobox, setOpenCustomerCombobox] = useState(false);
     const [openPlateCombobox, setOpenPlateCombobox] = useState(false);
+    const [plateSearchValue, setPlateSearchValue] = useState("");
 
     // API hooks
+    const { isLoading: vehiclesLoading } = useVehicles();
     const { get: productionTemplatesQuery, useProductionTemplateById } = useProductionTemplates();
     const { getAllOffers, loading: offersLoading } = useOffers();
     const { vehicleAcceptances, isLoading: vehicleAcceptancesLoading } = useVehicleAcceptance();
     const { customers, isLoading: customersLoading } = useCustomers();
     const { useProductionExecutionById, update } = useProductionExecution();
-    const { operations: allOperations } = useOperations();
+    const { operations: allOperations, isLoading: operationsLoading } = useOperations();
+    const { get: stationsQuery } = useStations();
+
+    const stations = stationsQuery.data || [];
 
     // Offers ve vehicle acceptances verilerini yükle
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,22 +191,46 @@ export default function ProductionExecutionEditPage() {
             setDescription(executionData.description || "");
 
             // Operasyonları EditableOperation formatına dönüştür
+            // Template bilgisi henüz yüklenmemiş olabilir, bu yüzden sadece executionData'dan gelen verilerle başlat
+            // Template yüklendiğinde operasyonlar yeniden map edilecek
             if (executionData.operations) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const operations = executionData.operations.map((op: any) => ({
                     id: `existing-${op.id}`,
-                    stationId: op.station_id,
-                    operationId: op.operation_id, // Gerçek operation ID'yi kullan
-                    originalOperationId: op.original_operation_id, // originalOperationId alanını da ekle
-                    originalStationId: op.original_station_id, // originalStationId alanını da ekle
-                    operationName: op.original_operation_name || op.operation_name, // Gerçek operation name'ini kullan
+                    stationId: op.original_station_id || op.station_id, // Geçici olarak original station ID kullan
+                    operationId: op.original_operation_id || op.operation_id,
+                    originalOperationId: op.original_operation_id,
+                    originalStationId: op.original_station_id || op.station_id,
+                    operationName: op.original_operation_name || op.operation_name,
                     stationName: op.station_name,
                     sortOrder: op.sort_order,
                     targetDuration: op.target_duration,
                     qualityControl: op.quality_control,
-                    isNew: false,
                 }));
                 setEditableOperations(operations);
+            }
+
+            // Eğer production_plan_id null ise, operasyonlardan istasyonları çıkar ve manuel istasyonlar olarak ekle
+            if (!executionData.production_plan_id && executionData.operations && executionData.operations.length > 0) {
+                const uniqueStations = new Map<number, { id: number; name: string }>();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                executionData.operations.forEach((op: any) => {
+                    const stationId = op.original_station_id || op.station_id;
+                    if (stationId && !uniqueStations.has(stationId)) {
+                        uniqueStations.set(stationId, {
+                            id: stationId,
+                            name: op.station_name,
+                        });
+                    }
+                });
+
+                const manualStationsArray: ManualStation[] = Array.from(uniqueStations.values()).map((station) => ({
+                    id: `manual-${station.id}-${Date.now()}`,
+                    stationId: station.id,
+                    stationName: station.name,
+                }));
+
+                setManualStations(manualStationsArray);
             }
         }
     }, [executionData]);
@@ -200,19 +238,206 @@ export default function ProductionExecutionEditPage() {
     // Seçilen template'i yükle
     const { data: templateData, isLoading: templateLoading } = useProductionTemplateById(selectedTemplateId);
 
-    // Template verisi değiştiğinde selectedTemplate'i güncelle
+    // Template verisi değiştiğinde selectedTemplate'i güncelle ve operasyonları yeniden map et
     useEffect(() => {
         if (templateData) {
-            setSelectedTemplate(templateData as unknown as SelectedTemplate);
+            const template = templateData as unknown as SelectedTemplate;
+            setSelectedTemplate(template);
+
+            // Template yüklendiyse ve operasyonlar varsa, operasyonları template istasyon ID'leri ile eşleştir
+            if (executionData?.operations && template.stations) {
+                // Template istasyonlarını station_id'ye göre map et (stations tablosundaki ID -> production_plan_stations.id)
+                const stationIdMap = new Map<number, number>();
+                template.stations.forEach((s) => {
+                    stationIdMap.set(s.station_id, s.id); // station_id (stations tablosu) -> id (production_plan_stations tablosu)
+                });
+
+                // Template operation ID'lerini map et
+                const operationIdMap = new Map<number, number>();
+                template.stations.forEach((s) => {
+                    s.operations?.forEach((op) => {
+                        operationIdMap.set(op.operation_id, op.id); // operation_id (operations tablosu) -> id (template operation id)
+                    });
+                });
+
+                // Operasyonları yeniden map et
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const updatedOperations = executionData.operations.map((op: any) => {
+                    const originalStationId = op.original_station_id || op.station_id;
+                    const originalOperationId = op.original_operation_id || op.operation_id;
+
+                    // Template'te bu station_id'ye karşılık gelen template station ID'sini bul
+                    const templateStationId = stationIdMap.get(originalStationId);
+                    // Template'te bu operation_id'ye karşılık gelen template operation ID'sini bul
+                    const templateOperationId = operationIdMap.get(originalOperationId);
+
+                    return {
+                        id: `existing-${op.id}`,
+                        stationId: templateStationId || originalStationId, // Template station ID varsa onu kullan, yoksa original
+                        operationId: templateOperationId || originalOperationId, // Template operation ID varsa onu kullan, yoksa original
+                        originalOperationId: originalOperationId,
+                        originalStationId: originalStationId,
+                        operationName: op.original_operation_name || op.operation_name,
+                        stationName: op.station_name,
+                        sortOrder: op.sort_order,
+                        targetDuration: op.target_duration,
+                        qualityControl: op.quality_control,
+                    };
+                });
+
+                setEditableOperations(updatedOperations);
+            }
         } else if (selectedTemplateId === null) {
             setSelectedTemplate(null);
         }
-    }, [templateData, selectedTemplateId]);
+    }, [templateData, selectedTemplateId, executionData]);
+
+    // Template seçim fonksiyonu
+    const handleTemplateSelect = (templateId: string) => {
+        if (templateId === "none" || templateId === "") {
+            setSelectedTemplateId(null);
+            return;
+        }
+        const template = productionTemplates.find((t) => t.id === parseInt(templateId));
+        if (template) {
+            setSelectedTemplateId(template.id);
+        }
+    };
+
+    // Manuel istasyon ekle
+    const handleAddManualStation = (stationId: number) => {
+        const station = stations.find((s) => s.id === stationId);
+        if (!station) return;
+
+        // Zaten eklenmiş mi kontrol et (template'ten veya manuel)
+        const isAlreadyAdded =
+            manualStations.some((ms) => ms.stationId === stationId) ||
+            (selectedTemplate?.stations?.some((s) => s.id === stationId) ?? false);
+
+        if (isAlreadyAdded) {
+            toast.error("Bu istasyon zaten eklenmiş");
+            return;
+        }
+
+        const newManualStation: ManualStation = {
+            id: `manual-${stationId}-${Date.now()}`,
+            stationId: station.id,
+            stationName: station.name,
+        };
+
+        setManualStations([...manualStations, newManualStation]);
+        setOpenStationCombobox(false);
+        toast.success(`${station.name} istasyonu eklendi`);
+    };
+
+    // Manuel istasyon sil
+    const handleRemoveManualStation = (stationId: string) => {
+        // Bu istasyona ait operasyonları da sil
+        const station = manualStations.find((ms) => ms.id === stationId);
+        if (station) {
+            const newOperations = editableOperations.filter((op) => op.stationId !== station.stationId);
+            setEditableOperations(newOperations);
+        }
+
+        setManualStations(manualStations.filter((ms) => ms.id !== stationId));
+    };
+
+    // İstasyona operasyon ekle
+    const handleAddOperationToStation = (stationId: number, operationId: number) => {
+        const operation = allOperations.find((op) => op.id === operationId);
+        if (!operation) return;
+
+        // Template'ten gelen istasyon mu kontrol et
+        const templateStation = selectedTemplate?.stations?.find((s) => s.id === stationId);
+        let dbStation;
+        let manualStation;
+        let stationName = "";
+
+        if (templateStation) {
+            // Template'ten gelen istasyon için gerçek station ID'sini kullan
+            const realStationId = templateStation.station_id;
+            dbStation = stations.find((s) => s.id === realStationId);
+            stationName = templateStation.station_name;
+        } else {
+            // Manuel eklenen istasyon veya normal istasyon
+            dbStation = stations.find((s) => s.id === stationId);
+            manualStation = manualStations.find((ms) => ms.stationId === stationId);
+            stationName = manualStation?.stationName || dbStation?.name || "";
+        }
+
+        if (!dbStation && !manualStation && !templateStation) return;
+
+        // Gerçek station ID'sini belirle (template istasyonu için station_id, diğerleri için stationId)
+        const realStationId = templateStation?.station_id || stationId;
+
+        // Aynı operasyon aynı istasyona zaten eklenmiş mi kontrol et
+        const isAlreadyAdded = editableOperations.some(
+            (op) =>
+                op.stationId === stationId && (op.originalOperationId === operationId || op.operationId === operationId)
+        );
+
+        if (isAlreadyAdded) {
+            toast.error("Bu operasyon bu istasyona zaten eklenmiş");
+            return;
+        }
+
+        const newOperation: EditableOperation = {
+            id: `manual-op-${stationId}-${operationId}-${Date.now()}`,
+            stationId: stationId, // Template istasyon ID'si kullan (production_plan_stations.id)
+            operationId: operationId,
+            originalOperationId: operationId,
+            originalStationId: realStationId, // Gerçek stations tablosundaki ID
+            operationName: operation.name,
+            stationName: stationName,
+            sortOrder: editableOperations.length + 1,
+            qualityControl: operation.quality_control,
+            targetDuration: operation.target_duration,
+        };
+
+        setEditableOperations([...editableOperations, newOperation]);
+        setOpenOperationCombobox((prev) => ({ ...prev, [stationId.toString()]: false }));
+        toast.success(`${operation.name} operasyonu eklendi`);
+    };
+
+    // Tüm istasyonları birleştir (template'ten gelenler + manuel eklenenler)
+    const getAllStations = () => {
+        const templateStationIds = new Set(selectedTemplate?.stations?.map((s) => s.id) || []);
+
+        // Template'ten gelen istasyonlar
+        const templateStations =
+            selectedTemplate?.stations?.map((s) => ({
+                id: s.id,
+                name: s.station_name,
+            })) || [];
+
+        // Manuel eklenen istasyonlar (template'te olmayanlar)
+        const additionalManualStations = manualStations
+            .filter((ms) => !templateStationIds.has(ms.stationId))
+            .map((ms) => ({
+                id: ms.stationId,
+                name: ms.stationName,
+            }));
+
+        return [...templateStations, ...additionalManualStations];
+    };
+
+    // İstasyonun manuel eklenip eklenmediğini kontrol et
+    const isStationManual = (stationId: number) => {
+        return manualStations.some((ms) => ms.stationId === stationId);
+    };
+
+    const productionTemplates = productionTemplatesQuery.data || [];
 
     // Kaydetme fonksiyonu
     const handleSave = async () => {
         if (!executionData) {
             toast.error("Execution verisi yüklenmedi");
+            return;
+        }
+
+        // Teklif numarası veya plaka numarası zorunlu (ikisinden birisi)
+        if (!vehicleInfo.offerId && !vehicleInfo.vehicleAcceptanceId) {
+            toast.error("Lütfen teklif numarası veya plaka numarası seçin");
             return;
         }
 
@@ -231,9 +456,9 @@ export default function ProductionExecutionEditPage() {
                 };
 
                 // Sadece mevcut operasyonlar için ID ekle (yeni eklenenler için değil)
-                // Yeni operasyonların ID'si "new-" ile başlar ve isNew=true
+                // Yeni operasyonların ID'si "manual-op-" ile başlar
                 // Backend ID olmayan operasyonları yeni operasyon olarak ekler
-                if (!op.isNew && op.id && !op.id.toString().startsWith("new-")) {
+                if (op.id && op.id.toString().startsWith("existing-")) {
                     // ID'yi numeric ID'ye çevir (existing- prefix'ini kaldır)
                     const numericId = op.id.toString().replace("existing-", "");
                     if (!isNaN(Number(numericId))) {
@@ -245,12 +470,14 @@ export default function ProductionExecutionEditPage() {
             });
 
             // Backend'e gönderilecek veri
-            const updateData = {
-                offerId: vehicleInfo.offerId || undefined,
-                customerId: vehicleInfo.customerId || undefined,
-                vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId || undefined,
-                description: description || undefined,
-                number: vehicleInfo.number || undefined,
+            const updateData: UpdateProductionExecutionData = {
+                ...(selectedTemplateId && { productionPlanId: selectedTemplateId }),
+                vehicleId: vehicleInfo.vehicleId!,
+                ...(vehicleInfo.offerId && { offerId: vehicleInfo.offerId }),
+                ...(vehicleInfo.customerId && { customerId: vehicleInfo.customerId }),
+                ...(vehicleInfo.vehicleAcceptanceId && { vehicleAcceptanceId: vehicleInfo.vehicleAcceptanceId }),
+                ...(description && { description }),
+                number: vehicleInfo.number!,
                 operations: operations,
             };
 
@@ -321,56 +548,35 @@ export default function ProductionExecutionEditPage() {
         setEditableOperations(newOperations);
     };
 
-    // Operasyon ekleme fonksiyonu
-    const handleAddOperation = (operationId: number, stationId: number) => {
-        const selectedOperation = allOperations.find((op) => op.id === operationId);
-
-        // Template'ten station bilgisini al
-        const selectedStation = selectedTemplate?.stations.find((station) => station.id === stationId);
-
-        if (!selectedOperation) {
-            toast.error("Operasyon bulunamadı");
-            console.error("Operasyon bulunamadı, ID:", operationId, "Mevcut operasyonlar:", allOperations);
-            return;
-        }
-
-        if (!selectedStation) {
-            toast.error("İstasyon bulunamadı");
-            console.error("İstasyon bulunamadı, ID:", stationId, "Template stations:", selectedTemplate?.stations);
-            return;
-        }
-
-        // Yeni operasyon oluştur
-        const newOperation: EditableOperation = {
-            id: `new-${Date.now()}-${Math.random()}`, // Benzersiz geçici ID
-            stationId: stationId, // Template'teki station ID (production_template_stations.id)
-            operationId: selectedOperation.id, // Operations tablosundaki operation ID
-            originalOperationId: selectedOperation.id, // Operations tablosundaki gerçek ID
-            originalStationId: selectedStation.station_id, // Gerçek stations tablosundaki ID
-            operationName: selectedOperation.name,
-            stationName: selectedStation.station_name,
-            sortOrder: editableOperations.filter((op) => op.stationId === stationId).length + 1,
-            targetDuration: selectedOperation.target_duration || undefined,
-            qualityControl: selectedOperation.quality_control || false,
-            isNew: true, // Yeni eklenen operasyonu işaretle
-        };
-        // Operasyonu listeye ekle
-        setEditableOperations([...editableOperations, newOperation]);
-        setOpenAddOperationPopover(false);
-        setAddOperationStationId(null);
-        toast.success(`"${selectedOperation.name}" operasyonu "${selectedStation.station_name}" istasyonuna eklendi`);
-    };
-
     // Benzersiz veriler için helper'lar
     const uniqueOfferNumbers = [...new Set(offers.map((offer) => offer.offer_number))].filter(Boolean);
-    const uniquePlateNumbers = [...new Set(vehicleAcceptances.map((acc) => acc.plate_number))].filter(Boolean);
+    // Plaka/şase numarasına göre filtrelenmiş araç kabul listesi
+    const filteredVehicleAcceptances = vehicleAcceptances.filter((acc) => {
+        if (!plateSearchValue) return true;
+        const searchLower = plateSearchValue.toLowerCase().trim();
+        const hasPlate = acc.plate_number && acc.plate_number.trim() !== "";
+        const hasChassis = acc.chassis_number && acc.chassis_number.trim() !== "";
+
+        // Arama yapılıyorsa, plaka veya şase numarasında eşleşme olmalı
+        if (searchLower) {
+            const plateMatch = hasPlate && acc.plate_number!.toLowerCase().includes(searchLower);
+            const chassisMatch = hasChassis && acc.chassis_number!.toLowerCase().includes(searchLower);
+            return plateMatch || chassisMatch;
+        }
+
+        // Arama yoksa, plaka veya şase numarası olan tüm araçları göster
+        return hasPlate || hasChassis;
+    });
 
     const isLoading =
+        vehiclesLoading ||
         productionTemplatesQuery.isLoading ||
         offersLoading ||
         vehicleAcceptancesLoading ||
         customersLoading ||
-        executionLoading;
+        executionLoading ||
+        stationsQuery.isLoading ||
+        operationsLoading;
 
     if (executionLoading) {
         return (
@@ -478,7 +684,7 @@ export default function ProductionExecutionEditPage() {
 
                     <Button
                         onClick={handleSave}
-                        disabled={update.isPending}
+                        disabled={update.isPending || (!vehicleInfo.offerId && !vehicleInfo.vehicleAcceptanceId)}
                         className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                     >
                         {update.isPending ? (
@@ -533,10 +739,44 @@ export default function ProductionExecutionEditPage() {
                                             <Label className="text-sm font-medium w-32 flex-shrink-0">
                                                 Üretim Şablonu
                                             </Label>
-                                            <div className="flex-1 h-12 px-3 py-2 bg-gray-50 border border-input rounded-md text-sm flex items-center text-gray-600">
-                                                <FileText className="h-4 w-4 mr-2 text-gray-400" />
-                                                {selectedTemplate?.name || "Şablon seçilmedi"}
-                                            </div>
+                                            <Select
+                                                onValueChange={handleTemplateSelect}
+                                                value={selectedTemplateId?.toString()}
+                                            >
+                                                <SelectTrigger className="h-12 flex-1">
+                                                    <SelectValue
+                                                        placeholder={
+                                                            selectedTemplateId
+                                                                ? "Üretim şablonu seçin (isteğe bağlı)"
+                                                                : "Şablon seçmeden devam et"
+                                                        }
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">
+                                                        <span className="text-muted-foreground">
+                                                            Şablon seçmeden devam et
+                                                        </span>
+                                                    </SelectItem>
+                                                    {productionTemplates
+                                                        .filter(
+                                                            (template) =>
+                                                                !vehicleInfo.vehicleId ||
+                                                                template.vehicle_id === vehicleInfo.vehicleId
+                                                        )
+                                                        .map((template) => (
+                                                            <SelectItem
+                                                                key={template.id}
+                                                                value={template.id.toString()}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <FileText className="w-4 h-4" />
+                                                                    <span>{template.name}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     </div>
                                 </div>
@@ -797,10 +1037,18 @@ export default function ProductionExecutionEditPage() {
                                         </Popover>
                                     </div>
 
-                                    {/* Plaka Numarası Combobox */}
+                                    {/* Plaka/Şase Numarası Combobox */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="plateNumber">Plaka Numarası</Label>
-                                        <Popover open={openPlateCombobox} onOpenChange={setOpenPlateCombobox}>
+                                        <Label htmlFor="plateNumber">Plaka/Şase Numarası</Label>
+                                        <Popover
+                                            open={openPlateCombobox}
+                                            onOpenChange={(open) => {
+                                                setOpenPlateCombobox(open);
+                                                if (!open) {
+                                                    setPlateSearchValue("");
+                                                }
+                                            }}
+                                        >
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -808,64 +1056,122 @@ export default function ProductionExecutionEditPage() {
                                                     aria-expanded={openPlateCombobox}
                                                     className="w-full justify-between"
                                                 >
-                                                    {vehicleInfo.plateNumber || "Plaka numarası seçin veya yazın..."}
+                                                    {(() => {
+                                                        const selectedAcceptance = vehicleAcceptances.find(
+                                                            (va) => va.id === vehicleInfo.vehicleAcceptanceId
+                                                        );
+                                                        if (selectedAcceptance) {
+                                                            if (
+                                                                selectedAcceptance.plate_number &&
+                                                                selectedAcceptance.chassis_number
+                                                            ) {
+                                                                return `${selectedAcceptance.plate_number} (Şase: ${selectedAcceptance.chassis_number})`;
+                                                            } else if (selectedAcceptance.plate_number) {
+                                                                return selectedAcceptance.plate_number;
+                                                            } else if (selectedAcceptance.chassis_number) {
+                                                                return `Şase: ${selectedAcceptance.chassis_number}`;
+                                                            }
+                                                        }
+                                                        return (
+                                                            vehicleInfo.plateNumber ||
+                                                            "Plaka veya şase numarası seçin..."
+                                                        );
+                                                    })()}
                                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-full p-0">
-                                                <Command>
+                                                <Command shouldFilter={false}>
                                                     <CommandInput
-                                                        placeholder="Plaka numarası ara veya yaz..."
-                                                        value={vehicleInfo.plateNumber}
-                                                        onValueChange={(value) =>
-                                                            setVehicleInfo((prev) => ({ ...prev, plateNumber: value }))
-                                                        }
+                                                        placeholder="Plaka veya şase numarası ara..."
+                                                        value={plateSearchValue}
+                                                        onValueChange={setPlateSearchValue}
                                                     />
                                                     <CommandEmpty>
                                                         <div className="p-2">
                                                             <p className="text-sm text-muted-foreground mb-2">
-                                                                Eşleşen plaka bulunamadı
+                                                                Eşleşen plaka/şase bulunamadı
                                                             </p>
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => setOpenPlateCombobox(false)}
-                                                                className="w-full"
-                                                            >
-                                                                {vehicleInfo.plateNumber} olarak kullan
-                                                            </Button>
+                                                            {plateSearchValue && (
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        setVehicleInfo((prev) => ({
+                                                                            ...prev,
+                                                                            plateNumber: plateSearchValue,
+                                                                        }));
+                                                                        setOpenPlateCombobox(false);
+                                                                    }}
+                                                                    className="w-full"
+                                                                >
+                                                                    {plateSearchValue} olarak kullan
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </CommandEmpty>
                                                     <CommandList>
                                                         <CommandGroup>
-                                                            {uniquePlateNumbers.map((plateNumber) => (
-                                                                <CommandItem
-                                                                    key={plateNumber}
-                                                                    value={plateNumber}
-                                                                    onSelect={(value) => {
-                                                                        const selectedAcceptance =
-                                                                            vehicleAcceptances.find(
-                                                                                (va) => va.plate_number === value
-                                                                            );
-                                                                        setVehicleInfo((prev) => ({
-                                                                            ...prev,
-                                                                            plateNumber: value,
-                                                                            vehicleAcceptanceId:
-                                                                                selectedAcceptance?.id || null,
-                                                                        }));
-                                                                        setOpenPlateCombobox(false);
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={`mr-2 h-4 w-4 ${
-                                                                            vehicleInfo.plateNumber === plateNumber
-                                                                                ? "opacity-100"
-                                                                                : "opacity-0"
+                                                            {filteredVehicleAcceptances.map((acceptance) => {
+                                                                const hasPlate =
+                                                                    acceptance.plate_number &&
+                                                                    acceptance.plate_number.trim() !== "";
+                                                                const hasChassis =
+                                                                    acceptance.chassis_number &&
+                                                                    acceptance.chassis_number.trim() !== "";
+
+                                                                return (
+                                                                    <CommandItem
+                                                                        key={acceptance.id}
+                                                                        value={`${acceptance.plate_number || ""} ${
+                                                                            acceptance.chassis_number || ""
                                                                         }`}
-                                                                    />
-                                                                    {plateNumber}
-                                                                </CommandItem>
-                                                            ))}
+                                                                        onSelect={() => {
+                                                                            setVehicleInfo((prev) => ({
+                                                                                ...prev,
+                                                                                plateNumber:
+                                                                                    acceptance.plate_number || "",
+                                                                                vehicleAcceptanceId:
+                                                                                    acceptance.id || null,
+                                                                            }));
+                                                                            setOpenPlateCombobox(false);
+                                                                            setPlateSearchValue("");
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={`mr-2 h-4 w-4 ${
+                                                                                vehicleInfo.vehicleAcceptanceId ===
+                                                                                acceptance.id
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0"
+                                                                            }`}
+                                                                        />
+                                                                        <div className="flex flex-col">
+                                                                            {hasPlate ? (
+                                                                                <>
+                                                                                    <span className="font-medium">
+                                                                                        {acceptance.plate_number}
+                                                                                    </span>
+                                                                                    {hasChassis && (
+                                                                                        <span className="text-xs text-muted-foreground">
+                                                                                            Şase:{" "}
+                                                                                            {acceptance.chassis_number}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </>
+                                                                            ) : hasChassis ? (
+                                                                                <span className="font-medium">
+                                                                                    Şase: {acceptance.chassis_number}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="font-medium text-muted-foreground">
+                                                                                    Plaka/Şase bilgisi yok
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </CommandItem>
+                                                                );
+                                                            })}
                                                         </CommandGroup>
                                                     </CommandList>
                                                 </Command>
@@ -876,22 +1182,77 @@ export default function ProductionExecutionEditPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Alt Kısım - Operasyonlar */}
-                        {selectedTemplate && (
-                            <Card>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <Wrench className="h-5 w-5" />
-                                                Üretim Operasyonları
-                                            </CardTitle>
-                                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-2">
-                                                <span>{selectedTemplate.name}</span>
-                                                <Badge variant="outline">{editableOperations.length} Operasyon</Badge>
-                                            </div>
+                        {/* Alt Kısım - Üretim Operasyonları */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Wrench className="h-5 w-5" />
+                                            Üretim Operasyonları
+                                        </CardTitle>
+                                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-2">
+                                            {selectedTemplate && <span>{selectedTemplate.name}</span>}
+                                            <Badge variant="outline">{editableOperations.length} Operasyon</Badge>
                                         </div>
-                                        <div className="flex gap-2">
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {/* Manuel İstasyon Ekle */}
+                                        <Popover open={openStationCombobox} onOpenChange={setOpenStationCombobox}>
+                                            <PopoverTrigger asChild>
+                                                <Button variant="outline" size="sm">
+                                                    <MapPin className="h-4 w-4 mr-2" />
+                                                    İstasyon Ekle
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80 p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="İstasyon ara..." />
+                                                    <CommandEmpty>
+                                                        <div className="p-2">
+                                                            <p className="text-sm text-muted-foreground">
+                                                                İstasyon bulunamadı
+                                                            </p>
+                                                        </div>
+                                                    </CommandEmpty>
+                                                    <CommandList>
+                                                        <CommandGroup>
+                                                            {stations
+                                                                .filter((station) => {
+                                                                    // Template'ten gelen istasyonları ve manuel eklenen istasyonları filtrele
+                                                                    const isInTemplate =
+                                                                        selectedTemplate?.stations?.some(
+                                                                            (s) => s.id === station.id
+                                                                        );
+                                                                    const isManualAdded = manualStations.some(
+                                                                        (ms) => ms.stationId === station.id
+                                                                    );
+                                                                    return (
+                                                                        !isInTemplate &&
+                                                                        !isManualAdded &&
+                                                                        station.is_active
+                                                                    );
+                                                                })
+                                                                .map((station) => (
+                                                                    <CommandItem
+                                                                        key={station.id}
+                                                                        value={station.name}
+                                                                        onSelect={() =>
+                                                                            handleAddManualStation(station.id)
+                                                                        }
+                                                                    >
+                                                                        <Check className={`mr-2 h-4 w-4 opacity-0`} />
+                                                                        <MapPin className="w-4 h-4 mr-2" />
+                                                                        <span>{station.name}</span>
+                                                                    </CommandItem>
+                                                                ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+
+                                        {editableOperations.length > 0 && (
                                             <Button
                                                 onClick={handleEditOperationsToggle}
                                                 variant={isEditingOperations ? "default" : "outline"}
@@ -900,420 +1261,304 @@ export default function ProductionExecutionEditPage() {
                                                 <Pencil className="h-4 w-4 mr-2" />
                                                 {isEditingOperations ? "Düzenlemeyi Bitir" : "Düzenle"}
                                             </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {templateLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="flex items-center gap-2">
+                                            <Loader2 className="animate-spin h-4 w-4" />
+                                            Şablon yükleniyor...
                                         </div>
                                     </div>
-                                </CardHeader>
-                                <CardContent>
-                                    {templateLoading ? (
-                                        <div className="flex items-center justify-center py-8">
-                                            <div className="flex items-center gap-2">
-                                                <Loader2 className="animate-spin h-4 w-4" />
-                                                Şablon yükleniyor...
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {selectedTemplate.stations && selectedTemplate.stations.length > 0 ? (
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                    {selectedTemplate.stations
-                                                        .sort((a, b) => a.sort_order - b.sort_order)
-                                                        .map((station, stationIndex) => {
-                                                            // Bu istasyona ait operasyonları editableOperations'tan al
-                                                            // stationId veya originalStationId ile eşleştir
-                                                            const stationOperations = editableOperations.filter(
-                                                                (op) =>
-                                                                    op.stationId === station.id ||
-                                                                    op.originalStationId === station.station_id
-                                                            );
+                                ) : (
+                                    <div className="space-y-4">
+                                        {getAllStations().length > 0 ? (
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                                                {getAllStations().map((station, stationIndex) => {
+                                                    // Bu istasyona ait operasyonları editableOperations'tan al
+                                                    const stationOperations = editableOperations.filter(
+                                                        (op) => op.stationId === station.id
+                                                    );
 
-                                                            return (
-                                                                <div
-                                                                    key={station.id}
-                                                                    className="border rounded-lg p-4 space-y-3 bg-gradient-to-br from-white to-gray-50"
-                                                                >
-                                                                    {/* İstasyon Başlığı */}
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                                                                            {stationIndex + 1}
-                                                                        </div>
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <h4 className="font-medium flex items-center gap-2 truncate">
-                                                                                <MapPin className="w-4 h-4 flex-shrink-0" />
-                                                                                <span className="truncate">
-                                                                                    {station.station_name}
-                                                                                </span>
-                                                                            </h4>
-                                                                            <p className="text-sm text-muted-foreground">
-                                                                                {stationOperations.length} operasyon
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
+                                                    const isManual = isStationManual(station.id);
 
-                                                                    {/* Operasyonlar */}
-                                                                    <div className="space-y-2">
-                                                                        {stationOperations.length > 0 ? (
-                                                                            <>
-                                                                                {stationOperations
-                                                                                    .sort(
-                                                                                        (a, b) =>
-                                                                                            editableOperations.indexOf(
-                                                                                                a
-                                                                                            ) -
-                                                                                            editableOperations.indexOf(
-                                                                                                b
-                                                                                            )
-                                                                                    )
-                                                                                    .map((operation) => {
-                                                                                        const operationIndex =
-                                                                                            editableOperations.findIndex(
+                                                    return (
+                                                        <div
+                                                            key={`station-${station.id}`}
+                                                            className="border rounded-lg p-4 space-y-3 bg-gradient-to-br from-white to-gray-50"
+                                                        >
+                                                            {/* İstasyon Başlığı */}
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                                                    {stationIndex + 1}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <h4 className="font-medium flex items-center gap-2 truncate">
+                                                                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                                                                        <span className="truncate">{station.name}</span>
+                                                                    </h4>
+                                                                    <p className="text-sm text-muted-foreground">
+                                                                        {stationOperations.length} operasyon
+                                                                    </p>
+                                                                </div>
+                                                                {/* Manuel istasyon silme butonu */}
+                                                                {isManual && isEditingOperations && (
+                                                                    <Button
+                                                                        onClick={() => {
+                                                                            const manualStation = manualStations.find(
+                                                                                (ms) => ms.stationId === station.id
+                                                                            );
+                                                                            if (manualStation) {
+                                                                                handleRemoveManualStation(
+                                                                                    manualStation.id
+                                                                                );
+                                                                            }
+                                                                        }}
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    >
+                                                                        <X className="h-3 w-3" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Operasyon Ekle Butonu */}
+                                                            <Popover
+                                                                open={
+                                                                    openOperationCombobox[station.id.toString()] ||
+                                                                    false
+                                                                }
+                                                                onOpenChange={(open) =>
+                                                                    setOpenOperationCombobox((prev) => ({
+                                                                        ...prev,
+                                                                        [station.id.toString()]: open,
+                                                                    }))
+                                                                }
+                                                            >
+                                                                <PopoverTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="w-full"
+                                                                    >
+                                                                        <Wrench className="h-3 w-3 mr-2" />
+                                                                        Operasyon Ekle
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-80 p-0">
+                                                                    <Command>
+                                                                        <CommandInput placeholder="Operasyon ara..." />
+                                                                        <CommandEmpty>
+                                                                            <div className="p-2">
+                                                                                <p className="text-sm text-muted-foreground">
+                                                                                    Operasyon bulunamadı
+                                                                                </p>
+                                                                            </div>
+                                                                        </CommandEmpty>
+                                                                        <CommandList>
+                                                                            <CommandGroup>
+                                                                                {allOperations
+                                                                                    .filter((operation) => {
+                                                                                        // Bu istasyona zaten eklenmiş mi kontrol et
+                                                                                        const isAlreadyAdded =
+                                                                                            editableOperations.some(
                                                                                                 (op) =>
-                                                                                                    op.id ===
-                                                                                                    operation.id
+                                                                                                    op.stationId ===
+                                                                                                        station.id &&
+                                                                                                    (op.originalOperationId ===
+                                                                                                        operation.id ||
+                                                                                                        op.operationId ===
+                                                                                                            operation.id)
                                                                                             );
-                                                                                        const localIndex =
-                                                                                            stationOperations.findIndex(
-                                                                                                (op) =>
-                                                                                                    op.id ===
-                                                                                                    operation.id
-                                                                                            );
-
                                                                                         return (
-                                                                                            <div
-                                                                                                key={operation.id}
-                                                                                                draggable={
-                                                                                                    isEditingOperations
-                                                                                                }
-                                                                                                onDragStart={(e) =>
-                                                                                                    handleDragStart(
-                                                                                                        e,
-                                                                                                        operation.id
-                                                                                                    )
-                                                                                                }
-                                                                                                onDragEnd={
-                                                                                                    handleDragEnd
-                                                                                                }
-                                                                                                onDragOver={
-                                                                                                    handleDragOver
-                                                                                                }
-                                                                                                onDrop={(e) =>
-                                                                                                    handleDrop(
-                                                                                                        e,
-                                                                                                        operation.id
-                                                                                                    )
-                                                                                                }
-                                                                                                className={`flex items-start gap-2 p-2 rounded-md border-l-3 transition-all duration-200 ${
-                                                                                                    operation.qualityControl
-                                                                                                        ? "bg-orange-50 border-l-orange-400"
-                                                                                                        : "bg-green-50 border-l-green-400"
-                                                                                                } ${
-                                                                                                    operation.isNew
-                                                                                                        ? "ring-2 ring-blue-300"
-                                                                                                        : ""
-                                                                                                } ${
-                                                                                                    isEditingOperations
-                                                                                                        ? "cursor-move hover:shadow-md hover:scale-[1.02]"
-                                                                                                        : ""
-                                                                                                } ${
-                                                                                                    draggedOperationId ===
+                                                                                            !isAlreadyAdded &&
+                                                                                            operation.is_active
+                                                                                        );
+                                                                                    })
+                                                                                    .map((operation) => (
+                                                                                        <CommandItem
+                                                                                            key={operation.id}
+                                                                                            value={operation.name}
+                                                                                            onSelect={() =>
+                                                                                                handleAddOperationToStation(
+                                                                                                    station.id,
                                                                                                     operation.id
-                                                                                                        ? "opacity-50 scale-105 shadow-lg"
-                                                                                                        : ""
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            <Check
+                                                                                                className={`mr-2 h-4 w-4 opacity-0`}
+                                                                                            />
+                                                                                            <Wrench className="w-4 h-4 mr-2" />
+                                                                                            <span className="flex-1">
+                                                                                                {operation.name}
+                                                                                            </span>
+                                                                                            {operation.quality_control && (
+                                                                                                <Badge
+                                                                                                    variant="outline"
+                                                                                                    className="text-xs bg-orange-100 text-orange-700 border-orange-300"
+                                                                                                >
+                                                                                                    KK
+                                                                                                </Badge>
+                                                                                            )}
+                                                                                        </CommandItem>
+                                                                                    ))}
+                                                                            </CommandGroup>
+                                                                        </CommandList>
+                                                                    </Command>
+                                                                </PopoverContent>
+                                                            </Popover>
+
+                                                            {/* Operasyonlar */}
+                                                            <div className="space-y-2">
+                                                                {stationOperations.length > 0 ? (
+                                                                    <>
+                                                                        {stationOperations
+                                                                            .sort(
+                                                                                (a, b) =>
+                                                                                    editableOperations.indexOf(a) -
+                                                                                    editableOperations.indexOf(b)
+                                                                            )
+                                                                            .map((operation) => {
+                                                                                const operationIndex =
+                                                                                    editableOperations.findIndex(
+                                                                                        (op) => op.id === operation.id
+                                                                                    );
+                                                                                const localIndex =
+                                                                                    stationOperations.findIndex(
+                                                                                        (op) => op.id === operation.id
+                                                                                    );
+
+                                                                                return (
+                                                                                    <div
+                                                                                        key={operation.id}
+                                                                                        draggable={isEditingOperations}
+                                                                                        onDragStart={(e) =>
+                                                                                            handleDragStart(
+                                                                                                e,
+                                                                                                operation.id
+                                                                                            )
+                                                                                        }
+                                                                                        onDragEnd={handleDragEnd}
+                                                                                        onDragOver={handleDragOver}
+                                                                                        onDrop={(e) =>
+                                                                                            handleDrop(e, operation.id)
+                                                                                        }
+                                                                                        className={`flex items-start gap-2 p-2 rounded-md border-l-3 transition-all duration-200 ${
+                                                                                            operation.qualityControl
+                                                                                                ? "bg-orange-50 border-l-orange-400"
+                                                                                                : "bg-green-50 border-l-green-400"
+                                                                                        } ${
+                                                                                            isEditingOperations
+                                                                                                ? "cursor-move hover:shadow-md hover:scale-[1.02]"
+                                                                                                : ""
+                                                                                        } ${
+                                                                                            draggedOperationId ===
+                                                                                            operation.id
+                                                                                                ? "opacity-50 scale-105 shadow-lg"
+                                                                                                : ""
+                                                                                        }`}
+                                                                                    >
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <div
+                                                                                                className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${
+                                                                                                    operation.qualityControl
+                                                                                                        ? "bg-orange-500"
+                                                                                                        : "bg-green-500"
                                                                                                 }`}
                                                                                             >
-                                                                                                <div className="flex items-center gap-1">
-                                                                                                    <div
-                                                                                                        className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0 ${
-                                                                                                            operation.qualityControl
-                                                                                                                ? "bg-orange-500"
-                                                                                                                : "bg-green-500"
-                                                                                                        }`}
+                                                                                                {localIndex + 1}
+                                                                                            </div>
+                                                                                            {isEditingOperations && (
+                                                                                                <GripVertical className="w-4 h-4 text-gray-600 cursor-grab active:cursor-grabbing" />
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <div className="flex-1 min-w-0">
+                                                                                            <div className="flex items-start gap-1 flex-wrap">
+                                                                                                <Wrench
+                                                                                                    className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
+                                                                                                        operation.qualityControl
+                                                                                                            ? "text-orange-600"
+                                                                                                            : "text-green-600"
+                                                                                                    }`}
+                                                                                                />
+                                                                                                <span className="font-medium text-xs leading-tight">
+                                                                                                    {
+                                                                                                        operation.operationName
+                                                                                                    }
+                                                                                                </span>
+                                                                                                {operation.qualityControl && (
+                                                                                                    <Badge
+                                                                                                        variant="outline"
+                                                                                                        className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
                                                                                                     >
-                                                                                                        {localIndex + 1}
-                                                                                                    </div>
-                                                                                                    {isEditingOperations && (
-                                                                                                        <GripVertical className="w-4 h-4 text-gray-600 cursor-grab active:cursor-grabbing" />
-                                                                                                    )}
-                                                                                                </div>
-                                                                                                <div className="flex-1 min-w-0">
-                                                                                                    <div className="flex items-start gap-1 flex-wrap">
-                                                                                                        <Wrench
-                                                                                                            className={`w-3 h-3 mt-0.5 flex-shrink-0 ${
-                                                                                                                operation.qualityControl
-                                                                                                                    ? "text-orange-600"
-                                                                                                                    : "text-green-600"
-                                                                                                            }`}
-                                                                                                        />
-                                                                                                        <span className="font-medium text-xs leading-tight">
-                                                                                                            {
-                                                                                                                operation.operationName
-                                                                                                            }
-                                                                                                        </span>
-                                                                                                        {operation.qualityControl && (
-                                                                                                            <Badge
-                                                                                                                variant="outline"
-                                                                                                                className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
-                                                                                                            >
-                                                                                                                KK
-                                                                                                            </Badge>
-                                                                                                        )}
-                                                                                                        {operation.isNew && (
-                                                                                                            <Badge
-                                                                                                                variant="outline"
-                                                                                                                className="text-xs bg-blue-100 text-blue-700 border-blue-300 px-1 py-0 h-4"
-                                                                                                            >
-                                                                                                                YENİ
-                                                                                                            </Badge>
-                                                                                                        )}
-                                                                                                    </div>
-                                                                                                    {operation.targetDuration && (
-                                                                                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                                                                                            Hedef:{" "}
-                                                                                                            {
-                                                                                                                operation.targetDuration
-                                                                                                            }
-                                                                                                            dk
-                                                                                                        </p>
-                                                                                                    )}
-                                                                                                </div>
-
-                                                                                                {/* Silme butonu */}
-                                                                                                {isEditingOperations && (
-                                                                                                    <Button
-                                                                                                        onClick={() =>
-                                                                                                            handleDeleteOperation(
-                                                                                                                operationIndex
-                                                                                                            )
-                                                                                                        }
-                                                                                                        variant="ghost"
-                                                                                                        size="sm"
-                                                                                                        className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                                                    >
-                                                                                                        <X className="h-3 w-3" />
-                                                                                                    </Button>
+                                                                                                        KK
+                                                                                                    </Badge>
                                                                                                 )}
                                                                                             </div>
-                                                                                        );
-                                                                                    })}
+                                                                                            {operation.targetDuration && (
+                                                                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                                                                    Hedef:{" "}
+                                                                                                    {
+                                                                                                        operation.targetDuration
+                                                                                                    }
+                                                                                                    dk
+                                                                                                </p>
+                                                                                            )}
+                                                                                        </div>
 
-                                                                                {/* Operasyon Ekle Butonu - Düzenleme Modunda */}
-                                                                                {isEditingOperations && (
-                                                                                    <Popover
-                                                                                        open={
-                                                                                            openAddOperationPopover &&
-                                                                                            addOperationStationId ===
-                                                                                                station.id
-                                                                                        }
-                                                                                        onOpenChange={(open) => {
-                                                                                            setOpenAddOperationPopover(
-                                                                                                open
-                                                                                            );
-                                                                                            if (open) {
-                                                                                                setAddOperationStationId(
-                                                                                                    station.id
-                                                                                                );
-                                                                                            } else {
-                                                                                                setAddOperationStationId(
-                                                                                                    null
-                                                                                                );
-                                                                                            }
-                                                                                        }}
-                                                                                    >
-                                                                                        <PopoverTrigger asChild>
+                                                                                        {/* Silme butonu */}
+                                                                                        {isEditingOperations && (
                                                                                             <Button
-                                                                                                variant="outline"
+                                                                                                onClick={() =>
+                                                                                                    handleDeleteOperation(
+                                                                                                        operationIndex
+                                                                                                    )
+                                                                                                }
+                                                                                                variant="ghost"
                                                                                                 size="sm"
-                                                                                                className="w-full mt-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-400"
+                                                                                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                                                                             >
-                                                                                                <Plus className="h-4 w-4 mr-2" />
-                                                                                                Operasyon Ekle
+                                                                                                <X className="h-3 w-3" />
                                                                                             </Button>
-                                                                                        </PopoverTrigger>
-                                                                                        <PopoverContent className="w-80 p-0">
-                                                                                            <Command>
-                                                                                                <CommandInput placeholder="Operasyon ara..." />
-                                                                                                <CommandEmpty>
-                                                                                                    Operasyon
-                                                                                                    bulunamadı.
-                                                                                                </CommandEmpty>
-                                                                                                <CommandList>
-                                                                                                    <CommandGroup>
-                                                                                                        {allOperations.map(
-                                                                                                            (
-                                                                                                                operation
-                                                                                                            ) => (
-                                                                                                                <CommandItem
-                                                                                                                    key={
-                                                                                                                        operation.id
-                                                                                                                    }
-                                                                                                                    value={
-                                                                                                                        operation.name
-                                                                                                                    }
-                                                                                                                    onSelect={() =>
-                                                                                                                        handleAddOperation(
-                                                                                                                            operation.id,
-                                                                                                                            station.id
-                                                                                                                        )
-                                                                                                                    }
-                                                                                                                    className="cursor-pointer"
-                                                                                                                >
-                                                                                                                    <div className="flex flex-col">
-                                                                                                                        <span className="font-medium">
-                                                                                                                            {
-                                                                                                                                operation.name
-                                                                                                                            }
-                                                                                                                        </span>
-                                                                                                                        <div className="flex items-center gap-2 mt-1">
-                                                                                                                            {operation.target_duration && (
-                                                                                                                                <span className="text-xs text-muted-foreground">
-                                                                                                                                    Hedef:{" "}
-                                                                                                                                    {
-                                                                                                                                        operation.target_duration
-                                                                                                                                    }
-                                                                                                                                    dk
-                                                                                                                                </span>
-                                                                                                                            )}
-                                                                                                                            {operation.quality_control && (
-                                                                                                                                <Badge
-                                                                                                                                    variant="outline"
-                                                                                                                                    className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
-                                                                                                                                >
-                                                                                                                                    KK
-                                                                                                                                </Badge>
-                                                                                                                            )}
-                                                                                                                        </div>
-                                                                                                                    </div>
-                                                                                                                </CommandItem>
-                                                                                                            )
-                                                                                                        )}
-                                                                                                    </CommandGroup>
-                                                                                                </CommandList>
-                                                                                            </Command>
-                                                                                        </PopoverContent>
-                                                                                    </Popover>
-                                                                                )}
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <div className="text-center py-4 text-muted-foreground">
-                                                                                    <p className="text-xs">
-                                                                                        Bu istasyonda operasyon yok
-                                                                                    </p>
-                                                                                </div>
-
-                                                                                {/* Operasyon Ekle Butonu - Boş İstasyon İçin */}
-                                                                                {isEditingOperations && (
-                                                                                    <Popover
-                                                                                        open={
-                                                                                            openAddOperationPopover &&
-                                                                                            addOperationStationId ===
-                                                                                                station.id
-                                                                                        }
-                                                                                        onOpenChange={(open) => {
-                                                                                            setOpenAddOperationPopover(
-                                                                                                open
-                                                                                            );
-                                                                                            if (open) {
-                                                                                                setAddOperationStationId(
-                                                                                                    station.id
-                                                                                                );
-                                                                                            } else {
-                                                                                                setAddOperationStationId(
-                                                                                                    null
-                                                                                                );
-                                                                                            }
-                                                                                        }}
-                                                                                    >
-                                                                                        <PopoverTrigger asChild>
-                                                                                            <Button
-                                                                                                variant="outline"
-                                                                                                size="sm"
-                                                                                                className="w-full border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-400"
-                                                                                            >
-                                                                                                <Plus className="h-4 w-4 mr-2" />
-                                                                                                Operasyon Ekle
-                                                                                            </Button>
-                                                                                        </PopoverTrigger>
-                                                                                        <PopoverContent className="w-80 p-0">
-                                                                                            <Command>
-                                                                                                <CommandInput placeholder="Operasyon ara..." />
-                                                                                                <CommandEmpty>
-                                                                                                    Operasyon
-                                                                                                    bulunamadı.
-                                                                                                </CommandEmpty>
-                                                                                                <CommandList>
-                                                                                                    <CommandGroup>
-                                                                                                        {allOperations.map(
-                                                                                                            (
-                                                                                                                operation
-                                                                                                            ) => (
-                                                                                                                <CommandItem
-                                                                                                                    key={
-                                                                                                                        operation.id
-                                                                                                                    }
-                                                                                                                    value={
-                                                                                                                        operation.name
-                                                                                                                    }
-                                                                                                                    onSelect={() =>
-                                                                                                                        handleAddOperation(
-                                                                                                                            operation.id,
-                                                                                                                            station.id
-                                                                                                                        )
-                                                                                                                    }
-                                                                                                                    className="cursor-pointer"
-                                                                                                                >
-                                                                                                                    <div className="flex flex-col">
-                                                                                                                        <span className="font-medium">
-                                                                                                                            {
-                                                                                                                                operation.name
-                                                                                                                            }
-                                                                                                                        </span>
-                                                                                                                        <div className="flex items-center gap-2 mt-1">
-                                                                                                                            {operation.target_duration && (
-                                                                                                                                <span className="text-xs text-muted-foreground">
-                                                                                                                                    Hedef:{" "}
-                                                                                                                                    {
-                                                                                                                                        operation.target_duration
-                                                                                                                                    }
-                                                                                                                                    dk
-                                                                                                                                </span>
-                                                                                                                            )}
-                                                                                                                            {operation.quality_control && (
-                                                                                                                                <Badge
-                                                                                                                                    variant="outline"
-                                                                                                                                    className="text-xs bg-orange-100 text-orange-700 border-orange-300 px-1 py-0 h-4"
-                                                                                                                                >
-                                                                                                                                    KK
-                                                                                                                                </Badge>
-                                                                                                                            )}
-                                                                                                                        </div>
-                                                                                                                    </div>
-                                                                                                                </CommandItem>
-                                                                                                            )
-                                                                                                        )}
-                                                                                                    </CommandGroup>
-                                                                                                </CommandList>
-                                                                                            </Command>
-                                                                                        </PopoverContent>
-                                                                                    </Popover>
-                                                                                )}
-                                                                            </>
-                                                                        )}
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="text-center py-4 text-muted-foreground">
+                                                                        <p className="text-xs">
+                                                                            Bu istasyonda operasyon yok
+                                                                        </p>
                                                                     </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-12 text-muted-foreground">
-                                                    <Wrench className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                                    <p className="text-sm">Bu şablonda operasyon bulunamadı</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12 text-muted-foreground">
+                                                <Wrench className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                                <p className="text-sm">
+                                                    {selectedTemplate
+                                                        ? "Bu şablonda operasyon bulunamadı"
+                                                        : "Henüz istasyon eklenmedi"}
+                                                </p>
+                                                <p className="text-xs mt-2">
+                                                    Üstteki İstasyon Ekle butonunu kullanarak istasyon ekleyebilirsiniz
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
             </div>

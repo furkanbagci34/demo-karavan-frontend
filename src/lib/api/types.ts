@@ -36,6 +36,7 @@ export interface User {
     is_active: boolean;
     allowed_menus?: string[]; // Kullanıcının erişebileceği menü ID'leri
     default_page?: string; // Kullanıcının varsayılan sayfası
+    signature?: string; // Kullanıcının imzası (base64 encoded image)
     created_at: string;
     last_signin_at?: string;
     role: string;
@@ -446,6 +447,8 @@ export interface VehicleAcceptance {
     damage_markers: DamageMarker[];
     pdf_base64?: string;
     delivered_by?: string;
+    signature?: string;
+    received_by_signature?: string;
     created_at?: string;
     updated_at?: string;
     created_by?: number;
@@ -471,6 +474,7 @@ export interface CreateVehicleAcceptanceData {
     pdf_base64?: string;
     delivered_by?: string;
     signature?: string;
+    received_by_signature?: string;
 }
 
 export interface UpdateVehicleAcceptanceData {
@@ -492,6 +496,7 @@ export interface UpdateVehicleAcceptanceData {
     pdf_base64?: string;
     delivered_by?: string;
     signature?: string;
+    received_by_signature?: string;
 }
 
 // Production Operation tipleri
@@ -586,6 +591,7 @@ export interface ProductionExecution {
     offer_number?: string;
     offer_total_amount?: number;
     plate_number?: string;
+    chassis_number?: string;
     acceptance_date?: string;
     created_by_name?: string;
     total_operations?: number;
@@ -635,7 +641,7 @@ export interface ProductionExecutionOperationData {
 }
 
 export interface CreateProductionExecutionData {
-    productionPlanId: number;
+    productionPlanId?: number;
     vehicleId?: number;
     offerId?: number;
     customerId?: number;
@@ -647,6 +653,8 @@ export interface CreateProductionExecutionData {
 }
 
 export interface UpdateProductionExecutionData {
+    productionPlanId?: number;
+    vehicleId?: number;
     offerId?: number;
     customerId?: number;
     vehicleAcceptanceId?: number;

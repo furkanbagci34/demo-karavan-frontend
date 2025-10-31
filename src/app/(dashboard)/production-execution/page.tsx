@@ -219,13 +219,10 @@ export default function ProductionExecutionListPage() {
                                 <TableHeader>
                                     <TableRow className="bg-gray-50 hover:bg-gray-50 border-b-2 border-gray-200">
                                         <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
-                                            Plan Adı
-                                        </TableHead>
-                                        <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
                                             Numara
                                         </TableHead>
                                         <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
-                                            Araç
+                                            Model
                                         </TableHead>
                                         <TableHead className="text-center font-semibold text-gray-700 py-4 px-3">
                                             Müşteri
@@ -284,14 +281,6 @@ export default function ProductionExecutionListPage() {
                                                 }`}
                                                 onClick={() => handleRowClick(execution.id)}
                                             >
-                                                <TableCell className="font-medium">
-                                                    <div className="flex items-center gap-2 justify-center">
-                                                        <FileText className="h-4 w-4 text-blue-600" />
-                                                        <span className="font-mono text-sm">
-                                                            {execution.production_plan_name || `Plan #${execution.id}`}
-                                                        </span>
-                                                    </div>
-                                                </TableCell>
                                                 <TableCell className="text-center">
                                                     {execution.number ? (
                                                         <div className="flex items-center justify-center">
@@ -313,6 +302,36 @@ export default function ProductionExecutionListPage() {
                                                                 {execution.vehicle_brand_model}
                                                             </div>
                                                         )}
+                                                        {(() => {
+                                                            const hasPlate =
+                                                                execution.plate_number &&
+                                                                execution.plate_number.trim() !== "";
+                                                            const hasChassis =
+                                                                execution.chassis_number &&
+                                                                execution.chassis_number.trim() !== "";
+
+                                                            if (hasPlate && hasChassis) {
+                                                                return (
+                                                                    <div className="text-xs text-blue-600 mt-1">
+                                                                        {execution.plate_number} (Şase:{" "}
+                                                                        {execution.chassis_number})
+                                                                    </div>
+                                                                );
+                                                            } else if (hasPlate) {
+                                                                return (
+                                                                    <div className="text-xs text-blue-600 mt-1">
+                                                                        {execution.plate_number}
+                                                                    </div>
+                                                                );
+                                                            } else if (hasChassis) {
+                                                                return (
+                                                                    <div className="text-xs text-blue-600 mt-1">
+                                                                        Şase: {execution.chassis_number}
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -462,11 +481,43 @@ export default function ProductionExecutionListPage() {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                            <Car className="h-3 w-3" />
-                                                            <span>
-                                                                {execution.vehicle_name || "Araç belirtilmemiş"}
-                                                            </span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                <Car className="h-3 w-3" />
+                                                                <span>
+                                                                    {execution.vehicle_name || "Araç belirtilmemiş"}
+                                                                </span>
+                                                            </div>
+                                                            {(() => {
+                                                                const hasPlate =
+                                                                    execution.plate_number &&
+                                                                    execution.plate_number.trim() !== "";
+                                                                const hasChassis =
+                                                                    execution.chassis_number &&
+                                                                    execution.chassis_number.trim() !== "";
+
+                                                                if (hasPlate && hasChassis) {
+                                                                    return (
+                                                                        <div className="text-xs text-blue-600 ml-5">
+                                                                            {execution.plate_number} (Şase:{" "}
+                                                                            {execution.chassis_number})
+                                                                        </div>
+                                                                    );
+                                                                } else if (hasPlate) {
+                                                                    return (
+                                                                        <div className="text-xs text-blue-600 ml-5">
+                                                                            {execution.plate_number}
+                                                                        </div>
+                                                                    );
+                                                                } else if (hasChassis) {
+                                                                    return (
+                                                                        <div className="text-xs text-blue-600 ml-5">
+                                                                            Şase: {execution.chassis_number}
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })()}
                                                         </div>
                                                     </div>
                                                     <Badge className={getStatusColor(execution.status)}>

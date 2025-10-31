@@ -62,7 +62,7 @@ export const SignatureModal = ({ open, onOpenChange, onSave, onClear, initialSig
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[800px] max-w-[95vw]">
                 <DialogHeader>
                     <DialogTitle>
                         {initialSignature && initialSignature.trim() ? "İmzayı Düzenle" : "İmza At"}
@@ -75,17 +75,85 @@ export const SignatureModal = ({ open, onOpenChange, onSave, onClear, initialSig
                             <img src={initialSignature} alt="Mevcut İmza" className="h-20 border rounded bg-white" />
                         </div>
                     )}
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg bg-white p-2">
-                        <SignatureCanvas
-                            ref={signatureRef}
-                            canvasProps={{
-                                width: 500,
-                                height: 200,
-                                className: "signature-canvas w-full h-full",
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg bg-white p-2 relative overflow-hidden">
+                        <div
+                            className="relative w-full"
+                            style={{
+                                touchAction: "none",
+                                userSelect: "none",
+                                WebkitUserSelect: "none",
+                                MozUserSelect: "none",
+                                msUserSelect: "none",
+                                position: "relative",
                             }}
-                            backgroundColor="white"
-                            onEnd={handleEnd}
-                        />
+                            onMouseLeave={() => {
+                                // Mouse çıktığında çizimi durdur
+                                if (signatureRef.current) {
+                                    const canvas = signatureRef.current.getCanvas();
+                                    const ctx = canvas.getContext("2d");
+                                    if (ctx) {
+                                        ctx.beginPath();
+                                    }
+                                }
+                            }}
+                            onMouseUp={() => {
+                                // Mouse bırakıldığında çizimi durdur
+                                if (signatureRef.current) {
+                                    const canvas = signatureRef.current.getCanvas();
+                                    const ctx = canvas.getContext("2d");
+                                    if (ctx) {
+                                        ctx.beginPath();
+                                    }
+                                }
+                            }}
+                            onTouchEnd={() => {
+                                // Touch bittiğinde çizimi durdur
+                                if (signatureRef.current) {
+                                    const canvas = signatureRef.current.getCanvas();
+                                    const ctx = canvas.getContext("2d");
+                                    if (ctx) {
+                                        ctx.beginPath();
+                                    }
+                                }
+                            }}
+                            onTouchCancel={() => {
+                                // Touch iptal olduğunda çizimi durdur
+                                if (signatureRef.current) {
+                                    const canvas = signatureRef.current.getCanvas();
+                                    const ctx = canvas.getContext("2d");
+                                    if (ctx) {
+                                        ctx.beginPath();
+                                    }
+                                }
+                            }}
+                        >
+                            <SignatureCanvas
+                                ref={signatureRef}
+                                canvasProps={{
+                                    width: 700,
+                                    height: 250,
+                                    className: "signature-canvas w-full h-full",
+                                    style: {
+                                        touchAction: "none",
+                                        userSelect: "none",
+                                        WebkitUserSelect: "none",
+                                        MozUserSelect: "none",
+                                        msUserSelect: "none",
+                                        cursor: "crosshair",
+                                        display: "block",
+                                        maxWidth: "100%",
+                                        height: "auto",
+                                    },
+                                }}
+                                backgroundColor="white"
+                                onEnd={handleEnd}
+                                penColor="black"
+                                throttle={8}
+                                minWidth={1.5}
+                                maxWidth={2.5}
+                                velocityFilterWeight={0.7}
+                            />
+                        </div>
                     </div>
                     <p className="text-sm text-gray-500 text-center">Yukarıdaki alana imzanızı atın</p>
                 </div>

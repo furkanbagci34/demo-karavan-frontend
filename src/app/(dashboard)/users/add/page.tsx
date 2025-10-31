@@ -16,13 +16,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Users, Mail, Lock, Phone, ArrowLeft, Loader2, Menu as MenuIcon, Home, Shield } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Users, ArrowLeft, Loader2, Menu as MenuIcon, Pencil, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
 import { useUsers } from "@/hooks/api/useUsers";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import menusData from "@/config/menus.json";
+import { SignatureModal } from "@/components/SignatureModal";
 
 interface MenuItem {
     id: string;
@@ -50,7 +52,11 @@ export default function AddUserPage() {
         role: "user" as "admin" | "user",
         allowedMenus: [] as string[],
         defaultPage: "",
+        signature: "",
     });
+
+    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+    const [isMenuPermissionsOpen, setIsMenuPermissionsOpen] = useState(false);
 
     const menus = menusData.menus as MenuItem[];
 
@@ -140,6 +146,7 @@ export default function AddUserPage() {
                 role: formData.role,
                 allowedMenus: formData.allowedMenus.length > 0 ? formData.allowedMenus : undefined,
                 defaultPage: formData.defaultPage || undefined,
+                signature: formData.signature || undefined,
             },
             {
                 onSuccess: () => {
@@ -180,242 +187,21 @@ export default function AddUserPage() {
                 </div>
             </header>
 
-            <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-6">
+            <div className="flex flex-1 flex-col p-4 sm:p-6 space-y-4">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold">Yeni Kullanıcı Oluştur</h1>
                         <p className="text-muted-foreground">Sisteme yeni kullanıcı ekleyin</p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/users">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Geri Dön
-                        </Link>
-                    </Button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Temel Bilgiler */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Users className="h-5 w-5" />
-                                Temel Bilgiler
-                            </CardTitle>
-                            <CardDescription>Kullanıcının temel bilgilerini girin</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name" className="flex items-center gap-2">
-                                        <Users className="h-4 w-4 text-muted-foreground" />
-                                        Ad <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={(e) => handleInputChange("name", e.target.value)}
-                                        placeholder="Kullanıcının adı"
-                                        required
-                                        disabled={isCreating}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="surname" className="flex items-center gap-2">
-                                        <Users className="h-4 w-4 text-muted-foreground" />
-                                        Soyad <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="surname"
-                                        type="text"
-                                        value={formData.surname}
-                                        onChange={(e) => handleInputChange("surname", e.target.value)}
-                                        placeholder="Kullanıcının soyadı"
-                                        required
-                                        disabled={isCreating}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="flex items-center gap-2">
-                                    <Mail className="h-4 w-4 text-muted-foreground" />
-                                    E-posta <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={(e) => handleInputChange("email", e.target.value)}
-                                    placeholder="ornek@lovasoftware.com"
-                                    required
-                                    disabled={isCreating}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="password" className="flex items-center gap-2">
-                                        <Lock className="h-4 w-4 text-muted-foreground" />
-                                        Şifre <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) => handleInputChange("password", e.target.value)}
-                                        placeholder="En az 6 karakter"
-                                        required
-                                        minLength={6}
-                                        disabled={isCreating}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="phoneNumber" className="flex items-center gap-2">
-                                        <Phone className="h-4 w-4 text-muted-foreground" />
-                                        Telefon
-                                    </Label>
-                                    <Input
-                                        id="phoneNumber"
-                                        type="tel"
-                                        value={formData.phoneNumber}
-                                        onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-                                        placeholder="05XX XXX XX XX"
-                                        disabled={isCreating}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="role" className="flex items-center gap-2">
-                                    <Shield className="h-4 w-4 text-muted-foreground" />
-                                    Rol <span className="text-red-500">*</span>
-                                </Label>
-                                <Select
-                                    value={formData.role}
-                                    onValueChange={(value: "admin" | "user") => handleInputChange("role", value)}
-                                    disabled={isCreating}
-                                >
-                                    <SelectTrigger id="role">
-                                        <SelectValue placeholder="Rol seçin" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="user">Kullanıcı</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Menü İzinleri */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <MenuIcon className="h-5 w-5" />
-                                Menü İzinleri
-                            </CardTitle>
-                            <CardDescription>
-                                Kullanıcının erişebileceği menüleri seçin (Seçim yapmazsanız, kullanıcı tüm menülere
-                                erişebilir)
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {menus.map((menu) => (
-                                    <div key={menu.id} className="space-y-3">
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={menu.id}
-                                                checked={formData.allowedMenus.includes(menu.id)}
-                                                onCheckedChange={() => handleMenuToggle(menu.id)}
-                                                disabled={isCreating}
-                                            />
-                                            <Label
-                                                htmlFor={menu.id}
-                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                            >
-                                                {menu.title}
-                                            </Label>
-                                        </div>
-                                        {menu.items && menu.items.length > 0 && (
-                                            <div className="ml-6 space-y-2">
-                                                {menu.items.map((item) => (
-                                                    <div key={item.id} className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={item.id}
-                                                            checked={formData.allowedMenus.includes(item.id)}
-                                                            onCheckedChange={() => handleMenuToggle(item.id)}
-                                                            disabled={isCreating}
-                                                        />
-                                                        <Label
-                                                            htmlFor={item.id}
-                                                            className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-muted-foreground"
-                                                        >
-                                                            {item.title}
-                                                        </Label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Varsayılan Sayfa */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Home className="h-5 w-5" />
-                                Varsayılan Sayfa
-                            </CardTitle>
-                            <CardDescription>
-                                Kullanıcının giriş yaptıktan sonra yönlendirileceği sayfayı seçin
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <Label htmlFor="defaultPage">Varsayılan Sayfa</Label>
-                                <Select
-                                    value={formData.defaultPage}
-                                    onValueChange={(value) => handleInputChange("defaultPage", value)}
-                                    disabled={isCreating}
-                                >
-                                    <SelectTrigger id="defaultPage">
-                                        <SelectValue placeholder="Varsayılan sayfa seçin" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {allMenuOptions.map((option) => (
-                                            <SelectItem key={option.id} value={option.url}>
-                                                {option.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {!formData.defaultPage && (
-                                    <p className="text-xs text-muted-foreground">
-                                        Seçim yapmazsanız, kullanıcı ana sayfaya yönlendirilir
-                                    </p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Form Actions */}
-                    <div className="flex justify-end gap-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => router.push("/users")}
-                            disabled={isCreating}
-                        >
-                            İptal
+                    <div className="flex gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href="/users">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Geri Dön
+                            </Link>
                         </Button>
-                        <Button type="submit" disabled={isCreating}>
+                        <Button type="submit" form="user-form" disabled={isCreating}>
                             {isCreating ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -429,7 +215,307 @@ export default function AddUserPage() {
                             )}
                         </Button>
                     </div>
+                </div>
+
+                <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {/* Sol Kolon - Temel Bilgiler */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        Temel Bilgiler
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="name" className="text-sm">
+                                                Ad <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="name"
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={(e) => handleInputChange("name", e.target.value)}
+                                                placeholder="Ad"
+                                                required
+                                                disabled={isCreating}
+                                                className="h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="surname" className="text-sm">
+                                                Soyad <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="surname"
+                                                type="text"
+                                                value={formData.surname}
+                                                onChange={(e) => handleInputChange("surname", e.target.value)}
+                                                placeholder="Soyad"
+                                                required
+                                                disabled={isCreating}
+                                                className="h-9"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="email" className="text-sm">
+                                            E-posta <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={(e) => handleInputChange("email", e.target.value)}
+                                            placeholder="ornek@demontekaravan.com"
+                                            required
+                                            disabled={isCreating}
+                                            className="h-9"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="password" className="text-sm">
+                                                Şifre <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                value={formData.password}
+                                                onChange={(e) => handleInputChange("password", e.target.value)}
+                                                placeholder="En az 6 karakter"
+                                                required
+                                                minLength={6}
+                                                disabled={isCreating}
+                                                className="h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="phoneNumber" className="text-sm">
+                                                Telefon
+                                            </Label>
+                                            <Input
+                                                id="phoneNumber"
+                                                type="tel"
+                                                value={formData.phoneNumber}
+                                                onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+                                                placeholder="05XX XXX XX XX"
+                                                disabled={isCreating}
+                                                className="h-9"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="role" className="text-sm">
+                                                Rol <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Select
+                                                value={formData.role}
+                                                onValueChange={(value: "admin" | "user") =>
+                                                    handleInputChange("role", value)
+                                                }
+                                                disabled={isCreating}
+                                            >
+                                                <SelectTrigger id="role" className="h-9">
+                                                    <SelectValue placeholder="Rol seçin" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="user">Kullanıcı</SelectItem>
+                                                    <SelectItem value="admin">Admin</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="defaultPage" className="text-sm">
+                                                Varsayılan Sayfa
+                                            </Label>
+                                            <Select
+                                                value={formData.defaultPage}
+                                                onValueChange={(value) => handleInputChange("defaultPage", value)}
+                                                disabled={isCreating}
+                                            >
+                                                <SelectTrigger id="defaultPage" className="h-9">
+                                                    <SelectValue placeholder="Seçin (opsiyonel)" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {allMenuOptions.map((option) => (
+                                                        <SelectItem key={option.id} value={option.url}>
+                                                            {option.title}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Menü İzinleri */}
+                            <Collapsible open={isMenuPermissionsOpen} onOpenChange={setIsMenuPermissionsOpen}>
+                                <Card>
+                                    <CollapsibleTrigger asChild>
+                                        <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                                            <CardTitle className="text-lg flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <MenuIcon className="h-4 w-4" />
+                                                    Menü İzinleri
+                                                    {formData.allowedMenus.length > 0 && (
+                                                        <span className="text-xs font-normal text-muted-foreground">
+                                                            ({formData.allowedMenus.length} seçili)
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <ChevronDown
+                                                    className={`h-4 w-4 transition-transform ${
+                                                        isMenuPermissionsOpen ? "rotate-180" : ""
+                                                    }`}
+                                                />
+                                            </CardTitle>
+                                            <CardDescription className="text-xs mt-1">
+                                                Seçim yapmazsanız, kullanıcı tüm menülere erişebilir
+                                            </CardDescription>
+                                        </CardHeader>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <CardContent className="pt-0">
+                                            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                                                {menus.map((menu) => (
+                                                    <div key={menu.id} className="space-y-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={menu.id}
+                                                                checked={formData.allowedMenus.includes(menu.id)}
+                                                                onCheckedChange={() => handleMenuToggle(menu.id)}
+                                                                disabled={isCreating}
+                                                            />
+                                                            <Label
+                                                                htmlFor={menu.id}
+                                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                            >
+                                                                {menu.title}
+                                                            </Label>
+                                                        </div>
+                                                        {menu.items && menu.items.length > 0 && (
+                                                            <div className="ml-6 space-y-1.5">
+                                                                {menu.items.map((item) => (
+                                                                    <div
+                                                                        key={item.id}
+                                                                        className="flex items-center space-x-2"
+                                                                    >
+                                                                        <Checkbox
+                                                                            id={item.id}
+                                                                            checked={formData.allowedMenus.includes(
+                                                                                item.id
+                                                                            )}
+                                                                            onCheckedChange={() =>
+                                                                                handleMenuToggle(item.id)
+                                                                            }
+                                                                            disabled={isCreating}
+                                                                        />
+                                                                        <Label
+                                                                            htmlFor={item.id}
+                                                                            className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-muted-foreground"
+                                                                        >
+                                                                            {item.title}
+                                                                        </Label>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </CollapsibleContent>
+                                </Card>
+                            </Collapsible>
+                        </div>
+
+                        {/* Sağ Kolon - İmza ve Ayarlar */}
+                        <div className="space-y-4">
+                            {/* İmza */}
+                            <Card>
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <Pencil className="h-4 w-4" />
+                                        İmza
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    {formData.signature && formData.signature.trim() ? (
+                                        <div className="border rounded-lg p-2 bg-gray-50">
+                                            <img
+                                                src={formData.signature}
+                                                alt="Kullanıcı imzası"
+                                                className="h-24 w-full border rounded bg-white object-contain"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                                            <Pencil className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                                            <p className="text-xs text-muted-foreground">Henüz imza eklenmemiş</p>
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col gap-2">
+                                        <Button
+                                            type="button"
+                                            variant={
+                                                formData.signature && formData.signature.trim() ? "outline" : "default"
+                                            }
+                                            onClick={() => setIsSignatureModalOpen(true)}
+                                            disabled={isCreating}
+                                            size="sm"
+                                            className="w-full"
+                                        >
+                                            <Pencil className="mr-2 h-3 w-3" />
+                                            {formData.signature && formData.signature.trim()
+                                                ? "İmzayı Düzenle"
+                                                : "İmza Ekle"}
+                                        </Button>
+                                        {formData.signature && formData.signature.trim() && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => setFormData((prev) => ({ ...prev, signature: "" }))}
+                                                disabled={isCreating}
+                                                size="sm"
+                                                className="w-full"
+                                            >
+                                                İmzayı Kaldır
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
                 </form>
+
+                {/* İmza Modal */}
+                <SignatureModal
+                    open={isSignatureModalOpen}
+                    onOpenChange={setIsSignatureModalOpen}
+                    onSave={(sig) => {
+                        if (sig && sig.trim()) {
+                            setFormData((prev) => ({ ...prev, signature: sig.trim() }));
+                            toast.success("İmza kaydedildi");
+                        } else {
+                            toast.error("İmza kaydedilemedi");
+                        }
+                    }}
+                    onClear={() => {
+                        setFormData((prev) => ({ ...prev, signature: "" }));
+                        toast.success("İmza temizlendi");
+                    }}
+                    initialSignature={formData.signature}
+                />
             </div>
         </>
     );

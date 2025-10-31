@@ -18,6 +18,7 @@ export type CreateUserData = {
     role?: "admin" | "user";
     allowedMenus?: string[];
     defaultPage?: string;
+    signature?: string;
 } & Record<string, unknown>;
 
 export type UpdateUserData = {
@@ -30,6 +31,7 @@ export type UpdateUserData = {
     role?: "admin" | "user";
     allowedMenus?: string[];
     defaultPage?: string;
+    signature?: string;
 } & Record<string, unknown>;
 
 export const useUsers = (params: UsersQueryParams = {}) => {
