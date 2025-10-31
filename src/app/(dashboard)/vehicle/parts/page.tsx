@@ -229,11 +229,11 @@ export default function VehiclePartsPage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem className="hidden sm:block">
-                                <BreadcrumbLink href="/vehicle">Araçlar</BreadcrumbLink>
+                                <BreadcrumbLink href="/vehicle">Modeller</BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden sm:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Araç Parçaları</BreadcrumbPage>
+                                <BreadcrumbPage>Model Parçaları</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -244,7 +244,7 @@ export default function VehiclePartsPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                         <Car className="h-6 w-6" />
-                        Araç Parçaları
+                        Model Parçaları
                     </h1>
                 </div>
 
@@ -256,7 +256,7 @@ export default function VehiclePartsPage() {
                                 <Car className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                                <CardTitle className="text-lg">Araç Seçimi</CardTitle>
+                                <CardTitle className="text-lg">Model Seçimi</CardTitle>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     Parçalarını yönetmek istediğiniz aracı seçin
                                 </p>
