@@ -62,25 +62,25 @@
         },
         {
             "id": "vehicles",
-            "title": "Araçlar",
+            "title": "Araçlar ve Modeller",
             "url": "/vehicle",
             "icon": "Car",
             "group": "Menü",
             "items": [
                 {
+                    "id": "vehicles-acceptance",
+                    "title": "Araç Kabul",
+                    "url": "/vehicle-acceptance"
+                },
+                {
                     "id": "vehicles-list",
-                    "title": "Araç Listesi",
+                    "title": "Model Listesi",
                     "url": "/vehicle"
                 },
                 {
                     "id": "vehicles-parts",
-                    "title": "Araç Parçaları",
+                    "title": "Model Parçaları",
                     "url": "/vehicle/parts"
-                },
-                {
-                    "id": "vehicles-acceptance",
-                    "title": "Araç Kabul",
-                    "url": "/vehicle-acceptance"
                 }
             ]
         },

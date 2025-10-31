@@ -504,21 +504,6 @@ export default function VehicleAcceptanceFormPage() {
                     </div>
                 )}
 
-                {/* Yazdırma başlığı */}
-                <div className="print-only mb-4">
-                    <h1 className="text-2xl font-bold print-title">
-                        {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
-                    </h1>
-                    <Image
-                        src="/images/lovasoftware-icon.png"
-                        priority
-                        alt="Logo"
-                        width={60}
-                        height={60}
-                        className="print-logo-fixed"
-                        style={{ objectFit: "contain" }}
-                    />
-                </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print">
                     <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
