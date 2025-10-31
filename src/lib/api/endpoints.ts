@@ -64,6 +64,7 @@ export const API_ENDPOINTS = {
         update: (id: string) => `/api/vehicles/acceptance/${id}`,
         delete: (id: string) => `/api/vehicles/acceptance/${id}`,
         getDetailById: (id: string) => `/api/vehicles/acceptance/detail/${id}`,
+        sendEmail: (id: string) => `/api/vehicles/acceptance/${id}/send-email`,
     },
     warehouses: {
         create: "/api/warehouses",

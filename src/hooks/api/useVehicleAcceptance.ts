@@ -34,16 +34,23 @@ export const useVehicleAcceptance = () => {
         ): Promise<ApiResponse<{ vehicleAcceptanceId: number }>> => {
             const backendData = {
                 date: data.date,
+                form_type: data.form_type,
                 plate_number: data.plate_number,
+                chassis_number: data.chassis_number,
+                customer_id: data.customer_id,
                 entry_km: data.entry_km,
                 exit_km: data.exit_km,
                 tse_entry_datetime: data.tse_entry_datetime,
                 tse_exit_datetime: data.tse_exit_datetime,
                 delivery_date: data.delivery_date,
                 description: data.description,
+                delivered_by: data.delivered_by,
+                signature: data.signature,
                 fuel_level: data.fuel_level,
                 features: data.features,
                 damage_markers: data.damage_markers,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pdf_base64: (data as any).pdf_base64,
             };
 
             const response = await apiClient.post<ApiResponse<{ vehicleAcceptanceId: number }>>(
@@ -114,6 +121,13 @@ export const useVehicleAcceptance = () => {
 
         // Callback methods
         getVehicleAcceptanceById,
+        sendVehicleAcceptanceEmail: async (id: string, pdfBase64: string) => {
+            const response = await apiClient.post<ApiResponse<{ message: string }>>(
+                API_ENDPOINTS.vehicleAcceptance.sendEmail(id),
+                { pdfBase64 }
+            );
+            return response;
+        },
 
         // Loading states
         isLoading,

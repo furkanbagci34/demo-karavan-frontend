@@ -603,7 +603,7 @@ export default function VehiclePartsPage() {
                                                     <Button
                                                         variant="destructive"
                                                         size="sm"
-                                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 w-7 p-0"
+                                                        className="absolute top-2 right-2 opacity-100 transition-opacity duration-200 h-7 w-7 p-0"
                                                         onClick={() =>
                                                             openDeleteDialog({ id: product.id, name: product.name })
                                                         }

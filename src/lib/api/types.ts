@@ -430,7 +430,11 @@ export interface VehicleFeature {
 export interface VehicleAcceptance {
     id?: number;
     date: string;
+    form_type?: "yeni_arac" | "servis";
     plate_number: string;
+    chassis_number?: string;
+    customer_id?: number;
+    customer_name?: string;
     entry_km?: number;
     exit_km?: number;
     tse_entry_datetime?: string;
@@ -440,6 +444,8 @@ export interface VehicleAcceptance {
     fuel_level: number;
     features: VehicleFeature;
     damage_markers: DamageMarker[];
+    pdf_base64?: string;
+    delivered_by?: string;
     created_at?: string;
     updated_at?: string;
     created_by?: number;
@@ -449,7 +455,10 @@ export interface VehicleAcceptance {
 
 export interface CreateVehicleAcceptanceData {
     date: string;
+    form_type?: "yeni_arac" | "servis";
     plate_number: string;
+    chassis_number?: string;
+    customer_id?: number;
     entry_km?: number;
     exit_km?: number;
     tse_entry_datetime?: string;
@@ -459,11 +468,17 @@ export interface CreateVehicleAcceptanceData {
     fuel_level: number;
     features: VehicleFeature;
     damage_markers: DamageMarker[];
+    pdf_base64?: string;
+    delivered_by?: string;
+    signature?: string;
 }
 
 export interface UpdateVehicleAcceptanceData {
     date?: string;
+    form_type?: "yeni_arac" | "servis";
     plate_number?: string;
+    chassis_number?: string;
+    customer_id?: number;
     entry_km?: number;
     exit_km?: number;
     tse_entry_datetime?: string;
@@ -474,6 +489,9 @@ export interface UpdateVehicleAcceptanceData {
     features?: Partial<VehicleFeature>;
     damage_markers?: DamageMarker[];
     status?: "active" | "completed" | "cancelled";
+    pdf_base64?: string;
+    delivered_by?: string;
+    signature?: string;
 }
 
 // Production Operation tipleri

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,10 +19,28 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useCustomers } from "@/hooks/api/useCustomers";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ChevronsUpDown, User } from "lucide-react";
 import { useVehicleAcceptance } from "@/hooks/api/useVehicleAcceptance";
 import { CreateVehicleAcceptanceData, UpdateVehicleAcceptanceData, VehicleFeature } from "@/lib/api/types";
 import { toast } from "sonner";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, Loader2 } from "lucide-react";
+import { generateVehicleAcceptancePdf, generateVehicleAcceptancePdfBase64 } from "@/components/VehicleAcceptancePdf";
+import { useAuth } from "@/hooks/api/useAuth";
+import { SignatureModal } from "@/components/SignatureModal";
+import { Pen } from "lucide-react";
 
 type DamageMarker = {
     id: string;
@@ -82,7 +101,10 @@ export default function VehicleAcceptanceFormPage() {
         getVehicleAcceptanceById,
         isLoadingCreate,
         isLoadingUpdate,
+        sendVehicleAcceptanceEmail,
     } = useVehicleAcceptance();
+
+    const { user } = useAuth();
 
     const [damageMarkers, setDamageMarkers] = useState<DamageMarker[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -96,14 +118,27 @@ export default function VehicleAcceptanceFormPage() {
         }
     });
     const [plateNumber, setPlateNumber] = useState("");
+    const [formType, setFormType] = useState<"yeni_arac" | "servis">("yeni_arac");
+    const [chassisNumber, setChassisNumber] = useState("");
     const [entryKm, setEntryKm] = useState("");
+    const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+    const [isCustomerSelectorOpen, setIsCustomerSelectorOpen] = useState(false);
+    const { customers, isLoading: customersLoading } = useCustomers();
     const [exitKm, setExitKm] = useState("");
     const [tseEntryDateTime, setTseEntryDateTime] = useState("");
     const [tseExitDateTime, setTseExitDateTime] = useState("");
     const [deliveryDate, setDeliveryDate] = useState("");
     const [description, setDescription] = useState("");
+    const [deliveredBy, setDeliveredBy] = useState("");
+    const [signature, setSignature] = useState<string>("");
+    const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
     const [fuelLevel, setFuelLevel] = useState(0);
     const [markerType, setMarkerType] = useState<"cross" | "line">("cross");
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const handleOpenConfirm = () => setIsConfirmOpen(true);
+    const handleCloseConfirm = () => setIsConfirmOpen(false);
 
     // Araç özellikleri state'i
     const [vehicleFeatures, setVehicleFeatures] = useState<VehicleFeature | null>({
@@ -148,6 +183,17 @@ export default function VehicleAcceptanceFormPage() {
         }
     }, [isEditMode, id]);
 
+    // Müşteri seçildiğinde teslim eden alanını otomatik doldur (sadece boşsa)
+    useEffect(() => {
+        if (selectedCustomerId && customers.length > 0) {
+            const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+            if (selectedCustomer && (!deliveredBy || !deliveredBy.trim())) {
+                setDeliveredBy(selectedCustomer.name || "");
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCustomerId, customers]);
+
     const loadVehicleAcceptanceData = async () => {
         try {
             setIsLoading(true);
@@ -162,24 +208,34 @@ export default function VehicleAcceptanceFormPage() {
             // Form alanlarını doldur - tüm alanları kontrol et
             const newDate = formatDateForInput(data.date);
             const newPlateNumber = data.plate_number || "";
+            const newFormType = (data as any).form_type || "servis";
+            const newChassisNumber = (data as any).chassis_number || "";
             const newEntryKm = data.entry_km !== undefined && data.entry_km !== null ? data.entry_km.toString() : "";
+            const newCustomerId = (data as any).customer_id ?? null;
             const newExitKm = data.exit_km !== undefined && data.exit_km !== null ? data.exit_km.toString() : "";
             const newTseEntryDateTime = formatDateTimeLocalForInput(data.tse_entry_datetime);
             const newTseExitDateTime = formatDateTimeLocalForInput(data.tse_exit_datetime);
             const newDeliveryDate = formatDateForInput(data.delivery_date);
             const newDescription = data.description || "";
+            const newDeliveredBy = (data as any).delivered_by || "";
+            const newSignature = (data as any).signature || "";
             const newFuelLevel = data.fuel_level !== undefined && data.fuel_level !== null ? data.fuel_level : 0;
 
             // State'leri güncelle
             setDate(newDate);
             setPlateNumber(newPlateNumber);
+            setFormType(newFormType);
+            setChassisNumber(newChassisNumber);
             setEntryKm(newEntryKm);
             setExitKm(newExitKm);
             setTseEntryDateTime(newTseEntryDateTime);
             setTseExitDateTime(newTseExitDateTime);
             setDeliveryDate(newDeliveryDate);
             setDescription(newDescription);
+            setDeliveredBy(newDeliveredBy);
+            setSignature(newSignature);
             setFuelLevel(newFuelLevel);
+            setSelectedCustomerId(newCustomerId);
 
             // Araç özelliklerini güvenli şekilde yükle
             if (data.features && typeof data.features === "object") {
@@ -306,21 +362,56 @@ export default function VehicleAcceptanceFormPage() {
 
     // Form gönderme
     const handleSubmit = async () => {
-        if (!(plateNumber || "").trim()) {
-            toast.error("Plaka numarası zorunludur");
+        const trimmedPlateNumber = (plateNumber || "").trim();
+        const trimmedChassisNumber = (chassisNumber || "").trim();
+
+        if (!trimmedPlateNumber && !trimmedChassisNumber) {
+            toast.error("Plaka veya şase numarasından en az biri zorunludur");
             return;
         }
 
+        setIsSubmitting(true);
         try {
+            const damageCounts = {
+                cross: (damageMarkers || []).filter((m) => m.type === "cross").length,
+                line: (damageMarkers || []).filter((m) => m.type === "line").length,
+                total: (damageMarkers || []).length,
+            };
+            const pdfBase64 = await generateVehicleAcceptancePdfBase64({
+                title: isEditMode ? "Araç Kabul" : "Yeni Araç Kabul",
+                date,
+                formType: formType,
+                plateNumber: plateNumber,
+                chassisNumber: chassisNumber,
+                customerName: selectedCustomerId ? customers.find((c) => c.id === selectedCustomerId)?.name : undefined,
+                entryKm,
+                exitKm,
+                tseEntryDateTime,
+                tseExitDateTime,
+                deliveryDate,
+                description,
+                fuelLevel,
+                features: (vehicleFeatures as unknown as Record<string, boolean>) || null,
+                damageMarkers: (damageMarkers || []).map((m) => ({ x: m.x, y: m.y, type: m.type })),
+                damageMarkerCounts: damageCounts,
+                deliveredBy: deliveredBy || undefined,
+                receivedBy: user?.name && user?.surname ? `${user.name} ${user.surname}` : undefined,
+                signature: signature || undefined,
+            });
             const formData = {
                 date: date || "",
-                plate_number: (plateNumber || "").trim().toUpperCase(),
+                form_type: formType,
+                plate_number: trimmedPlateNumber ? trimmedPlateNumber.toUpperCase() : undefined,
+                chassis_number: trimmedChassisNumber ? trimmedChassisNumber.toUpperCase() : undefined,
+                customer_id: selectedCustomerId ?? undefined,
                 entry_km: entryKm ? parseInt(entryKm) : undefined,
                 exit_km: exitKm ? parseInt(exitKm) : undefined,
                 tse_entry_datetime: tseEntryDateTime || undefined,
                 tse_exit_datetime: tseExitDateTime || undefined,
                 delivery_date: deliveryDate || undefined,
                 description: (description || "").trim() || undefined,
+                delivered_by: (deliveredBy || "").trim() || undefined,
+                signature: signature && signature.trim() ? signature.trim() : undefined,
                 fuel_level: fuelLevel || 0,
                 features: vehicleFeatures || {
                     celik_jant: false,
@@ -342,14 +433,30 @@ export default function VehicleAcceptanceFormPage() {
                     y_coordinate: marker.y,
                     marker_type: marker.type,
                 })),
+                pdf_base64: pdfBase64,
             };
 
+            let savedId: string | null = null;
             if (isEditMode) {
                 await updateVehicleAcceptance(id, formData as UpdateVehicleAcceptanceData);
+                savedId = id;
                 toast.success("Araç kabul formu başarıyla güncellendi");
             } else {
-                await createVehicleAcceptance(formData as CreateVehicleAcceptanceData);
+                const resp = await createVehicleAcceptance(formData as CreateVehicleAcceptanceData);
+                const createdId = (resp?.data as any)?.vehicleAcceptanceId;
+                if (createdId) savedId = String(createdId);
                 toast.success("Araç kabul formu başarıyla kaydedildi");
+            }
+
+            // Müşteri seçiliyse otomatik mail gönder
+            if (selectedCustomerId && savedId) {
+                try {
+                    await sendVehicleAcceptanceEmail(savedId, (formData as any).pdf_base64);
+                    toast.success("Müşteriye e-posta gönderildi");
+                } catch (e) {
+                    console.error("Otomatik e-posta gönderim hatası:", e);
+                    toast.error("E-posta gönderilemedi");
+                }
             }
 
             // Listeye yönlendir
@@ -357,6 +464,8 @@ export default function VehicleAcceptanceFormPage() {
         } catch (error) {
             console.error("Form gönderme hatası:", error);
             toast.error(isEditMode ? "Form güncellenirken bir hata oluştu" : "Form gönderilirken bir hata oluştu");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -415,18 +524,124 @@ export default function VehicleAcceptanceFormPage() {
                         {isEditMode ? "Araç Kabul Düzenle" : "Yeni Araç Kabul Formu"}
                     </h1>
                     <div className="flex items-center gap-3 self-end sm:self-auto">
-                        <Button variant="outline" size="sm" onClick={() => window.print()}>
-                            Yazdır
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                                const damageCounts = {
+                                    cross: (damageMarkers || []).filter((m) => m.type === "cross").length,
+                                    line: (damageMarkers || []).filter((m) => m.type === "line").length,
+                                    total: (damageMarkers || []).length,
+                                };
+                                await generateVehicleAcceptancePdf({
+                                    title: isEditMode ? "Araç Kabul" : "Yeni Araç Kabul",
+                                    date,
+                                    formType: formType,
+                                    plateNumber: plateNumber,
+                                    chassisNumber: chassisNumber,
+                                    customerName: selectedCustomerId
+                                        ? customers.find((c) => c.id === selectedCustomerId)?.name
+                                        : undefined,
+                                    entryKm,
+                                    exitKm,
+                                    tseEntryDateTime,
+                                    tseExitDateTime,
+                                    deliveryDate,
+                                    description,
+                                    fuelLevel,
+                                    features: (vehicleFeatures as unknown as Record<string, boolean>) || null,
+                                    damageMarkers: (damageMarkers || []).map((m) => ({ x: m.x, y: m.y, type: m.type })),
+                                    damageMarkerCounts: damageCounts,
+                                    deliveredBy: deliveredBy || undefined,
+                                    receivedBy:
+                                        user?.name && user?.surname ? `${user.name} ${user.surname}` : undefined,
+                                    signature: signature || undefined,
+                                });
+                            }}
+                        >
+                            PDF Göster
                         </Button>
+                        {isEditMode && id && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isSendingEmail}
+                                onClick={async () => {
+                                    if (!isEditMode || !id) return;
+                                    setIsSendingEmail(true);
+                                    try {
+                                        const damageCounts = {
+                                            cross: (damageMarkers || []).filter((m) => m.type === "cross").length,
+                                            line: (damageMarkers || []).filter((m) => m.type === "line").length,
+                                            total: (damageMarkers || []).length,
+                                        };
+                                        const pdfBase64 = await generateVehicleAcceptancePdfBase64({
+                                            title: isEditMode ? "Araç Kabul" : "Yeni Araç Kabul",
+                                            date,
+                                            formType: formType,
+                                            plateNumber: plateNumber,
+                                            chassisNumber: chassisNumber,
+                                            customerName: selectedCustomerId
+                                                ? customers.find((c) => c.id === selectedCustomerId)?.name
+                                                : undefined,
+                                            entryKm,
+                                            exitKm,
+                                            tseEntryDateTime,
+                                            tseExitDateTime,
+                                            deliveryDate,
+                                            description,
+                                            fuelLevel,
+                                            features: (vehicleFeatures as unknown as Record<string, boolean>) || null,
+                                            damageMarkers: (damageMarkers || []).map((m) => ({
+                                                x: m.x,
+                                                y: m.y,
+                                                type: m.type,
+                                            })),
+                                            damageMarkerCounts: damageCounts,
+                                            deliveredBy: deliveredBy || undefined,
+                                            receivedBy:
+                                                user?.name && user?.surname
+                                                    ? `${user.name} ${user.surname}`
+                                                    : undefined,
+                                            signature: signature || undefined,
+                                        });
+                                        await sendVehicleAcceptanceEmail(id as string, pdfBase64);
+                                        toast.success("E-posta gönderildi");
+                                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                    } catch (e) {
+                                        toast.error("E-posta gönderilirken hata oluştu");
+                                    } finally {
+                                        setIsSendingEmail(false);
+                                    }
+                                }}
+                            >
+                                {isSendingEmail ? (
+                                    <span className="inline-flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" /> Gönderiliyor...
+                                    </span>
+                                ) : (
+                                    "Mail Gönder"
+                                )}
+                            </Button>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => router.push("/vehicle-acceptance")}>
                             Listeye Dön
                         </Button>
-                        <Button size="sm" onClick={handleSubmit} disabled={isLoadingCreate || isLoadingUpdate}>
-                            {isLoadingCreate || isLoadingUpdate
-                                ? "Kaydediliyor..."
-                                : isEditMode
-                                ? "Değişiklikleri Kaydet"
-                                : "Formu Kaydet"}
+                        <Button
+                            size="sm"
+                            onClick={handleOpenConfirm}
+                            disabled={isLoadingCreate || isLoadingUpdate || isSubmitting}
+                        >
+                            {isLoadingCreate || isLoadingUpdate || isSubmitting ? (
+                                <span className="inline-flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    {isSubmitting ? "Kaydediliyor ve mail gönderiliyor..." : "Kaydediliyor..."}
+                                </span>
+                            ) : isEditMode ? (
+                                "Değişiklikleri Kaydet"
+                            ) : (
+                                "Formu Kaydet"
+                            )}
                         </Button>
                     </div>
                 </div>
@@ -438,19 +653,190 @@ export default function VehicleAcceptanceFormPage() {
                             {/* Sol taraf - Form alanları */}
                             <div className="space-y-4 print:space-y-0 print:m-0">
                                 <div className="grid grid-cols-1 gap-4 print:gap-0 print:m-0">
-                                    {/* Tarih */}
+                                    {/* Form Tipi */}
                                     <div className="space-y-2 print:space-y-0 print:m-0">
-                                        <Label htmlFor="date" className="print:text-xs print:m-0 print:p-0">
-                                            Tarih
+                                        <Label htmlFor="formType" className="print:text-xs print:m-0 print:p-0">
+                                            FORM TİPİ
                                         </Label>
-                                        <Input
-                                            id="date"
-                                            type="date"
-                                            value={date}
-                                            onChange={(e) => setDate(e.target.value)}
-                                            className="bg-gray-50 print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
-                                            disabled={isLoading || isLoadingCreate || isLoadingUpdate}
-                                        />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    name="formType"
+                                                    value="yeni_arac"
+                                                    checked={formType === "yeni_arac"}
+                                                    onChange={() => setFormType("yeni_arac")}
+                                                    className="w-4 h-4 text-blue-600"
+                                                    disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                                />
+                                                <span>Yeni Araç</span>
+                                            </label>
+                                            <label className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    name="formType"
+                                                    value="servis"
+                                                    checked={formType === "servis"}
+                                                    onChange={() => setFormType("servis")}
+                                                    className="w-4 h-4 text-blue-600"
+                                                    disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                                />
+                                                <span>Servis</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Müşteri Seçimi ve Teslim Eden yan yana */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-0">
+                                        {/* Müşteri Seçimi */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0 no-print">
+                                            <Label className="print:text-xs print:m-0 print:p-0">MÜŞTERİ</Label>
+                                            <Popover
+                                                open={isCustomerSelectorOpen}
+                                                onOpenChange={setIsCustomerSelectorOpen}
+                                                modal={true}
+                                            >
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={isCustomerSelectorOpen}
+                                                        className={`w-full justify-between h-10 text-left font-normal ${
+                                                            !selectedCustomerId
+                                                                ? "border-slate-300 text-slate-500"
+                                                                : "border-slate-300"
+                                                        }`}
+                                                        disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                                    >
+                                                        {selectedCustomerId
+                                                            ? customers.find((c) => c.id === selectedCustomerId)?.name
+                                                            : "Müşteri seçin..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-full p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Müşteri ara..." className="h-9" />
+                                                        <CommandEmpty>
+                                                            {customersLoading ? (
+                                                                <div className="flex items-center justify-center py-4">
+                                                                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-b-2 border-blue-600" />
+                                                                    <span className="text-sm">Yükleniyor...</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="py-4 text-center text-sm text-muted-foreground">
+                                                                    Müşteri bulunamadı
+                                                                </div>
+                                                            )}
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            <CommandList className="max-h-[240px] overflow-y-auto">
+                                                                {customers.map((customer) => (
+                                                                    <CommandItem
+                                                                        key={customer.id}
+                                                                        onSelect={() => {
+                                                                            setSelectedCustomerId(customer.id);
+                                                                            setIsCustomerSelectorOpen(false);
+                                                                        }}
+                                                                        className="flex items-center gap-3 p-3 cursor-pointer"
+                                                                    >
+                                                                        <div className="flex items-center gap-3 flex-1">
+                                                                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                                                                <User className="h-4 w-4 text-blue-600" />
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-medium text-sm">
+                                                                                    {customer.name}
+                                                                                </div>
+                                                                                <div className="text-xs text-slate-500">
+                                                                                    {customer.email}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {selectedCustomerId === customer.id && (
+                                                                            <div className="w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
+                                                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                                            </div>
+                                                                        )}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandList>
+                                                        </CommandGroup>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+
+                                        {/* Teslim Eden */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label htmlFor="deliveredBy" className="print:text-xs print:m-0 print:p-0">
+                                                TESLİM EDEN
+                                            </Label>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    id="deliveredBy"
+                                                    type="text"
+                                                    placeholder="Teslim eden kişinin adı soyadı"
+                                                    value={deliveredBy}
+                                                    onChange={(e) => setDeliveredBy(e.target.value)}
+                                                    className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0 flex-1"
+                                                    disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant={signature && signature.trim() ? "default" : "outline"}
+                                                    size="sm"
+                                                    onClick={() => setIsSignatureModalOpen(true)}
+                                                    className={`no-print shrink-0 ${
+                                                        signature && signature.trim()
+                                                            ? "bg-green-600 hover:bg-green-700 text-white border-green-600"
+                                                            : ""
+                                                    }`}
+                                                    disabled={
+                                                        isLoading || isLoadingCreate || isLoadingUpdate || isSubmitting
+                                                    }
+                                                    title={signature && signature.trim() ? "İmzayı Düzenle" : "İmza At"}
+                                                >
+                                                    <Pen className="h-4 w-4" />
+                                                    {signature && signature.trim() && (
+                                                        <span className="ml-1 text-xs">✓</span>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Tarih ve Teslim Tarihi yan yana */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-0">
+                                        {/* Tarih */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label htmlFor="date" className="print:text-xs print:m-0 print:p-0">
+                                                Tarih
+                                            </Label>
+                                            <Input
+                                                id="date"
+                                                type="date"
+                                                value={date}
+                                                onChange={(e) => setDate(e.target.value)}
+                                                className="bg-gray-50 h-9 text-sm print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                                disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                            />
+                                        </div>
+
+                                        {/* Teslim Tarihi */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label htmlFor="deliveryDate" className="print:text-xs print:m-0 print:p-0">
+                                                TESLİM TARİHİ
+                                            </Label>
+                                            <Input
+                                                id="deliveryDate"
+                                                type="date"
+                                                value={deliveryDate}
+                                                onChange={(e) => setDeliveryDate(e.target.value)}
+                                                className="h-9 text-sm print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                                disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Plaka */}
@@ -469,81 +855,94 @@ export default function VehicleAcceptanceFormPage() {
                                         />
                                     </div>
 
-                                    {/* Giriş KM */}
+                                    {/* Şase No */}
                                     <div className="space-y-2 print:space-y-0 print:m-0">
-                                        <Label htmlFor="entryKm" className="print:text-xs print:m-0 print:p-0">
-                                            GİRİŞ KM
+                                        <Label htmlFor="chassisNumber" className="print:text-xs print:m-0 print:p-0">
+                                            ŞASE NO
                                         </Label>
                                         <Input
-                                            id="entryKm"
-                                            type="number"
-                                            placeholder="0"
-                                            value={entryKm}
-                                            onChange={(e) => setEntryKm(e.target.value)}
-                                            className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                            id="chassisNumber"
+                                            type="text"
+                                            placeholder="Şase No"
+                                            value={chassisNumber}
+                                            onChange={(e) => setChassisNumber(e.target.value)}
+                                            className="uppercase print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
                                             disabled={isLoading || isLoadingCreate || isLoadingUpdate}
                                         />
                                     </div>
 
-                                    {/* Çıkış KM */}
-                                    <div className="space-y-2 print:space-y-0 print:m-0">
-                                        <Label htmlFor="exitKm" className="print:text-xs print:m-0 print:p-0">
-                                            ÇIKIŞ KM
-                                        </Label>
-                                        <Input
-                                            id="exitKm"
-                                            type="number"
-                                            placeholder="0"
-                                            value={exitKm}
-                                            onChange={(e) => setExitKm(e.target.value)}
-                                            className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
-                                            disabled={isLoading || isLoadingCreate || isLoadingUpdate}
-                                        />
+                                    {/* KM Alanları: Giriş ve Çıkış yan yana (yarı yarıya) */}
+                                    <div className="grid grid-cols-2 gap-4 print:gap-0 print:grid-cols-2">
+                                        {/* Giriş KM */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label htmlFor="entryKm" className="print:text-xs print:m-0 print:p-0">
+                                                GİRİŞ KM
+                                            </Label>
+                                            <Input
+                                                id="entryKm"
+                                                type="number"
+                                                placeholder="0"
+                                                value={entryKm}
+                                                onChange={(e) => setEntryKm(e.target.value)}
+                                                className="h-9 text-sm print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                                disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                            />
+                                        </div>
+
+                                        {/* Çıkış KM */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label htmlFor="exitKm" className="print:text-xs print:m-0 print:p-0">
+                                                ÇIKIŞ KM
+                                            </Label>
+                                            <Input
+                                                id="exitKm"
+                                                type="number"
+                                                placeholder="0"
+                                                value={exitKm}
+                                                onChange={(e) => setExitKm(e.target.value)}
+                                                className="h-9 text-sm print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                                disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                            />
+                                        </div>
                                     </div>
 
-                                    {/* TSE Kamera Giriş */}
-                                    <div className="space-y-2 print:space-y-0 print:m-0">
-                                        <Label htmlFor="tseEntryDateTime" className="print:text-xs print:m-0 print:p-0">
-                                            TSE KAMERA GİRİŞ TARİHİ
-                                        </Label>
-                                        <Input
-                                            id="tseEntryDateTime"
-                                            type="datetime-local"
-                                            value={tseEntryDateTime}
-                                            onChange={(e) => setTseEntryDateTime(e.target.value)}
-                                            className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
-                                            disabled={isLoading || isLoadingCreate || isLoadingUpdate}
-                                        />
-                                    </div>
+                                    {/* TSE Kamera Tarihleri: Giriş ve Çıkış yan yana */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2 print:gap-0">
+                                        {/* TSE Kamera Giriş */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label
+                                                htmlFor="tseEntryDateTime"
+                                                className="print:text-xs print:m-0 print:p-0"
+                                            >
+                                                TSE KAMERA GİRİŞ TARİHİ
+                                            </Label>
+                                            <Input
+                                                id="tseEntryDateTime"
+                                                type="datetime-local"
+                                                value={tseEntryDateTime}
+                                                onChange={(e) => setTseEntryDateTime(e.target.value)}
+                                                className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                                disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                            />
+                                        </div>
 
-                                    {/* TSE Kamera Çıkış */}
-                                    <div className="space-y-2 print:space-y-0 print:m-0">
-                                        <Label htmlFor="tseExitDateTime" className="print:text-xs print:m-0 print:p-0">
-                                            TSE KAMERA ÇIKIŞ TARİHİ
-                                        </Label>
-                                        <Input
-                                            id="tseExitDateTime"
-                                            type="datetime-local"
-                                            value={tseExitDateTime}
-                                            onChange={(e) => setTseExitDateTime(e.target.value)}
-                                            className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
-                                            disabled={isLoading || isLoadingCreate || isLoadingUpdate}
-                                        />
-                                    </div>
-
-                                    {/* Teslim Tarihi */}
-                                    <div className="space-y-2 print:space-y-0 print:m-0">
-                                        <Label htmlFor="deliveryDate" className="print:text-xs print:m-0 print:p-0">
-                                            TESLİM TARİHİ
-                                        </Label>
-                                        <Input
-                                            id="deliveryDate"
-                                            type="date"
-                                            value={deliveryDate}
-                                            onChange={(e) => setDeliveryDate(e.target.value)}
-                                            className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
-                                            disabled={isLoading || isLoadingCreate || isLoadingUpdate}
-                                        />
+                                        {/* TSE Kamera Çıkış */}
+                                        <div className="space-y-2 print:space-y-0 print:m-0">
+                                            <Label
+                                                htmlFor="tseExitDateTime"
+                                                className="print:text-xs print:m-0 print:p-0"
+                                            >
+                                                TSE KAMERA ÇIKIŞ TARİHİ
+                                            </Label>
+                                            <Input
+                                                id="tseExitDateTime"
+                                                type="datetime-local"
+                                                value={tseExitDateTime}
+                                                onChange={(e) => setTseExitDateTime(e.target.value)}
+                                                className="print:h-5 print:text-xs print:p-0 print:m-0 print:border-0"
+                                                disabled={isLoading || isLoadingCreate || isLoadingUpdate}
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Açıklama */}
@@ -1187,6 +1586,60 @@ export default function VehicleAcceptanceFormPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Kayıt/Güncelleme Onay Diyaloğu */}
+            <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>İşlemi Onaylayın</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Kaydettiğiniz bilgiler seçili olan müşteriye e-posta olarak gönderilecektir. Devam etmek
+                            istiyor musunuz?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={handleCloseConfirm} className="min-w-24" disabled={isSubmitting}>
+                            Vazgeç
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            className="min-w-32"
+                            onClick={async () => {
+                                handleCloseConfirm();
+                                await handleSubmit();
+                            }}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? (
+                                <span className="inline-flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Kaydediliyor...
+                                </span>
+                            ) : (
+                                "Onayla ve Kaydet"
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* İmza Modal */}
+            <SignatureModal
+                open={isSignatureModalOpen}
+                onOpenChange={setIsSignatureModalOpen}
+                onSave={(sig) => {
+                    if (sig && sig.trim()) {
+                        setSignature(sig.trim());
+                        toast.success("İmza kaydedildi");
+                    } else {
+                        toast.error("İmza kaydedilemedi");
+                    }
+                }}
+                onClear={() => {
+                    setSignature("");
+                    toast.success("İmza temizlendi");
+                }}
+                initialSignature={signature}
+            />
         </>
     );
 }
